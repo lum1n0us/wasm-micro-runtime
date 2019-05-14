@@ -14,7 +14,7 @@
 
 CC = emcc
 LVGL_DIR = ${shell pwd}
-CFLAGS += -O3 -DLV_CONF_INCLUDE_SIMPLE=1 -I$(LVGL_DIR)/ -I$(LVGL_DIR)/lvgl/ -I$(LVGL_DIR)/lv_drivers/ -I$(LVGL_DIR)/src/ -I../../../lib/app-libs/base/ -I../../../lib/native-interface/  -I../../../lib/app-libs/extension/sensor
+CFLAGS += -O3 -DLV_CONF_INCLUDE_SIMPLE=1 -I$(LVGL_DIR)/ -I$(LVGL_DIR)/lvgl/ -I$(LVGL_DIR)/lv_drivers/ -I$(LVGL_DIR)/src/ -I../../../core/iwasm/lib/app-libs/base/ -I../../../core/iwasm/lib/native-interface/  -I../../../core/iwasm/lib/app-libs/extension/sensor
 
 SRCS += lvgl/lv_draw/lv_draw_line.c lvgl/lv_draw/lv_draw_rbasic.c
 SRCS += lvgl/lv_draw/lv_draw_img.c lvgl/lv_draw/lv_draw_arc.c
@@ -22,19 +22,6 @@ SRCS += lvgl/lv_draw/lv_draw_rect.c lvgl/lv_draw/lv_draw_triangle.c
 SRCS += lvgl/lv_draw/lv_draw.c lvgl/lv_draw/lv_draw_label.c
 SRCS += lvgl/lv_draw/lv_draw_vbasic.c lvgl/lv_fonts/lv_font_builtin.c
 SRCS += lvgl/lv_fonts/lv_font_dejavu_20.c
-#SRCS += lvgl/lv_fonts/lv_font_dejavu_20.c lvgl/lv_fonts/lv_font_dejavu_40.c
-#SRCS += lvgl/lv_fonts/lv_font_dejavu_30_latin_sup.c
-#SRCS += lvgl/lv_fonts/lv_font_dejavu_10_cyrillic.c lvgl/lv_fonts/lv_font_monospace_8.c
-#SRCS += lvgl/lv_fonts/lv_font_dejavu_10_latin_sup.c lvgl/lv_fonts/lv_font_symbol_40.c
-#SRCS += lvgl/lv_fonts/lv_font_symbol_10.c lvgl/lv_fonts/lv_font_dejavu_10.c
-#SRCS += lvgl/lv_fonts/lv_font_dejavu_40_cyrillic.c
-#SRCS += lvgl/lv_fonts/lv_font_dejavu_20_cyrillic.c
-#SRCS += lvgl/lv_fonts/lv_font_dejavu_30_cyrillic.c
-#SRCS += lvgl/lv_fonts/lv_font_dejavu_20_latin_sup.c
-#SRCS += lvgl/lv_fonts/lv_font_dejavu_40_latin_sup.c lvgl/lv_fonts/lv_font_symbol_30.c
-#SRCS += lvgl/lv_fonts/lv_font_symbol_20.c lvgl/lv_fonts/lv_font_dejavu_30.c
-SRCS += lvgl/lv_objx/lv_cont.c lvgl/lv_objx/lv_img.c lvgl/lv_objx/lv_kb.c
-SRCS += lvgl/lv_objx/lv_table.c
 SRCS += lvgl/lv_objx/lv_roller.c lvgl/lv_objx/lv_cb.c lvgl/lv_objx/lv_led.c
 SRCS += lvgl/lv_objx/lv_calendar.c lvgl/lv_objx/lv_gauge.c lvgl/lv_objx/lv_page.c
 SRCS += lvgl/lv_objx/lv_list.c lvgl/lv_objx/lv_bar.c lvgl/lv_objx/lv_tabview.c
@@ -56,18 +43,13 @@ SRCS += lvgl/lv_themes/lv_theme_night.c lvgl/lv_themes/lv_theme_zen.c lvgl/lv_th
 SRCS += lvgl/lv_themes/lv_theme_alien.c lvgl/lv_themes/lv_theme_default.c
 SRCS += lvgl/lv_core/lv_group.c lvgl/lv_core/lv_style.c lvgl/lv_core/lv_indev.c
 SRCS += lvgl/lv_core/lv_vdb.c lvgl/lv_core/lv_obj.c lvgl/lv_core/lv_refr.c
-#SRCS += $(LVGL_DIR)/src/demo.c
-#SRCS += $(LVGL_DIR)/src/img_bubble_pattern.c
 SRCS += $(LVGL_DIR)/src/main.c
-#SRCS += $(LVGL_DIR)/src/mouse_cursor_icon.c
-#SRCS += $(LVGL_DIR)/lv_drivers/dummy_display_indev.c
+
+APP_LIBS=../../../core/iwasm/lib/app-libs
+NATIVE_LIBS=../../../core/iwasm/lib/native-interface
 
 
-APP_LIBS=./../../../lib/app-libs
-NATIVE_LIBS=./../../../lib/native-interface
-
-
-SRCS += ../../../lib/app-libs/base/timer.c
+SRCS += ../../../core/iwasm/lib/app-libs/base/timer.c
 all: 
 	$(CC) $(CFLAGS) $(SRCS) \
     -s WASM=1 -s SIDE_MODULE=1 -s ASSERTIONS=1 -s STACK_OVERFLOW_CHECK=2 \
