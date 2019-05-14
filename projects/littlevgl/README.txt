@@ -1,36 +1,29 @@
-Install required library
+There are 3 sub-folders for 3 binaries.
+    native-ui-app   : littlevgl graphics app built into Linux application named "ui_app", which can directly run on Linux.
+    vgl-wasm-runtime: wasm micro-runtime and littlevgl native interface built into Linux application named "littlevgl", where wasm apps run on it.
+    wasm-apps       : A wasm app with littlevgl graphics.
+
+Install required SDK and libraries.
 =======================
-0. sudo apt-get install libsdl2-dev:i386
+1. 32 bit SDL(simple directmedia layer) Library is required
+    a. sudo apt-get install libsdl2-dev:i386
+    b. Alternatively it can be download from www.libsdl.org, then 
+        ./configure C_FLAGS=-m32 CXX_FLAGS=-m32 LD_FLAGS=-m32
+        ./make
+        ./sudo make install
+2. Install EMSDK
+    https://emscripten.org/docs/tools_reference/emsdk.html
 
-
-Build the Zephyr image
+Build out binaries
 =======================
+./build.sh
+All binaries are in ./out, which contains "host_tool", "native_ui_app", "TestApplet1.wasm" and "vgl_wasm_runtime".
 
 
-Build the linux version runtime with littlevgl native interface support
-========================================================================
-1. mkdir build && cd build
-2. cmake ..
-3. make
-
-
-Build the UI application into the linux execuable with SDL:
-===========================================================
-0. goto native-ui-app
-1. mkdir build && cd build
-2. cmake ..
-3. make
-lvgl will be fetched in cmake.
-
-
-
-wasm-apps
-=========
-The folder for wasm applications
-
-build procedure:
-goto wasm-apps
-./build_wasm.sh
-If no "lvgl" folder, will git clone it.
-
-
+Run
+=======================
+1. Run UI app directly on Linux.
+    ./native_ui_app will show UI app.
+2. Run wasm vm then install the UI app.
+    ./vgl_wasm_runtime -s
+    ./host_tool -i TestApplet1.wasm -f TestApplet1.wasm

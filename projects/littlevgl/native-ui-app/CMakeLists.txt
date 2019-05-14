@@ -13,8 +13,8 @@
 # limitations under the License.
 
 cmake_minimum_required (VERSION 2.8.3)
-message ("ui_app...")
-project (ui_app)
+message ("native_ui_app...")
+project (native_ui_app)
 
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -DLV_CONF_INCLUDE_SIMPLE -DPLATFORM_NATIVE_LINUX -DUSE_MONITOR -DUSE_MOUSE=1")
@@ -149,6 +149,6 @@ include_directories(
     ${CMAKE_CURRENT_LIST_DIR}
     ${CMAKE_CURRENT_LIST_DIR}/../wasm-apps/src/
 )
-add_executable(ui_app ${SOURCES} )
+add_executable(native_ui_app ${SOURCES} )
 
-target_link_libraries( ui_app -lSDL2)
+target_link_libraries( native_ui_app -lSDL2)

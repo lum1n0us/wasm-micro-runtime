@@ -16,6 +16,5 @@
 if [ ! -d "lvgl" ]; then
     git clone https://github.com/littlevgl/lvgl.git
 fi
-make -f Makefile_for_wasm
+make -f Makefile_wasm_app
 
-cp -a a.out.wasm ../../../../../test/component/host_clients/src/TestApplet1.wasm
