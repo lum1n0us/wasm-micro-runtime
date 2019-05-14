@@ -14,30 +14,31 @@
  * limitations under the License.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "wasm_app.h"
+
+void publish_overheat_event()
+{
+    attr_container_t *event;
+
+    event = attr_container_create("event");
+    attr_container_set_string(&event, "warning", "temperature is over high");
+
+    printf("###app publish event begin ###\n");
+
+    api_publish_event("alert/overheat", FMT_ATTR_CONTAINER, event,
+            attr_container_get_serialize_length(event));
+
+    printf("###app publish event end ###\n");
+
+    attr_container_destroy(event);
+}
 
 void on_init()
 {
-#if 0
-    attr_container_t *attr;
+    publish_overheat_event();
+}
 
-    request_set_handler(NULL, NULL);
-    response_get_status(NULL);
-    response_create(NULL, 0);
-    response_send(NULL);
-    response_get_payload(NULL);
-    sensor_open(NULL, 0, NULL, NULL);
-    sensor_config(NULL, 0, 0, 0);
-    sensor_config_with_attr_container(NULL, NULL);
-    sensor_close(NULL);
-
-    api_timer_create(0, 0, 0, NULL, NULL);
-    api_timer_set_interval(NULL, 0);
-    api_timer_cancel(NULL);
-    timer_start(NULL);
-
-    attr = attr_container_create("attr");
-    attr_container_destroy(attr);
-#endif
+void on_destroy()
+{
+    /* real destroy work including killing timer and closing sensor is accomplished in wasm app library version of on_destroy() */
 }
