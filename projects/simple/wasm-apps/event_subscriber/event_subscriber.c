@@ -16,29 +16,29 @@
 
 #include "wasm_app.h"
 
-void publish_overheat_event()
+void over_heat_event_handler(request_t *request)
 {
-    attr_container_t *event;
+    printf("### user over heat event handler called\n");
 
-    event = attr_container_create("event");
-    attr_container_set_string(&event, "warning", "temperature is over high");
+    printf("###### dump event ######\n");
 
-    printf("###app publish event begin ###\n");
+    printf("sender: %d\n", request->sender);
+    printf("url: %s\n", request->url);
+    printf("action: %d\n", request->action);
+    printf("payload:\n");
+    if (request->payload != NULL && request->fmt == FMT_ATTR_CONTAINER)
+        attr_container_dump((attr_container_t *) request->payload);
 
-    api_publish_event("alert/overheat", FMT_ATTR_CONTAINER, event,
-            attr_container_get_serialize_length(event));
-
-    printf("###app publish event end ###\n");
-
-    attr_container_destroy(event);
+    printf("#### dump event end ###\n");
 }
 
 void on_init()
 {
-    publish_overheat_event();
+    api_subscribe_event("alert/overheat", over_heat_event_handler);
 }
 
 void on_destroy()
 {
-    /* real destroy work including killing timer and closing sensor is accomplished in wasm app library version of on_destroy() */
+    /* real destroy work including killing timer and closing sensor is
+       accomplished in wasm app library version of on_destroy() */
 }

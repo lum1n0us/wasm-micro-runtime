@@ -16,7 +16,7 @@
 
 #include "wasm_app.h"
 
-void my_response_handler(response_t *response, void *user_data)
+static void my_response_handler(response_t *response, void *user_data)
 {
     char *tag = (char *) user_data;
 
@@ -25,13 +25,13 @@ void my_response_handler(response_t *response, void *user_data)
         return;
     }
 
-    printf(
-            "[req] response handler called mid:%d, status:%d, fmt:%d, payload:%p, len:%d, tag:%s\n",
-            response->mid, response->status, response->fmt, response->payload,
-            response->payload_len, tag);
+    printf("[req] response handler called mid:%d, status:%d, fmt:%d, payload:%p, len:%d, tag:%s\n",
+           response->mid, response->status, response->fmt, response->payload,
+           response->payload_len, tag);
 
-    if (response->payload
-            != NULL&& response->payload_len > 0 && response->fmt == FMT_ATTR_CONTAINER) {
+    if (response->payload != NULL
+        && response->payload_len > 0
+        && response->fmt == FMT_ATTR_CONTAINER) {
         printf("[req] dump the response payload:\n");
         attr_container_dump((attr_container_t *) response->payload);
     }
@@ -47,7 +47,7 @@ static void test_send_request(const char *url, const char *tag)
 
 void on_init()
 {
-    test_send_request("/app/TestApplet1/url1", "a request to target app");
+    test_send_request("/app/request_handler/url1", "a request to target app");
     test_send_request("url1", "a general request");
 }
 

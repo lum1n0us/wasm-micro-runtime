@@ -16,22 +16,21 @@
 
 #include "wasm_app.h"
 
-void res1_handler(request_t *request)
+static void url1_request_handler(request_t *request)
 {
     response_t response[1];
     attr_container_t *payload;
 
-    printf("### user resource 1 handler called\n");
+    printf("[resp] ### user resource 1 handler called\n");
 
-    printf("###### dump request ######\n");
-    printf("sender: %d\n", request->sender);
-    printf("url: %s\n", request->url);
-    printf("action: %d\n", request->action);
-    printf("payload:\n");
-    if (request->payload
-            != NULL&& request->payload_len > 0 && request->fmt == FMT_ATTR_CONTAINER)
+    printf("[resp] ###### dump request ######\n");
+    printf("[resp] sender: %d\n", request->sender);
+    printf("[resp] url: %s\n", request->url);
+    printf("[resp] action: %d\n", request->action);
+    printf("[resp] payload:\n");
+    if (request->payload != NULL && request->fmt == FMT_ATTR_CONTAINER)
         attr_container_dump((attr_container_t *) request->payload);
-    printf("#### dump request end ###\n");
+    printf("[resp] #### dump request end ###\n");
 
     payload = attr_container_create("wasm app response payload");
     if (payload == NULL)
@@ -43,13 +42,15 @@ void res1_handler(request_t *request)
     make_response_for_request(request, response);
     set_response(response, CONTENT_2_05,
     FMT_ATTR_CONTAINER, payload, attr_container_get_serialize_length(payload));
-    printf("reciver: %d, mid:%d\n", response->reciever, response->mid);
+    printf("[resp] response payload len %d\n",
+            attr_container_get_serialize_length(payload));
+    printf("[resp] reciver: %d, mid:%d\n", response->reciever, response->mid);
     api_response_send(response);
 
     attr_container_destroy(payload);
 }
 
-void res2_handler(request_t *request)
+static void url2_request_handler(request_t *request)
 {
     response_t response[1];
     make_response_for_request(request, response);
@@ -62,8 +63,8 @@ void res2_handler(request_t *request)
 void on_init()
 {
     /* register resource uri */
-    api_register_resource_handler("/url1", res1_handler);
-    api_register_resource_handler("/url2", res2_handler);
+    api_register_resource_handler("/url1", url1_request_handler);
+    api_register_resource_handler("/url2", url2_request_handler);
 }
 
 void on_destroy()

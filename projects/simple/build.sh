@@ -51,8 +51,7 @@ echo "#####################build wasm apps"
 
 cd ${CURR_DIR}
 
-echo "#####################build wasm app timer"
-APP_SRC="${WASM_APPS}/timer/main.c ${APP_LIB_SRC}"
+APP_SRC="${WASM_APPS}/timer/timer.c ${APP_LIB_SRC}"
 emcc -O3 -I${APP_LIBS}/base -I${APP_LIBS}/extension/sensor -I${NATIVE_LIBS} \
      -s WASM=1 -s SIDE_MODULE=1 -s ASSERTIONS=1 -s STACK_OVERFLOW_CHECK=2 \
      -s TOTAL_MEMORY=65536 -s TOTAL_STACK=4096 \
@@ -60,62 +59,39 @@ emcc -O3 -I${APP_LIBS}/base -I${APP_LIBS}/extension/sensor -I${NATIVE_LIBS} \
                              '_on_sensor_event', '_on_timer_callback']" \
      -o ${OUT_DIR}/wasm-apps/timer.wasm ${APP_SRC}
 
-echo "#####################build wasm app request_response/inter-host-wasm"
-APP_SRC="${WASM_APPS}/request_response/inter-host-wasm/main.c ${APP_LIB_SRC}"
+APP_SRC="${WASM_APPS}/request_handler/request_handler.c ${APP_LIB_SRC}"
 emcc -O3 -I${APP_LIBS}/base -I${APP_LIBS}/extension/sensor -I${NATIVE_LIBS} \
      -s WASM=1 -s SIDE_MODULE=1 -s ASSERTIONS=1 -s STACK_OVERFLOW_CHECK=2 \
      -s TOTAL_MEMORY=65536 -s TOTAL_STACK=4096 \
      -s "EXPORTED_FUNCTIONS=['_on_init', '_on_destroy', '_on_request', '_on_response', \
                              '_on_sensor_event', '_on_timer_callback']" \
-     -o ${OUT_DIR}/wasm-apps/req-resp-inter-host-wasm.wasm ${APP_SRC}
+     -o ${OUT_DIR}/wasm-apps/request_handler.wasm ${APP_SRC}
 
-echo "#####################build wasm app request_response/inter-wasm-apps/req"
-APP_SRC="${WASM_APPS}/request_response/inter-wasm-apps/req/main.c ${APP_LIB_SRC}"
+APP_SRC="${WASM_APPS}/request_sender/request_sender.c ${APP_LIB_SRC}"
 emcc -O3 -I${APP_LIBS}/base -I${APP_LIBS}/extension/sensor -I${NATIVE_LIBS} \
      -s WASM=1 -s SIDE_MODULE=1 -s ASSERTIONS=1 -s STACK_OVERFLOW_CHECK=2 \
      -s TOTAL_MEMORY=65536 -s TOTAL_STACK=4096 \
      -s "EXPORTED_FUNCTIONS=['_on_init', '_on_destroy', '_on_request', '_on_response', \
                              '_on_sensor_event', '_on_timer_callback']" \
-     -o ${OUT_DIR}/wasm-apps/req-resp-inter-wasm-apps-req.wasm ${APP_SRC}
+     -o ${OUT_DIR}/wasm-apps/request_sender.wasm ${APP_SRC}
 
-echo "#####################build wasm app request_response/inter-wasm-apps/resp"
-APP_SRC="${WASM_APPS}/request_response/inter-wasm-apps/resp/main.c ${APP_LIB_SRC}"
+APP_SRC="${WASM_APPS}/event_publisher/event_publisher.c ${APP_LIB_SRC}"
 emcc -O3 -I${APP_LIBS}/base -I${APP_LIBS}/extension/sensor -I${NATIVE_LIBS} \
      -s WASM=1 -s SIDE_MODULE=1 -s ASSERTIONS=1 -s STACK_OVERFLOW_CHECK=2 \
      -s TOTAL_MEMORY=65536 -s TOTAL_STACK=4096 \
      -s "EXPORTED_FUNCTIONS=['_on_init', '_on_destroy', '_on_request', '_on_response', \
                              '_on_sensor_event', '_on_timer_callback']" \
-     -o ${OUT_DIR}/wasm-apps/req-resp-inter-wasm-apps-resp.wasm ${APP_SRC}
+     -o ${OUT_DIR}/wasm-apps/event_publisher.wasm ${APP_SRC}
 
-echo "#####################build wasm app event/inter-host-wasm"
-APP_SRC="${WASM_APPS}/event/inter-host-wasm/main.c ${APP_LIB_SRC}"
+APP_SRC="${WASM_APPS}/event_subscriber/event_subscriber.c ${APP_LIB_SRC}"
 emcc -O3 -I${APP_LIBS}/base -I${APP_LIBS}/extension/sensor -I${NATIVE_LIBS} \
      -s WASM=1 -s SIDE_MODULE=1 -s ASSERTIONS=1 -s STACK_OVERFLOW_CHECK=2 \
      -s TOTAL_MEMORY=65536 -s TOTAL_STACK=4096 \
      -s "EXPORTED_FUNCTIONS=['_on_init', '_on_destroy', '_on_request', '_on_response', \
                              '_on_sensor_event', '_on_timer_callback']" \
-     -o ${OUT_DIR}/wasm-apps/event-inter-host-wasm.wasm ${APP_SRC}
+     -o ${OUT_DIR}/wasm-apps/event_subscriber.wasm ${APP_SRC}
 
-echo "#####################build wasm app event/inter-wasm-apps/providers"
-APP_SRC="${WASM_APPS}/event/inter-wasm-apps/providers/main.c ${APP_LIB_SRC}"
-emcc -O3 -I${APP_LIBS}/base -I${APP_LIBS}/extension/sensor -I${NATIVE_LIBS} \
-     -s WASM=1 -s SIDE_MODULE=1 -s ASSERTIONS=1 -s STACK_OVERFLOW_CHECK=2 \
-     -s TOTAL_MEMORY=65536 -s TOTAL_STACK=4096 \
-     -s "EXPORTED_FUNCTIONS=['_on_init', '_on_destroy', '_on_request', '_on_response', \
-                             '_on_sensor_event', '_on_timer_callback']" \
-     -o ${OUT_DIR}/wasm-apps/event-inter-wasm-apps-pub.wasm ${APP_SRC}
-
-echo "#####################build wasm app event/inter-wasm-apps/subscriber"
-APP_SRC="${WASM_APPS}/event/inter-wasm-apps/subscriber/main.c ${APP_LIB_SRC}"
-emcc -O3 -I${APP_LIBS}/base -I${APP_LIBS}/extension/sensor -I${NATIVE_LIBS} \
-     -s WASM=1 -s SIDE_MODULE=1 -s ASSERTIONS=1 -s STACK_OVERFLOW_CHECK=2 \
-     -s TOTAL_MEMORY=65536 -s TOTAL_STACK=4096 \
-     -s "EXPORTED_FUNCTIONS=['_on_init', '_on_destroy', '_on_request', '_on_response', \
-                             '_on_sensor_event', '_on_timer_callback']" \
-     -o ${OUT_DIR}/wasm-apps/event-inter-wasm-apps-sub.wasm ${APP_SRC}
-
-echo "#####################build wasm app sensor"
-APP_SRC="${WASM_APPS}/sensor/main.c ${APP_LIB_SRC}"
+APP_SRC="${WASM_APPS}/sensor/sensor.c ${APP_LIB_SRC}"
 emcc -O3 -I${APP_LIBS}/base -I${APP_LIBS}/extension/sensor -I${NATIVE_LIBS} \
      -s WASM=1 -s SIDE_MODULE=1 -s ASSERTIONS=1 -s STACK_OVERFLOW_CHECK=2 \
      -s TOTAL_MEMORY=65536 -s TOTAL_STACK=4096 \
