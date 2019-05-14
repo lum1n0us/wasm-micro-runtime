@@ -24,6 +24,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <termios.h>
+#include <fcntl.h>
 
 #include "transport.h"
 
@@ -51,15 +53,101 @@ bool tcp_init(const char *address, uint16_t port, int *fd)
     return true;
 }
 
-bool uart_init(const char *conn_str, int *fd)
+int parse_baudrate(int baud)
 {
-    return false;
+    switch (baud) {
+        case 9600:
+            return B9600;
+        case 19200:
+            return B19200;
+        case 38400:
+            return B38400;
+        case 57600:
+            return B57600;
+        case 115200:
+            return B115200;
+        case 230400:
+            return B230400;
+        case 460800:
+            return B460800;
+        case 500000:
+            return B500000;
+        case 576000:
+            return B576000;
+        case 921600:
+            return B921600;
+        case 1000000:
+            return B1000000;
+        case 1152000:
+            return B1152000;
+        case 1500000:
+            return B1500000;
+        case 2000000:
+            return B2000000;
+        case 2500000:
+            return B2500000;
+        case 3000000:
+            return B3000000;
+        case 3500000:
+            return B3500000;
+        case 4000000:
+            return B4000000;
+        default:
+            return -1;
+    }
+}
+
+bool uart_init(const char *device, int baudrate, int *fd)
+{
+    int uart_fd;
+    struct termios uart_term;
+
+    uart_fd = open(device, O_RDWR | O_NOCTTY);
+
+    if (uart_fd <= 0)
+        return false;
+
+    memset(&uart_term, 0, sizeof(uart_term));
+    uart_term.c_cflag = baudrate | CS8 | CLOCAL | CREAD;
+    uart_term.c_iflag = IGNPAR;
+    uart_term.c_oflag = 0;
+
+    /* set noncanonical mode */
+    uart_term.c_lflag = 0;
+    uart_term.c_cc[VTIME] = 30;
+    uart_term.c_cc[VMIN] = 1;
+    tcflush(uart_fd, TCIFLUSH);
+
+    if (tcsetattr(uart_fd, TCSANOW, &uart_term) != 0) {
+        close(uart_fd);
+        return false;
+    }
+
+    *fd = uart_fd;
+
+    return true;
 }
 
 bool udp_send(const char *address, int port, const char *buf, int len)
 {
-    //TODO;
-    return false;
+    int sockfd;
+    struct sockaddr_in servaddr;
+
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 )
+        return false;
+
+    memset(&servaddr, 0, sizeof(servaddr));
+
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(port);
+    servaddr.sin_addr.s_addr = INADDR_ANY;
+
+    sendto(sockfd, buf, len, MSG_CONFIRM, (const struct sockaddr *) &servaddr,
+        sizeof(servaddr));
+
+    close(sockfd);
+
+    return true;
 }
 
 bool host_tool_send_data(int fd, const char *buf, unsigned int len)
@@ -71,7 +159,7 @@ bool host_tool_send_data(int fd, const char *buf, unsigned int len)
         return false;
     }
 
-    resend: ret = send(fd, buf, len, 0);
+    resend: ret = write(fd, buf, len);
 
     if (ret == -1) {
         if (errno == ECONNRESET) {

@@ -1,9 +1,17 @@
+
+#ifndef CONNECTION_UART
 #include <netdb.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
+#else
+#include <termios.h>
+#endif
+
+#include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <signal.h>
 
@@ -20,16 +28,29 @@
 #include "module_wasm_app.h"
 #include "wasm-export.h"
 #define MAX 2048
-#define PORT 8888
+
+#ifndef CONNECTION_UART
 #define SA struct sockaddr
+static char *host_address = "127.0.0.1";
+static port = 8888;
+#else
+static char *uart_device = "/dev/ttyS2";
+static int baudrate = B115200;
+#endif
 
 extern void * thread_timer_check(void *);
 extern void init_sensor_framework();
+
+#ifndef CONNECTION_UART
 int listenfd = -1;
 int sockfd = -1;
-
-static bool server_mode = false;
 static pthread_mutex_t sock_lock = PTHREAD_MUTEX_INITIALIZER;
+#else
+int uartfd = -1;
+#endif
+
+#ifndef CONNECTION_UART
+static bool server_mode = false;
 
 // Function designed for chat between client and server.
 void* func(void* arg)
@@ -52,8 +73,8 @@ void* func(void* arg)
         bzero(&servaddr, sizeof(servaddr));
         // assign IP, PORT
         servaddr.sin_family = AF_INET;
-        servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-        servaddr.sin_port = htons(PORT);
+        servaddr.sin_addr.s_addr = inet_addr(host_address);
+        servaddr.sin_port = htons(port);
 
         // connect the client socket to server socket
         if (connect(sockfd, (SA*) &servaddr, sizeof(servaddr)) != 0) {
@@ -131,7 +152,7 @@ host_interface interface = { .init = host_init, .recv = host_recv, .send =
 
 void* func_server_mode(void* arg)
 {
-    int newsockfd, portno, clilent;
+    int newsockfd, clilent;
     struct sockaddr_in serv_addr, cli_addr;
     int n, pid;
     char buff[MAX];
@@ -150,11 +171,10 @@ void* func_server_mode(void* arg)
 
     /* Initialize socket structure */
     bzero((char *) &serv_addr, sizeof(serv_addr));
-    portno = 8866;
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(portno);
+    serv_addr.sin_port = htons(port);
 
     /* Now bind the host address using bind() call.*/
     if (bind(listenfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
@@ -203,13 +223,208 @@ void* func_server_mode(void* arg)
     }
 }
 
+#else
+static int parse_baudrate(int baud)
+{
+    switch (baud) {
+        case 9600:
+            return B9600;
+        case 19200:
+            return B19200;
+        case 38400:
+            return B38400;
+        case 57600:
+            return B57600;
+        case 115200:
+            return B115200;
+        case 230400:
+            return B230400;
+        case 460800:
+            return B460800;
+        case 500000:
+            return B500000;
+        case 576000:
+            return B576000;
+        case 921600:
+            return B921600;
+        case 1000000:
+            return B1000000;
+        case 1152000:
+            return B1152000;
+        case 1500000:
+            return B1500000;
+        case 2000000:
+            return B2000000;
+        case 2500000:
+            return B2500000;
+        case 3000000:
+            return B3000000;
+        case 3500000:
+            return B3500000;
+        case 4000000:
+            return B4000000;
+        default:
+            return -1;
+    }
+}
+static bool uart_init(const char *device, int baudrate, int *fd)
+{
+    int uart_fd;
+    struct termios uart_term;
+
+    uart_fd = open(device, O_RDWR | O_NOCTTY);
+
+    if (uart_fd <= 0)
+        return false;
+
+    memset(&uart_term, 0, sizeof(uart_term));
+    uart_term.c_cflag = baudrate | CS8 | CLOCAL | CREAD;
+    uart_term.c_iflag = IGNPAR;
+    uart_term.c_oflag = 0;
+
+    /* set noncanonical mode */
+    uart_term.c_lflag = 0;
+    uart_term.c_cc[VTIME] = 30;
+    uart_term.c_cc[VMIN] = 1;
+    tcflush(uart_fd, TCIFLUSH);
+
+    if (tcsetattr(uart_fd, TCSANOW, &uart_term) != 0) {
+        close(uart_fd);
+        return false;
+    }
+
+    *fd = uart_fd;
+
+    return true;
+}
+
+static void *func_uart_mode(void *arg)
+{
+    int n;
+    char buff[MAX];
+
+    if (!uart_init(uart_device, baudrate, &uartfd)) {
+        printf("open uart fail! %s\n", uart_device);
+        return NULL;
+    }
+
+    for (;;) {
+        bzero(buff, MAX);
+
+        n = read(uartfd, buff, sizeof(buff));
+
+        if (n <= 0) {
+            close(uartfd);
+            uartfd = -1;
+            break;
+        }
+
+        aee_host_msg_callback(buff, n);
+    }
+
+    return NULL;
+}
+
+static int uart_send(void * ctx, const char *buf, int size)
+{
+    int ret;
+
+    ret = write(uartfd, buf, size);
+
+    return ret;
+}
+
+static void uart_destroy()
+{
+    close(uartfd);
+}
+
+static host_interface interface = { .send = uart_send, .destroy = uart_destroy };
+
+#endif
+
 static char global_heap_buf[512 * 1024] = { 0 };
+
+static void showUsage()
+{
+#ifndef CONNECTION_UART
+     printf("Usage:\n");
+     printf("Work as server mode:\n\n");
+     printf("\tsimple -s|--server_mode -p|--port <Port>\n\n");
+     printf("Work as client mode:\n\n");
+     printf("\tsimple -a|--host_address <Host Address> -p|--port <Port>\n\n");
+#else
+     printf("Usage:\n");
+     printf("\tsimple -u <Uart Device> -b <Baudrate>\n\n");
+#endif
+}
+
+static bool parse_args(int argc, char *argv[])
+{
+    int c;
+
+    while (1) {
+        int optIndex = 0;
+        static struct option longOpts[] = { 
+#ifndef CONNECTION_UART
+            { "server_mode",    no_argument,       NULL, 's' },
+            { "host_address",   required_argument, NULL, 'a' },
+            { "port",           required_argument, NULL, 'p' },
+#else
+            { "uart",           required_argument, NULL, 'u' },
+            { "baudrate",       required_argument, NULL, 'b' },
+#endif
+            { "help",           required_argument, NULL, 'h' },
+            { 0, 0, 0, 0 } 
+        };
+
+        c = getopt_long(argc, argv, "sa:p:u:b:h", longOpts, &optIndex);
+        if (c == -1)
+            break;
+
+        switch (c) {
+#ifndef CONNECTION_UART
+            case 's':
+                server_mode = true;
+                break;
+            case 'a':
+                host_address = optarg;
+                printf("host address: %s\n", host_address);
+                break;
+            case 'p':
+                port = atoi(optarg);
+                printf("port: %d\n", port);
+                break;
+#else
+            case 'u':
+                uart_device = optarg;
+                printf("uart device: %s\n", uart_device);
+                break;
+            case 'b':
+                baudrate = parse_baudrate(atoi(optarg));
+                printf("uart baudrate: %s\n", optarg);
+                break;
+#endif
+            case 'h':
+                showUsage();
+                return false;
+            default:
+                showUsage();
+                return false;
+        }
+    }
+
+    return true;
+}
 
 // Driver function
 int iwasm_main(int argc, char *argv[])
 {
     korp_thread tid, tm_tid;
     timer_ctx_t timer_ctx;
+
+    if (!parse_args(argc, argv))
+        return -1;
 
     if (bh_memory_init_with_pool(global_heap_buf, sizeof(global_heap_buf))
             != 0) {
@@ -221,19 +436,21 @@ int iwasm_main(int argc, char *argv[])
         goto fail1;
     }
 
-    if (argc == 2 && strcmp(argv[1], "-s") == 0)
-        server_mode = true;
-
     init_sensor_framework();
 
     // timer manager
     init_wasm_timer();
 
+#ifndef CONNECTION_UART
     if (server_mode)
         vm_thread_create(&tid, func_server_mode, NULL,
         BH_APPLET_PRESERVED_STACK_SIZE);
     else
         vm_thread_create(&tid, func, NULL, BH_APPLET_PRESERVED_STACK_SIZE);
+#else
+    vm_thread_create(&tid, func_uart_mode, NULL, BH_APPLET_PRESERVED_STACK_SIZE);
+#endif
+
     // TODO:
     app_manager_startup(&interface);
 

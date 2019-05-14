@@ -68,6 +68,8 @@ include (${SHARED_DIR}/coap/lib_coap.cmake)
 
 include_directories(${SHARED_DIR}/include)
 
+#Note: uncomment below line to use UART mode
+#add_definitions (-DCONNECTION_UART)
 add_definitions (-DWASM_ENABLE_BASE_LIB)
 add_definitions (-Dattr_container_malloc=bh_malloc)
 add_definitions (-Dattr_container_free=bh_free)
