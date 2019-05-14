@@ -37,8 +37,8 @@ bool host_tool_send_data(int fd, const char *buf, unsigned int len);
 int on_imrt_link_byte_arrive(unsigned char ch, imrt_link_recv_context_t *ctx);
 
 bool tcp_init(const char *address, uint16_t port, int *fd);
-bool uart_init(const char *conn_str, int *fd);
-
+bool uart_init(const char *device, int baudrate, int *fd);
+int parse_baudrate(int baud);
 bool udp_send(const char *address, int port, const char *buf, int len);
 
 #endif /* DEPS_APP_MGR_HOST_TOOL_SRC_TRANSPORT_H_ */

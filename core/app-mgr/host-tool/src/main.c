@@ -19,6 +19,7 @@
 #include <string.h>
 #include <errno.h>
 #include <getopt.h>
+#include <termios.h>
 
 #include "host_tool_utils.h"
 #include "shared_utils.h"
@@ -35,6 +36,9 @@
 #define URL_MAX_LEN 256
 #define DEFAULT_TIMEOUT_MS 5000
 #define DEFAULT_ALIVE_TIME_MS 0
+
+#define CONNECTION_MODE_TCP 1
+#define CONNECTION_MODE_UART 2
 
 typedef enum {
     INSTALL, UNINSTALL, QUERY, REQUEST, REGISTER, UNREGISTER
@@ -101,6 +105,11 @@ static uint32_t g_alive_time_ms = DEFAULT_ALIVE_TIME_MS;
 static char *g_redirect_file_name = NULL;
 static int g_redirect_udp_port = -1;
 static int g_conn_fd; /* may be tcp or uart */
+static char *g_server_addr = "127.0.0.1";
+static int g_server_port = 8888;
+static char *g_uart_dev = "/dev/ttyS2";
+static int g_baudrate = B115200;
+static int g_connection_mode = CONNECTION_MODE_TCP;
 
 extern int g_mid;
 extern unsigned char leading[2];
@@ -291,24 +300,9 @@ static int request(req_info *info)
     fail: return ret;
 }
 
-#if 0
-int main ()
-{
-    char str[] ="1,2,3,4,5";
-    char *pt;
-    pt = strtok (str,",");
-    while (pt != NULL) {
-        int a = atoi(pt);
-        printf("%d\n", a);
-        pt = strtok (NULL, ",");
-    }
-    return 0;
-}
-#endif
-
 /*
  TODO: currently only support 1 url.
- TODO: how to set process's exit code for multiple urls
+ how to handle multiple responses and set process's exit code?
  */
 static int subscribe(reg_info *info)
 {
@@ -379,21 +373,21 @@ static int unsubscribe(unreg_info *info)
 
 static int init()
 {
-#if 1
-    int fd;
-    /* TODO: parse option '--connection=tcp,127.0.0.1,8866' from argv */
-    if (!tcp_init("127.0.0.1", 8866, &fd))
-        return -1;
-    g_conn_fd = fd;
-    return 0;
-#else
-    int fd;
-    /* TODO: parse option '--connection=uart,/dev/ttyS0,115200,8,n,1' from argv */
-    if (!uart_init("/dev/ttyS0,115200,8,n,1", &fd))
+    if (g_connection_mode == CONNECTION_MODE_TCP) {
+        int fd;
+        if (!tcp_init(g_server_addr, g_server_port, &fd))
+            return -1;
+        g_conn_fd = fd;
+        return 0;
+    } else if (g_connection_mode == CONNECTION_MODE_UART) {
+        int fd;
+        if (!uart_init(g_uart_dev, g_baudrate, &fd))
+            return -1;
+        g_conn_fd = fd;
+        return 0;
+    }
+
     return -1;
-    g_conn_fd = fd;
-    return 0;
-#endif
 }
 
 static void deinit()
@@ -451,6 +445,11 @@ static void showUsage()
     printf("\n");
 
     printf("\n\tControl Options:\n");
+    printf(" \t-S <Address>|--address=<Address>          Set server address, default to 127.0.0.1\n");
+    printf(" \t-P <Port>|--port=<Port>                   Set server port, default to 8888\n");
+    printf(" \t-D <Device>|--uart=<Device>               Set uart device, default to /dev/ttyS2\n");
+    printf(" \t-B <Baudrate>|--baudrate=<Baudrate>       Set uart device baudrate, default to 115200\n");
+
     printf(
             "\t-t <timeout>|--timeout=<timeout>          Operation timeout in ms, default to 5000\n");
     printf(
@@ -501,26 +500,38 @@ static bool parse_args(int argc, char *argv[], operation *op)
 {
     int c;
     bool operation_parsed = false;
+    bool conn_mode_parsed = false;
 
     while (1) {
         int optIndex = 0;
-        static struct option longOpts[] = { { "install", required_argument,
-        NULL, 'i' }, { "uninstall", required_argument, NULL, 'u' }, { "query",
-                optional_argument, NULL, 'q' }, { "request", required_argument,
-                NULL, 'r' }, { "register", required_argument,
-        NULL, 's' }, { "deregister", required_argument, NULL, 'd' }, {
-                "timeout", required_argument, NULL, 't' }, { "alive",
-                required_argument, NULL, 'a' }, { "output", required_argument,
-        NULL, 'o' }, { "udp", required_argument, NULL, 'U' }, { "action",
-                required_argument, NULL, 'A' }, { "file", required_argument,
-                NULL, 'f' }, { "payload", required_argument,
-        NULL, 'p' }, { "type", required_argument, NULL, 0 }, { "heap",
-                required_argument, NULL, 1 }, { "timers", required_argument,
-        NULL, 2 }, { "watchdog", required_argument, NULL, 3 }, { "help",
-                required_argument, NULL, 'h' }, { 0, 0, 0, 0 } };
+        static struct option longOpts[] = {
+            { "install",    required_argument, NULL, 'i' },
+            { "uninstall",  required_argument, NULL, 'u' },
+            { "query",      optional_argument, NULL, 'q' },
+            { "request",    required_argument, NULL, 'r' },
+            { "register",   required_argument, NULL, 's' },
+            { "deregister", required_argument, NULL, 'd' },
+            { "timeout",    required_argument, NULL, 't' },
+            { "alive",      required_argument, NULL, 'a' },
+            { "output",     required_argument, NULL, 'o' },
+            { "udp",        required_argument, NULL, 'U' },
+            { "action",     required_argument, NULL, 'A' },
+            { "file",       required_argument, NULL, 'f' },
+            { "payload",    required_argument, NULL, 'p' },
+            { "type",       required_argument, NULL, 0 },
+            { "heap",       required_argument, NULL, 1 },
+            { "timers",     required_argument, NULL, 2 },
+            { "watchdog",   required_argument, NULL, 3 },
+            { "address",    required_argument, NULL, 'S' },
+            { "port",       required_argument, NULL, 'P' },
+            { "uart_device",required_argument, NULL, 'D' },
+            { "baudrate",   required_argument, NULL, 'B' },
+            { "help",       required_argument, NULL, 'h' },
+            { 0, 0, 0, 0 }
+        };
 
-        c = getopt_long(argc, argv, "i:u:q::r:s:d:t:a:o:U:A:f:p:h", longOpts,
-                &optIndex);
+        c = getopt_long(argc, argv, "i:u:q::r:s:d:t:a:o:U:A:f:p:S:P:D:B:h",
+                longOpts, &optIndex);
         if (c == -1)
             break;
 
@@ -608,6 +619,30 @@ static bool parse_args(int argc, char *argv[], operation *op)
             CHECK_ARGS_UNMATCH_OPERATION(INSTALL);
             op->info.inst.watchdog_interval = atoi(optarg);
             break;
+        case 'S':
+            if (conn_mode_parsed) {
+                showUsage();
+                return false;
+            }
+            g_connection_mode = CONNECTION_MODE_TCP;
+            g_server_addr = optarg;
+            conn_mode_parsed = true;
+            break;
+        case 'P':
+            g_server_port = atoi(optarg);
+            break;
+        case 'D':
+            if (conn_mode_parsed) {
+                showUsage();
+                return false;
+            }
+            g_connection_mode = CONNECTION_MODE_UART;
+            g_uart_dev = optarg;
+            conn_mode_parsed = true;
+            break;
+        case 'B':
+            g_baudrate = parse_baudrate(atoi(optarg));
+            break;
         case 'h':
             showUsage();
             return false;
@@ -621,30 +656,25 @@ static bool parse_args(int argc, char *argv[], operation *op)
     switch (op->type) {
     case INSTALL:
         if (NULL == op->info.inst.file || NULL == op->info.inst.name)
-            ERROR_RETURN
-            ;
+            ERROR_RETURN;
         break;
     case UNINSTALL:
         if (NULL == op->info.uinst.name)
-            ERROR_RETURN
-            ;
+            ERROR_RETURN;
         break;
     case QUERY:
         break;
     case REQUEST:
         if (NULL == op->info.req.url || op->info.req.action <= 0)
-            ERROR_RETURN
-            ;
+            ERROR_RETURN;
         break;
     case REGISTER:
         if (NULL == op->info.reg.urls)
-            ERROR_RETURN
-            ;
+            ERROR_RETURN;
         break;
     case UNREGISTER:
         if (NULL == op->info.unreg.urls)
-            ERROR_RETURN
-            ;
+            ERROR_RETURN;
         break;
     default:
         return false;
@@ -851,7 +881,7 @@ int main(int argc, char *argv[])
             if (FD_ISSET(g_conn_fd, &readfds)) {
                 int reply_type = -1;
 
-                n = recv(g_conn_fd, buffer, BUF_SIZE, 0);
+                n = read(g_conn_fd, buffer, BUF_SIZE);
                 if (n <= 0) {
                     g_conn_fd = -1;
                     continue;
