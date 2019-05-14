@@ -168,9 +168,7 @@ extern void display_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
         const lv_color_t * color_p);
 static void hal_init(void)
 {
-    /* Add a display
-     * Use the 'monitor' driver which creates window on PC's monitor to simulate a display*/
-//    display_init();
+    /* Add a display*/
     lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv); /*Basic initialization*/
     disp_drv.disp_flush = display_flush_wrapper; /*Used when `LV_VDB_SIZE != 0` in lv_conf.h (buffered drawing)*/

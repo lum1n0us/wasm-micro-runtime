@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.8)
 
-project (simple)
+project (littlevgl)
 
 set (TARGET_PLATFORM "linux")
 
@@ -44,9 +44,9 @@ set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections -Wall -Wno-unused-parameter -Wno-pedantic")
 
 set(REPO_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/../..)
-set(WASM_DIR  ${REPO_ROOT_DIR}/wamr/core/iwasm)
-set(APP_MGR_DIR ${REPO_ROOT_DIR}/wamr/core/app-mgr)
-set(SHARED_DIR ${REPO_ROOT_DIR}/wamr/core/shared-lib)
+set(WASM_DIR  ${REPO_ROOT_DIR}/core/iwasm)
+set(APP_MGR_DIR ${REPO_ROOT_DIR}/core/app-mgr)
+set(SHARED_DIR ${REPO_ROOT_DIR}/core/shared-lib)
 
 
 enable_language (ASM)
@@ -87,7 +87,7 @@ add_library (vmlib
              ${NATIVE_INTERFACE_SOURCE}
             )
 
-add_executable (simple src/main.c src/iwasm_main.c src/ext-lib-export.c src/platform/${TARGET_PLATFORM}/display_indev.c src/platform/${TARGET_PLATFORM}/mouse.c)
+add_executable (littlevgl src/main.c src/iwasm_main.c src/ext-lib-export.c src/platform/${TARGET_PLATFORM}/display_indev.c src/platform/${TARGET_PLATFORM}/mouse.c)
 
-target_link_libraries (simple vmlib -lm -ldl -lpthread -lSDL2)
+target_link_libraries (littlevgl vmlib -lm -ldl -lpthread -lSDL2)
 

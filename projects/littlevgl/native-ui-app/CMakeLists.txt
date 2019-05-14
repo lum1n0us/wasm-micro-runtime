@@ -17,7 +17,7 @@ message ("ui_app...")
 project (ui_app)
 
 
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -DLV_CONF_INCLUDE_SIMPLE -DPLATFORM_NATIVE_LINUX -DUSE_MONITOR")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -DLV_CONF_INCLUDE_SIMPLE -DPLATFORM_NATIVE_LINUX -DUSE_MONITOR -DUSE_MOUSE=1")
 
 include(FetchContent)
 
@@ -132,29 +132,14 @@ SET (LVGL_SOURCES
     ${LVGL_SOURCE_DIR}/lv_themes/lv_theme_zen.c
 
     ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_builtin.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_dejavu_10.c
     ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_dejavu_20.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_dejavu_30.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_dejavu_40.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_dejavu_10_cyrillic.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_dejavu_20_cyrillic.c
-#   ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_dejavu_30_cyrillic.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_dejavu_40_cyrillic.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_dejavu_10_latin_sup.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_dejavu_20_latin_sup.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_dejavu_30_latin_sup.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_dejavu_40_latin_sup.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_symbol_10.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_symbol_20.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_symbol_30.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_symbol_40.c
-#    ${LVGL_SOURCE_DIR}/lv_fonts/lv_font_monospace_8.c
     ${LVGL_DRIVER_DIR}/linux_display_indev.c
+    ${LVGL_DRIVER_DIR}/indev/mouse.c
 
 )
 SET(SOURCES
     ${LVGL_SOURCES}
-    ./src/main.c
+    ../wasm-apps/src/main.c
     )
 include_directories(
     ${ep_base}/Source
@@ -162,7 +147,7 @@ include_directories(
     ${LVGL_DRIVER_DIR}/display
     ${LVGL_SOURCE_DIR}
     ${CMAKE_CURRENT_LIST_DIR}
-    ${CMAKE_CURRENT_LIST_DIR}/src
+    ${CMAKE_CURRENT_LIST_DIR}/../wasm-apps/src/
 )
 add_executable(ui_app ${SOURCES} )
 

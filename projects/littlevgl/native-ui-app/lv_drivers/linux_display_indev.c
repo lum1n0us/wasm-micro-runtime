@@ -49,7 +49,7 @@ void display_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
 
 bool display_input_read(lv_indev_data_t * data)
 {
-    return true;
+    return mouse_read(data);
 }
 
 void display_deinit(void)
@@ -232,7 +232,9 @@ void monitor_sdl_refr_core(void)
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-
+#if USE_MOUSE != 0
+        mouse_handler(&event);
+#endif
         if ((&event)->type == SDL_WINDOWEVENT) {
             switch ((&event)->window.event) {
 #if SDL_VERSION_ATLEAST(2, 0, 5)
