@@ -88,11 +88,8 @@ git clone https://github.com/emscripten-core/emsdk.git
 emsdk install latest
 emsdk activate latest
 ```
-
 add ```./emsdk_env.sh``` into the path to ease future use, or source it everytime.
 The Emscripten website provides other installation methods beyond Linux.
-
-(TODO) The user should copy the app-libs folder into project and include and build.
 
 You can write a simple ```test.c``` as the first sample.
 ``` C
@@ -101,23 +98,23 @@ You can write a simple ```test.c``` as the first sample.
 
 int main(int argc, char **argv)
 {
-  char *buf;
+    char *buf;
 
-  printf("Hello world!\n");
+    printf("Hello world!\n");
 
-  buf = malloc(1024);
-  if (!buf) {
-    printf("malloc buf failed\n");
-    return -1;
-  }
+    buf = malloc(1024);
+    if (!buf) {
+        printf("malloc buf failed\n");
+        return -1;
+    }
 
-  printf("buf ptr: %p\n", buf);
+    printf("buf ptr: %p\n", buf);
 
-  sprintf(buf, "%s", "1234\n");
-  printf("buf: %s", buf);
+    sprintf(buf, "%s", "1234\n");
+    printf("buf: %s", buf);
 
-  free(buf);
-  return 0;
+    free(buf);
+    return 0;
 }
 ```
 Use the emcc command below to build the WASM C source code into the WASM binary.
@@ -152,26 +149,38 @@ WAMR can be built into a standalone executable which takes the WASM application 
 <img src="./doc/pics/embed.PNG" width="60%" height="60%">
 
 
-A typical WAMR API usage is shown below:
+A typical WAMR API usage is shown below (some return values checking are ignored):
 ``` C
+  static char global_heap_buf[512 * 1024];
+
+  char *buffer;
   wasm_module_t module;
   wasm_module_inst_t inst;
   wasm_function_inst_t func;
   wasm_exec_env_t env;
+  uint32 argv[2];
+
+  bh_memory_init_with_pool(global_heap_buf, sizeof(global_heap_buf));
   wasm_runtime_init();
+
+  buffer = read_wasm_binary_to_buffer(…);
   module = wasm_runtime_load(buffer, size, err, err_size);
-  inst = wasm_runtime_instantiate(module, 0, err, err_size);
-  func = wasm_runtime_lookup_function(inst, "fib", "(i32i32");
+  inst = wasm_runtime_instantiate(module, 0, 0, err, err_size);
+  func = wasm_runtime_lookup_function(inst, "fib", "(i32)i32");
   env = wasm_runtime_create_exec_env(stack_size);
 
+  argv[0] = 8;
   if (!wasm_runtime_call_wasm(inst, env, func, 1, argv_buf) ) {
-          wasm_runtime_clear_exception(inst);
-    }
+      wasm_runtime_clear_exception(inst);
+  }
+  /* the return value is stored in argv[0] */
+  printf(“fib function return: %d\n”, argv[0]);
 
   wasm_runtime_destory_exec_env(env);
   wasm_runtime_deinstantiate(inst);
   wasm_runtime_unload(module);
   wasm_runtime_destroy();
+  bh_memory_destroy();
 ```
 
 
@@ -256,14 +265,14 @@ The basic working flow for WASM application calling into the native API is shown
 WAMR provides the macro `EXPORT_WASM_API` to enable users to export a native API to a WASM application. WAMR has implemented a base API for the timer and messaging by using `EXPORT_WASM_API`. This can be a point of reference for extending your own library.
 ``` C
 static NativeSymbol extended_native_symbol_defs[] = {
-  EXPORT_WASM_API(wasm_register_resource),
-  EXPORT_WASM_API(wasm_response_send),
-  EXPORT_WASM_API(wasm_post_request),
-  EXPORT_WASM_API(wasm_sub_event),
-  EXPORT_WASM_API(wasm_create_timer),
-  EXPORT_WASM_API(wasm_timer_set_interval),
-  EXPORT_WASM_API(wasm_timer_cancel),
-  EXPORT_WASM_API(wasm_timer_restart)
+    EXPORT_WASM_API(wasm_register_resource),
+    EXPORT_WASM_API(wasm_response_send),
+    EXPORT_WASM_API(wasm_post_request),
+    EXPORT_WASM_API(wasm_sub_event),
+    EXPORT_WASM_API(wasm_create_timer),
+    EXPORT_WASM_API(wasm_timer_set_interval),
+    EXPORT_WASM_API(wasm_timer_cancel),
+    EXPORT_WASM_API(wasm_timer_restart)
 };
 ```
 
@@ -334,7 +343,7 @@ void customized();
 
 static NativeSymbol extended_native_symbol_defs[] =
 {
-  EXPORT_WASM_API(customized)
+    EXPORT_WASM_API(customized)
 };
 
 #include "ext-lib-export.h"
@@ -348,16 +357,118 @@ In the application source project, it will include the WAMR built-in APIs header
 
 int main(int argc, char **argv)
 {
-  int I;
-  char *buf = “abcd”;
-  customized();                   // customized API provided by the platform vendor
-  return i;
+    int I;
+    char *buf = “abcd”;
+    customized();                   // customized API provided by the platform vendor
+    return i;
 }
 ```
 
-Future Goals
+Application manager
 ========================
-The application manager and related code samples like inter-application communication, application life cycle management, 2D graphic demo and more ...
+The application manager is the component to manage WASM application lifecyle such as installation, uninstallation, query. It also enables the messaging between host and WASM applications, or inter-WASM applications.
+
+
+Programming models
+=========================
+WAMR supports two typical programming models, the microservice model and the pub/sub model. 
+
+
+Microservice model
+-------------------------
+The microservice model is also known for request and response model. One WASM application acts as the server which provides a specific service. Other WASM applications or host/cloud applications request that service and get the response.
+<img src="./docs/pics/request.PNG" width="60%" height="60%">
+
+Below is the reference implementation of the server application. It provides the room temperature measurement service.
+
+``` C
+void on_init()
+{
+    /* register resource uri */
+    init_resource_register();
+    api_register_resource_handler("/room_temp", room_temp_handler);
+}
+
+void on_destroy() 
+{
+}
+
+void room_temp_handler(request_t *request)
+{
+    response_t response[1];
+    attr_container_t *payload;
+    payload = attr_container_create("room_temp payload");
+    if (payload == NULL)
+        return;
+
+    attr_container_set_string(&payload, "temp unit", "centigrade");
+    attr_container_set_int(&payload, "value", 26);
+
+    make_response_for_request(request, response);
+    set_response(response,
+                 CONTENT_2_05,
+                 FMT_ATTR_CONTAINER,
+                 payload,
+                 attr_container_get_serialize_length(payload));
+
+    api_response_send(response);
+    attr_container_destroy(payload);
+}
+```
+
+
+Pub/sub model
+-------------------------
+One WASM application acts as the event publisher. It publish events to notify WASM applications or host/cloud applications which subscribe the events.
+<img src="./docs/pics/sub.PNG" width="60%" height="60%">
+
+Below is the reference implementation of the pub applicaiton. It utilizes a timer to repeatly publish an overheat alert event to the subcriber applications. Then the subscriber applications receive the events immediately.
+
+``` C
+void on_init(
+{
+    api_subscribe_event ("alert/overheat", overheat_handler);
+}
+
+void on_destroy()
+{
+}
+
+void overheat_handler(request_t *event
+{
+    printf(“Event: %s\n", event->url);
+}
+
+/* Timer callback */
+void timer_update(user_timer_t timer
+{
+    attr_container_t *event;
+    printf("Timer update %d\n", num++);
+
+    event = attr_container_create("event");
+    attr_container_set_string(&event,
+                             "warning",
+                             "temperature is over high");
+
+    api_publish_event("alert/overheat",
+                     FMT_ATTR_CONTAINER,
+                     event,
+                     attr_container_get_serialize_length(event));
+
+    attr_container_destroy(event);
+}
+
+void on_init()
+{
+    user_timer_t timer;
+    timer = api_timer_create(1000, true, true, timer_update);
+}
+```
+
+Samples and Demos
+=========================
+Please refer to the ```projects/simple``` folder for samples of WASM application life cyle management and programming models.
+Please refer to the ```projects/littlevgl``` folder for the 2D UI WASM app. The app is built on top of the littleVGL 2D library and runs on Linux PC or STM board with Zephyr OS.
 
 Submit issues and request
 =========================
