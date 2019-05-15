@@ -87,7 +87,7 @@ add_library (vmlib
              ${NATIVE_INTERFACE_SOURCE}
             )
 
-add_executable (vgl_wasm_runtime src/main.c src/iwasm_main.c src/ext-lib-export.c src/platform/${TARGET_PLATFORM}/display_indev.c src/platform/${TARGET_PLATFORM}/mouse.c)
+add_executable (vgl_wasm_runtime src/platform/${TARGET_PLATFORM}/main.c src/platform/${TARGET_PLATFORM}/iwasm_main.c src/ext-lib-export.c src/platform/${TARGET_PLATFORM}/display_indev.c src/platform/${TARGET_PLATFORM}/mouse.c)
 
 target_link_libraries (vgl_wasm_runtime vmlib -lm -ldl -lpthread -lSDL2)
 

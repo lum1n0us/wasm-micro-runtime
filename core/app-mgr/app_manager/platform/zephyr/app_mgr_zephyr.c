@@ -4,8 +4,9 @@
 #include <autoconf.h>
 #include <zephyr.h>
 #include <kernel.h>
+#if 0
 #include <sigverify.h>
-
+#endif
 typedef struct k_timer_watchdog {
     struct k_timer timer;
     watchdog_timer *wd_timer;
@@ -46,9 +47,10 @@ app_manager_get_wd_timer_from_timer_handle(void *timer)
 {
     return ((k_timer_watchdog*) timer)->wd_timer;
 }
-
+#if 0
 int app_manager_signature_verify(const uint8_t *file, unsigned int file_len,
         const uint8_t *signature, unsigned int sig_size)
 {
     return signature_verify(file, file_len, signature, sig_size);
 }
+#endif
