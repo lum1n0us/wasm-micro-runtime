@@ -238,7 +238,7 @@ response_t * clone_response(response_t * response)
 response_t * set_response(response_t * response, int status, int fmt,
         const char *payload, int payload_len)
 {
-    response->payload = payload;
+    response->payload = (void *)payload;
     response->payload_len = payload_len;
     response->status = status;
     response->fmt = fmt;
@@ -384,11 +384,9 @@ char * find_key_value(char * buffer, int buffer_len, char * key, char * value,
         int value_len, char delimiter)
 {
     char * p = buffer;
-    int i = 0;
     int remaining = buffer_len;
     int key_len = strlen(key);
 
-    char * item_start = p;
     while (*p != 0 && remaining > 0) {
         while (*p == ' ' || *p == delimiter) {
             p++;

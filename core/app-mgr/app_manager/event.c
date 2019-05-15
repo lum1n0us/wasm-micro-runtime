@@ -36,7 +36,7 @@ typedef struct _event {
 
 event_reg_t *g_events = NULL;
 
-static bool find_subscruber(event_reg_t * reg, uint32 id, bool remove_found)
+static bool find_subscriber(event_reg_t * reg, uint32 id, bool remove_found)
 {
     subscribe_t* c = reg->subscribers;
     subscribe_t * prev = NULL;
@@ -102,7 +102,7 @@ bool am_register_event(const char *url, uint32_t reg_client)
         g_events = current;
     }
 
-    if (find_subscruber(current, reg_client, false)) {
+    if (find_subscriber(current, reg_client, false)) {
         return true;
     } else {
         subscribe_t * s = (subscribe_t*) bh_malloc(sizeof(subscribe_t));
@@ -130,7 +130,7 @@ bool am_unregister_event(const char *url, uint32_t reg_client)
     while (current != NULL) {
         if (url == NULL || strcmp(current->url, url) == 0) {
             event_reg_t * next = current->next;
-            if (find_subscruber(current, reg_client, true)) {
+            if (find_subscriber(current, reg_client, true)) {
                 app_manager_printf("client: %d deregistered event (%s)\n",
                         reg_client, current->url);
             }

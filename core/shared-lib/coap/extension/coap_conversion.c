@@ -88,7 +88,7 @@ int convert_coap_packet_to_request(coap_packet_t *packet, request_t *request)
     }
     request->payload = packet->payload;
     request->payload_len = packet->payload_len;
-    request->url = url;
+    request->url = (char *)url;
     return url_len;
 }
 
