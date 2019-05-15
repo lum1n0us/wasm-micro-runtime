@@ -1,8 +1,6 @@
 /**
  * @file XPT2046.c
- *
- */
-
+*/
 /*********************
  *      INCLUDES
  *********************/
@@ -19,9 +17,6 @@
 #include <stddef.h>
 
 #define abs(x) ((x) < 0 ? -(x) : (x))
-
-//#include "lvgl/lv_hal/lv_hal_indev.h"//LV_DRV_INDEV_INCLUDE
-//#include LV_DRV_DELAY_INCLUDE
 
 /*********************
  *      DEFINES
@@ -237,8 +232,6 @@ bool xpt2046_read(lv_indev_data_t * data)
     struct spi_buf rx_buf = { .buf = &rx1, .len = 3 };
     struct spi_buf_set rx_bufs = { .buffers = &rx_buf, .count = 1 };
 
-//	disable_pen_interrupt();
-
     tx1[0] = CMD_X_READ;
     s32_ret = spi_transceive(input_dev, &spi_conf_xpt2046, &tx_bufs, &rx_bufs);
     if (s32_ret != 0) {
@@ -246,7 +239,6 @@ bool xpt2046_read(lv_indev_data_t * data)
     }
     x = rx1[1] << 8;
     x += rx1[2];
-//	printf("tx1[0]:%x,rx[0]%x,rx[1]:%x rx[2]:%x ,x:%x,\n",tx1[0],rx1[0],rx1[1],rx1[2],x);
 
     tx1[0] = CMD_Y_READ;
     s32_ret = spi_transceive(input_dev, &spi_conf_xpt2046, &tx_bufs, &rx_bufs);
@@ -255,22 +247,14 @@ bool xpt2046_read(lv_indev_data_t * data)
     }
     y = rx1[1] << 8;
     y += rx1[2];
-//	printf("tx1[0]:%x,rx[0]%x,rx[1]:%x rx[2]:%x ,y:%x\n",tx1[0],rx1[0],rx1[1],rx1[2],y);
-
-//	enable_pen_interrupt();
-
     x = x >> 3;
     y = y >> 3;
-//	printf("ad:x:%d,y:%d,\n",x,y);
 
     xpt2046_corr(&x, &y);
-//	printf("x:%d,y:%d,\n",x,y);
     if (y <= 0 || (x > 320)) {
         valid = false;
     }
     printf("x:%d,y:%d,\n", x, y);
-
-//    xpt2046_avg(&x, &y);
 
     last_x = x;
     last_y = y;
@@ -356,9 +340,6 @@ bool touchscreen_read(lv_indev_data_t * data)
     data->state = last_touch_point.state;
 
     if (last_touch_point.state == LV_INDEV_STATE_PR) {
-        printf("touch read by lvgl x:%d,y:%d\n", last_touch_point.point.x,
-                last_touch_point.point.y);
-
         last_touch_point.state = LV_INDEV_STATE_REL;
     }
     return false;

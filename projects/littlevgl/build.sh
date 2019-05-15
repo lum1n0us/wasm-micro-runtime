@@ -22,14 +22,14 @@ echo "##################### 1. build native-ui-app start#####################"
 cd $BUILD_DIR
 mkdir -p native-ui-app
 cd native-ui-app
-cmake ${PROJECT_DIR}/native-ui-app
+cmake ${PROJECT_DIR}/vgl-native-ui-app
 make
 if [ $? != 0 ];then
     echo "BUILD_FAIL native-ui-app $?\n"
     exit 2
 fi
 echo $PWD
-cp  native_ui_app ${OUT_DIR}
+cp  vgl_native_ui_app ${OUT_DIR}
 echo "#####################build native-ui-app success"
 
 echo "#####################build host-tool"
@@ -57,8 +57,8 @@ cp vgl_wasm_runtime ${OUT_DIR}/
 echo "##################### build littlevgl wasm runtime end#####################"
 
 
-echo "##################### 2. build wasm ui app start#####################"
+echo "##################### 3. build wasm ui app start#####################"
 cd ${PROJECT_DIR}/wasm-apps
 ./build_wasm_app.sh
 cp a.out.wasm ${OUT_DIR}/TestApplet1.wasm
-echo "##################### 2. build wasm ui app end#####################"
+echo "#####################  build wasm ui app end#####################"

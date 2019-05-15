@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required (VERSION 2.8.3)
-message ("native_ui_app...")
-project (native_ui_app)
+cmake_minimum_required (VERSION 3.13.1)
+message ("vgl_native_ui_app...")
+project (vgl_native_ui_app)
 
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -DLV_CONF_INCLUDE_SIMPLE -DPLATFORM_NATIVE_LINUX -DUSE_MONITOR -DUSE_MOUSE=1")
@@ -139,7 +139,7 @@ SET (LVGL_SOURCES
 )
 SET(SOURCES
     ${LVGL_SOURCES}
-    ../wasm-apps/src/main.c
+    ${CMAKE_CURRENT_LIST_DIR}/main.c
     )
 include_directories(
     ${ep_base}/Source
@@ -149,6 +149,6 @@ include_directories(
     ${CMAKE_CURRENT_LIST_DIR}
     ${CMAKE_CURRENT_LIST_DIR}/../wasm-apps/src/
 )
-add_executable(native_ui_app ${SOURCES} )
+add_executable(vgl_native_ui_app ${SOURCES} )
 
-target_link_libraries( native_ui_app -lSDL2)
+target_link_libraries( vgl_native_ui_app -lSDL2)
