@@ -349,13 +349,21 @@ static void showUsage()
 {
 #ifndef CONNECTION_UART
      printf("Usage:\n");
-     printf("Work as server mode:\n\n");
-     printf("\tsimple -s|--server_mode -p|--port <Port>\n\n");
-     printf("Work as client mode:\n\n");
-     printf("\tsimple -a|--host_address <Host Address> -p|--port <Port>\n\n");
+     printf("\nWork as TCP server mode:\n");
+     printf("\tsimple -s|--server_mode -p|--port <Port>\n");
+     printf("where\n");
+     printf("\t<Port> represents the port that would be listened on and the default is 8888\n");
+     printf("\nWork as TCP client mode:\n");
+     printf("\tsimple -a|--host_address <Host Address> -p|--port <Port>\n");
+     printf("where\n");
+     printf("\t<Host Address> represents the network address of host and the default is 127.0.0.1\n");
+     printf("\t<Port> represents the listen port of host and the default is 8888\n");
 #else
      printf("Usage:\n");
      printf("\tsimple -u <Uart Device> -b <Baudrate>\n\n");
+     printf("where\n");
+     printf("\t<Uart Device> represents the UART device name and the default is /dev/ttyS2\n");
+     printf("\t<Baudrate> represents the UART device baudrate and the default is 115200\n");
 #endif
 }
 

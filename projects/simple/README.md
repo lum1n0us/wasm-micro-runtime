@@ -21,10 +21,12 @@ out/
     └── timer.wasm
  
 host_tool:
-  A samll testing tool to send request to WAMR.
+  A samll testing tool to send request to WAMR. See usage of this tool by executing "./host_tool -h".
+  >./host_tool -h
 
 simple:
-  The simple application with WAMR runtime built in.
+  The simple application with WAMR runtime built in. See usage of this application by executing "./simple -h".
+  >./simple -h
 
 wasm-apps:
   5 sample wasm applications which demonstrate all APIs of WAMR programming model.
@@ -47,7 +49,7 @@ You can uncomment below line in CMakeLists.txt to enalbe UART mode. In this guid
   >./host_tool -q
 
 - Install a wasm application
-  >./host_tool -i TestApp -f wasm-apps/request_handler.wasm
+  >./host_tool -i TestApp -f ./wasm-apps/request_handler.wasm
 
 - Send request to the installed wasm app
   >./host_tool -r /url1 -A GET
@@ -113,28 +115,34 @@ connection lost, and waiting for client to reconnect...
 
 ####Output of host_tool
 
-shaka@shaka-VirtualBox:~/work/ssg_micro_runtime-dynamic-apps-projects/wamr/projects/simple/out (internal/feature)$ ./host_tool -q
+$ ./host_tool -q
 
 response status 69
 {
         "num":  0
-}shaka@shaka-VirtualBox:~/work/ssg_micro_runtime-dynamic-apps-projects/wamr/projects/simple/out (internal/feature)$ ./host_tool -i TestApp -f wasm-apps/request_handler.wasm 
+}
+
+$ ./host_tool -i TestApp -f ./wasm-apps/request_handler.wasm
 
 response status 65
-shaka@shaka-VirtualBox:~/work/ssg_micro_runtime-dynamic-apps-projects/wamr/projects/simple/out (internal/feature)$ ./host_tool -r /url1 -A GET
+
+$ ./host_tool -r /url1 -A GET
 
 response status 69
 {
         "key1": "value1",
         "key2": "value2"
-}shaka@shaka-VirtualBox:~/work/ssg_micro_runtime-dynamic-apps-projects/wamr/projects/simple/out (internal/feature)$ ./host_tool -q
+}
+
+$ ./host_tool -q
 
 response status 69
 {
         "num":  1,
         "applet1":      "TestApp",
         "heap1":        49152
-}shaka@shaka-VirtualBox:~/work/ssg_micro_runtime-dynamic-apps-projects/wamr/projects/simple/out (internal/feature)$ ./host_tool -u TestApp
+}
+
+$ ./host_tool -u TestApp
 
 response status 66
-
