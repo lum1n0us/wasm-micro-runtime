@@ -23,14 +23,8 @@ static void url1_request_handler(request_t *request)
 
     printf("[resp] ### user resource 1 handler called\n");
 
-    printf("[resp] ###### dump request ######\n");
-    printf("[resp] sender: %d\n", request->sender);
-    printf("[resp] url: %s\n", request->url);
-    printf("[resp] action: %d\n", request->action);
-    printf("[resp] payload:\n");
     if (request->payload != NULL && request->fmt == FMT_ATTR_CONTAINER)
         attr_container_dump((attr_container_t *) request->payload);
-    printf("[resp] #### dump request end ###\n");
 
     payload = attr_container_create("wasm app response payload");
     if (payload == NULL)
@@ -42,9 +36,6 @@ static void url1_request_handler(request_t *request)
     make_response_for_request(request, response);
     set_response(response, CONTENT_2_05,
     FMT_ATTR_CONTAINER, payload, attr_container_get_serialize_length(payload));
-    printf("[resp] response payload len %d\n",
-            attr_container_get_serialize_length(payload));
-    printf("[resp] reciver: %d, mid:%d\n", response->reciever, response->mid);
     api_response_send(response);
 
     attr_container_destroy(payload);

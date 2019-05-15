@@ -20,16 +20,8 @@ void over_heat_event_handler(request_t *request)
 {
     printf("### user over heat event handler called\n");
 
-    printf("###### dump event ######\n");
-
-    printf("sender: %d\n", request->sender);
-    printf("url: %s\n", request->url);
-    printf("action: %d\n", request->action);
-    printf("payload:\n");
     if (request->payload != NULL && request->fmt == FMT_ATTR_CONTAINER)
         attr_container_dump((attr_container_t *) request->payload);
-
-    printf("#### dump event end ###\n");
 }
 
 void on_init()
