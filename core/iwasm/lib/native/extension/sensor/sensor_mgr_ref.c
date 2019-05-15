@@ -99,7 +99,6 @@ static attr_container_t * read_test_sensor(void * sensor)
 
 static bool config_test_sensor(void * s, void * config)
 {
-
     return false;
 }
 
@@ -119,6 +118,8 @@ static void cb_wakeup_thread()
 {
     vm_cond_signal(&cond);
 }
+
+void set_sensor_reshceduler(void (*callback)());
 
 void init_sensor_framework()
 {

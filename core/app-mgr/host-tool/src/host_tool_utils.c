@@ -63,6 +63,10 @@ static inline uint32_t get_uint32(const char *buf)
     return get_int32(buf);
 }
 
+char* attr_container_get_attr_begin(const attr_container_t *attr_cont,
+                                    uint32_t *p_total_length,
+                                    uint16_t *p_attr_num);
+
 cJSON *attr2json(const attr_container_t *attr_cont)
 {
     uint32_t total_length;
@@ -295,7 +299,6 @@ read_file_to_buffer(const char *filename, int *ret_size)
 int wirte_buffer_to_file(const char *filename, const char *buffer, int size)
 {
     int file, ret;
-    char buf[32] = { 0 };
 
     if ((file = open(filename, O_RDWR | O_CREAT | O_APPEND, 0644)) == -1)
         return -1;

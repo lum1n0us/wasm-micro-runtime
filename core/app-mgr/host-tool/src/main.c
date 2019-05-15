@@ -288,7 +288,7 @@ static int request(req_info *info)
         free(payload_file);
     }
 
-    init_request(request, info->url, info->action,
+    init_request(request, (char *)info->url, info->action,
     FMT_ATTR_CONTAINER, payload, payload_len);
     request->mid = gen_random_id();
 
@@ -307,7 +307,7 @@ static int request(req_info *info)
 static int subscribe(reg_info *info)
 {
     request_t request[1] = { 0 };
-    int ret = -1, url_count;
+    int ret = -1;
 #if 0
     char *p;
 
@@ -341,7 +341,7 @@ static int subscribe(reg_info *info)
 static int unsubscribe(unreg_info *info)
 {
     request_t request[1] = { 0 };
-    int ret = -1, url_count;
+    int ret = -1;
 #if 0
     char *p;
 

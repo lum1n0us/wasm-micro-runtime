@@ -32,7 +32,7 @@
 #ifndef CONNECTION_UART
 #define SA struct sockaddr
 static char *host_address = "127.0.0.1";
-static port = 8888;
+static int port = 8888;
 #else
 static char *uart_device = "/dev/ttyS2";
 static int baudrate = B115200;
@@ -57,8 +57,7 @@ void* func(void* arg)
 {
     char buff[MAX];
     int n;
-    int connfd, len;
-    struct sockaddr_in servaddr, cli;
+    struct sockaddr_in servaddr;
 
     while (1) {
         if (sockfd != -1)
@@ -152,9 +151,9 @@ host_interface interface = { .init = host_init, .recv = host_recv, .send =
 
 void* func_server_mode(void* arg)
 {
-    int newsockfd, clilent;
+    int clilent;
     struct sockaddr_in serv_addr, cli_addr;
-    int n, pid;
+    int n;
     char buff[MAX];
 
     struct sigaction sa;
@@ -428,8 +427,7 @@ static bool parse_args(int argc, char *argv[])
 // Driver function
 int iwasm_main(int argc, char *argv[])
 {
-    korp_thread tid, tm_tid;
-    timer_ctx_t timer_ctx;
+    korp_thread tid;
 
     if (!parse_args(argc, argv))
         return -1;

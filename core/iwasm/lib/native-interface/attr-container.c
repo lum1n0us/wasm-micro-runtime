@@ -794,7 +794,7 @@ void attr_container_dump(const attr_container_t *attr_cont)
             break;
         case ATTR_TYPE_INT64:
             bh_memcpy_s(&value.j, sizeof(uint64_t), p, sizeof(uint64_t));
-            attr_container_printf(", type: int64, value: 0x%llx\n", value.j);
+            attr_container_printf(", type: int64, value: 0x%llx\n", (long long unsigned int)(value.j));
             p += 8;
             break;
         case ATTR_TYPE_BYTE:
