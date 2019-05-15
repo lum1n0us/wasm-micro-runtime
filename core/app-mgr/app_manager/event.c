@@ -73,8 +73,6 @@ static bool check_url(const char *url)
 bool am_register_event(const char *url, uint32_t reg_client)
 {
     event_reg_t *current = g_events;
-    int i;
-    int freeslot = -1;
 
     app_manager_printf("am_register_event adding url:(%s)\n", url);
 
@@ -123,8 +121,6 @@ bool am_register_event(const char *url, uint32_t reg_client)
 // @url: NULL means the client wants to unregister all its subscribed items
 bool am_unregister_event(const char *url, uint32_t reg_client)
 {
-    bool found = false;
-    int i;
     event_reg_t *current = g_events, *pre = NULL;
 
     while (current != NULL) {
@@ -180,7 +176,7 @@ void am_publish_event(request_t * event)
                 if (c->subscriber_id == ID_HOST) {
                     send_request_to_host(event);
                 } else {
-                    module_request_handler(event, c->subscriber_id);
+                    module_request_handler(event, (void *)c->subscriber_id);
                 }
                 c = c->next;
             }

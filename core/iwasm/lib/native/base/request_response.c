@@ -19,7 +19,7 @@
 #include "coap_ext.h"
 #include "wasm-export.h"
 
-extern void module_request_handler(request_t *request, uint32 register_id);
+extern void module_request_handler(request_t *request, void *user_data);
 
 bool wasm_response_send(int32 buffer_offset, int size)
 {

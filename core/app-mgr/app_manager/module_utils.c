@@ -184,6 +184,8 @@ bool app_manager_is_interrupting_module(uint32 module_type)
     return app_manager_get_module_data(module_type)->wd_timer.is_interrupting;
 }
 
+extern void destory_module_timer_ctx(unsigned int module_id);
+
 void release_module(module_data *m_data)
 {
     watchdog_timer_destroy(&m_data->wd_timer);

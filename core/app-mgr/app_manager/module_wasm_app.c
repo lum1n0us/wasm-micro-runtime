@@ -891,7 +891,7 @@ static bool wasm_app_module_on_install_request_byte_arrive(uint8 ch,
 static bool module_wasm_app_handle_install_msg(install_wasm_app_msg_t *message)
 {
     request_t *request = NULL;
-    bh_message_t *msg;
+    bh_message_t msg;
 
     request = (request_t *) bh_malloc(sizeof(request_t));
     if (request == NULL)

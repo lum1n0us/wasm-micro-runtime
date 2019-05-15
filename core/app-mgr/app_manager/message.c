@@ -24,9 +24,6 @@ bool send_coap_packet_to_host(coap_packet_t * packet)
 
 bool send_request_to_host(request_t *msg)
 {
-    unsigned int len = 0;
-    char *buf = NULL;
-
     if (COAP_EVENT == msg->action && !event_is_registered(msg->url)) {
         app_manager_printf("Event is not registered\n");
         return false;
@@ -60,7 +57,6 @@ bool send_response_to_host(response_t *response)
 
 bool send_error_response_to_host(int mid, int status, const char *msg)
 {
-    bool ret;
     int payload_len = 0;
     attr_container_t *payload = NULL;
     response_t response[1] = { 0 };
@@ -74,13 +70,13 @@ bool send_error_response_to_host(int mid, int status, const char *msg)
     }
 
     set_response(response, status,
-    FMT_ATTR_CONTAINER, payload, payload_len);
+    FMT_ATTR_CONTAINER, (const char *)payload, payload_len);
     response->mid = mid;
 
     send_response_to_host(response);
 
     if (payload)
         attr_container_destroy(payload);
-    return ret;
+    return true;
 }
 

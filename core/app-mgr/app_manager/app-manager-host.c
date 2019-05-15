@@ -255,7 +255,6 @@ bool app_manager_host_init(host_interface *interface)
     memset(&recv_ctx, 0, sizeof(recv_ctx));
 
     host_commu.init = interface->init;
-    host_commu.recv = interface->recv;
     host_commu.send = interface->send;
     host_commu.destroy = interface->destroy;
 

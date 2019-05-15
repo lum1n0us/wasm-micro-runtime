@@ -37,7 +37,7 @@ static void my_response_handler(response_t *response, void *user_data)
     }
 }
 
-static void test_send_request(const char *url, const char *tag)
+static void test_send_request(char *url, char *tag)
 {
     request_t request[1];
 

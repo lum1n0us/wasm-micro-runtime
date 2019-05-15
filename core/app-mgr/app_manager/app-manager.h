@@ -92,7 +92,7 @@ int
 app_manager_signature_verify(const uint8_t *file, unsigned int file_len,
         const uint8_t *signature, unsigned int sig_size);
 
-void targeted_app_request_handler(request_t *request, uint32 register_id);
+void targeted_app_request_handler(request_t *request, void *unused);
 
 #if BEIHAI_ENABLE_TOOL_AGENT != 0
 void *

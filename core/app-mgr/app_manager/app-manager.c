@@ -203,7 +203,7 @@ static bool app_manager_query_applets(request_t *msg, const char *name)
     return ret;
 }
 
-void applet_mgt_reqeust_handler(request_t *request, void *user_data)
+void applet_mgt_reqeust_handler(request_t *request, void *unused)
 {
     bh_message_t msg;
     /* deep copy, but not use app self heap, but use global heap */
@@ -222,7 +222,7 @@ void applet_mgt_reqeust_handler(request_t *request, void *user_data)
 }
 
 /* return -1 for error */
-static int get_module_type(const char *kv_str)
+static int get_module_type(char *kv_str)
 {
     int module_type = -1;
     char type_str[8] = { 0 };
@@ -246,11 +246,10 @@ static int get_module_type(const char *kv_str)
 
 /* Queue callback of App Manager */
 
-static void app_manager_queue_callback(bh_message_t message)
+static void app_manager_queue_callback(void *message)
 {
-    request_t *request = (request_t *) bh_message_payload(message);
-    const char *url = NULL;
-    int url_len = 0, mid = request->mid, module_type, offset;
+    request_t *request = (request_t *) bh_message_payload((bh_message_t)message);
+    int mid = request->mid, module_type, offset;
 
     if ((offset = check_url_start(request->url, strlen(request->url), "/applet"))
             > 0) {

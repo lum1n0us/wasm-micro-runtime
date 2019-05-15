@@ -8,6 +8,7 @@
 #include "native_interface.h"
 #include "shared_utils.h"
 #include "app-manager.h"
+#include "app-manager-export.h"
 #include "attr-container.h"
 #include "coap_ext.h"
 
@@ -20,9 +21,9 @@ typedef struct _app_res_register {
 
 static app_res_register_t * g_resources = NULL;
 
-void module_request_handler(request_t *request, uint32 register_id)
+void module_request_handler(request_t *request, void *user_data)
 {
-    unsigned int mod_id = (unsigned int) register_id;
+    unsigned int mod_id = (unsigned int) user_data;
     bh_message_t msg;
     module_data *m_data;
     request_t *req;
@@ -57,7 +58,7 @@ void module_request_handler(request_t *request, uint32 register_id)
             m_data->module_name);
 }
 
-void targeted_app_request_handler(request_t *request, uint32 register_id)
+void targeted_app_request_handler(request_t *request, void *unused)
 {
     char applet_name[128] = { 0 };
     int offset;
@@ -88,7 +89,7 @@ void targeted_app_request_handler(request_t *request, uint32 register_id)
         goto end;
     }
 
-    module_request_handler(request, m_data->id);
+    module_request_handler(request, (void *)m_data->id);
     end: request->url = url;
 
 }
@@ -127,7 +128,7 @@ void * am_dispatch_request(request_t *request)
 
     while (r) {
         if (check_url_start(request->url, strlen(request->url), r->url) > 0) {
-            r->request_handler(request, r->register_id);
+            r->request_handler(request, (void *)r->register_id);
             return r;
         }
         r = r->next;
@@ -136,7 +137,7 @@ void * am_dispatch_request(request_t *request)
 }
 
 bool am_register_resource(const char *url,
-        void (*request_handler)(request_t *, uint32), uint32 register_id)
+        void (*request_handler)(request_t *, void *), uint32 register_id)
 {
     app_res_register_t * r = g_resources;
     int register_num = 0;

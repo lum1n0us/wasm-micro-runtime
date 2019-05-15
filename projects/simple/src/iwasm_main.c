@@ -3,6 +3,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #else
 #include <termios.h>
 #endif
@@ -14,6 +15,8 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <signal.h>
+#include <unistd.h>
+#include <strings.h>
 
 #include "runtime_lib.h"
 #include "runtime_timer.h"
@@ -40,6 +43,7 @@ static int baudrate = B115200;
 
 extern void * thread_timer_check(void *);
 extern void init_sensor_framework();
+extern int aee_host_msg_callback(void *msg, uint16_t msg_len);
 
 #ifndef CONNECTION_UART
 int listenfd = -1;
@@ -82,8 +86,6 @@ void* func(void* arg)
             continue;
         } else {
             printf("connected to the server..\n");
-
-            host_send("hello", 6);
         }
 
         // infinite loop for chat
@@ -110,11 +112,6 @@ void* func(void* arg)
 static bool host_init()
 {
     return true;
-}
-
-int host_recv(void * ctx, char *buf, int buf_size)
-{
-    return 0;
 }
 
 int host_send(void * ctx, const char *buf, int size)
@@ -146,8 +143,11 @@ void host_destroy()
     pthread_mutex_unlock(&sock_lock);
 }
 
-host_interface interface = { .init = host_init, .recv = host_recv, .send =
-        host_send, .destroy = host_destroy };
+host_interface interface = {
+                             .init = host_init,
+                             .send = host_send,
+                             .destroy = host_destroy
+                           };
 
 void* func_server_mode(void* arg)
 {

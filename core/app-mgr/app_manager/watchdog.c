@@ -9,6 +9,7 @@
 /* Queue of watchdog */
 static bh_queue *watchdog_queue;
 
+#ifdef WATCHDOG_ENABLED /* TODO */
 static void watchdog_timer_callback(void *timer)
 {
     watchdog_timer *wd_timer = app_manager_get_wd_timer_from_timer_handle(
@@ -28,6 +29,7 @@ static void watchdog_timer_callback(void *timer)
 
     vm_mutex_unlock(&wd_timer->lock);
 }
+#endif
 
 bool watchdog_timer_init(module_data *m_data)
 {
@@ -75,6 +77,7 @@ void watchdog_timer_stop(watchdog_timer *wd_timer)
     app_manager_timer_stop(wd_timer->timer_handle);
 }
 
+#ifdef WATCHDOG_ENABLED /* TODO */
 static void watchdog_queue_callback(void *queue_msg)
 {
     if (bh_message_type(queue_msg) == WD_TIMEOUT) {
@@ -87,7 +90,9 @@ static void watchdog_queue_callback(void *queue_msg)
         }
     }
 }
+#endif
 
+#ifdef WATCHDOG_ENABLED /* TODO */
 static void*
 watchdog_thread_routine(void *arg)
 {
@@ -97,6 +102,7 @@ watchdog_thread_routine(void *arg)
     (void) arg;
     return NULL;
 }
+#endif
 
 bool watchdog_startup()
 {

@@ -143,18 +143,6 @@ typedef struct module_interface {
 typedef bool (*host_init_func)(void);
 
 /**
- * @typedef host_recv_fun
- * @brief Define the host receive callback function signature for
- * struct host_interface.
- *
- * @param buf buffer to store the received data.
- * @param buf_size size of the buffer.
- *
- * @return size of the data received in bytes
- */
-typedef int (*host_recv_fun)(char *buf, int buf_size);
-
-/**
  * @typedef host_send_fun
  * @brief Define the host send callback function signature for
  * struct host_interface.
@@ -177,7 +165,6 @@ typedef void (*host_destroy_fun)();
 /* Interfaces of host communication */
 typedef struct host_interface {
     host_init_func init;
-    host_recv_fun recv;
     host_send_fun send;
     host_destroy_fun destroy;
 } host_interface;
@@ -230,6 +217,9 @@ module_data*
 app_manager_lookup_module_data(const char *name);
 
 module_data*
+module_data_list_lookup(const char *module_name);
+
+module_data*
 module_data_list_lookup_id(unsigned int module_id);
 
 void
@@ -237,7 +227,7 @@ app_manager_post_applets_update_event();
 
 bool
 am_register_resource(const char *url,
-        void (*request_handler)(request_t *, uint32), uint32 register_id);
+        void (*request_handler)(request_t *, void *), uint32 register_id);
 
 void am_cleanup_registeration(uint32 register_id);
 
@@ -252,6 +242,8 @@ void am_publish_event(request_t * event);
 void * am_dispatch_request(request_t *request);
 
 void am_send_response(response_t *response);
+
+void module_request_handler(request_t *request, void *user_data);
 
 /**
  * Send request message to host

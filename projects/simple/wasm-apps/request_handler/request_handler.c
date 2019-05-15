@@ -35,7 +35,9 @@ static void url1_request_handler(request_t *request)
 
     make_response_for_request(request, response);
     set_response(response, CONTENT_2_05,
-    FMT_ATTR_CONTAINER, payload, attr_container_get_serialize_length(payload));
+                 FMT_ATTR_CONTAINER,
+                 (void *)payload,
+                 attr_container_get_serialize_length(payload));
     api_response_send(response);
 
     attr_container_destroy(payload);
