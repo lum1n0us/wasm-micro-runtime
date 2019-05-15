@@ -13,12 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/*
- * restful_request.c
- *
- *  Created on: Apr 7, 2019
- *      Author: xwang98
- */
 
 #include "coap_ext.h"
 
