@@ -8,9 +8,11 @@
 #include <termios.h>
 #endif
 
+#include <arpa/inet.h>
+#include <unistd.h>
 #include <getopt.h>
 #include <stdlib.h>
-#include <string.h>
+#include <strings.h>
 #include <sys/types.h>
 #include <fcntl.h>
 #include <pthread.h>

@@ -102,7 +102,7 @@ static bool config_test_sensor(void * s, void * config)
     return false;
 }
 
-static void * thread_sensor_check(void * arg)
+static void thread_sensor_check(void * arg)
 {
     while (1) {
         int ms_to_expiry = check_sensor_timers();
@@ -139,7 +139,7 @@ void init_sensor_framework()
 
     wasm_register_cleanup_callback(sensor_cleanup_callback);
 
-    vm_thread_create(&tid, thread_sensor_check, NULL,
+    vm_thread_create(&tid, (void *)thread_sensor_check, NULL,
     BH_APPLET_PRESERVED_STACK_SIZE);
 
 }
