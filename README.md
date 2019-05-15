@@ -364,20 +364,16 @@ int main(int argc, char **argv)
 }
 ```
 
-Application manager
-========================
-The application manager is the component to manage WASM application lifecyle such as installation, uninstallation, query. It also enables the messaging between host and WASM applications, or inter-WASM applications.
 
-
-Programming models
+Communication programming models
 =========================
-WAMR supports two typical programming models, the microservice model and the pub/sub model. 
+WAMR supports two typical communication programming models, the microservice model and the pub/sub model. 
 
 
 Microservice model
 -------------------------
-The microservice model is also known for request and response model. One WASM application acts as the server which provides a specific service. Other WASM applications or host/cloud applications request that service and get the response.
-<img src="./docs/pics/request.PNG" width="60%" height="60%">
+The microservice model is also known as request and response model. One WASM application acts as the server which provides a specific service. Other WASM applications or host/cloud applications request that service and get the response.
+<img src="./doc/pics/request.PNG" width="60%" height="60%">
 
 Below is the reference implementation of the server application. It provides the room temperature measurement service.
 
@@ -420,7 +416,7 @@ void room_temp_handler(request_t *request)
 Pub/sub model
 -------------------------
 One WASM application acts as the event publisher. It publish events to notify WASM applications or host/cloud applications which subscribe the events.
-<img src="./docs/pics/sub.PNG" width="60%" height="60%">
+<img src="./doc/pics/sub.PNG" width="60%" height="60%">
 
 Below is the reference implementation of the pub applicaiton. It utilizes a timer to repeatly publish an overheat alert event to the subcriber applications. Then the subscriber applications receive the events immediately.
 
