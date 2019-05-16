@@ -146,10 +146,10 @@ void host_destroy()
 }
 
 host_interface interface = {
-                             .init = host_init,
-                             .send = host_send,
-                             .destroy = host_destroy
-                           };
+    .init = host_init,
+    .send = host_send,
+    .destroy = host_destroy
+};
 
 void* func_server_mode(void* arg)
 {
