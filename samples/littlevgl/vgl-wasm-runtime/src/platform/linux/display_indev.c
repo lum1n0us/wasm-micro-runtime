@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include <stdio.h>
 #include <stdbool.h>
 #include "display_indev.h"
@@ -26,80 +27,13 @@
 #define MONITOR_ZOOM        1
 #endif
 #define SDL_REFR_PERIOD     50
+void monitor_sdl_init(void);
+void monitor_sdl_refr_core(void);
+void monitor_sdl_clean_up(void);
+
 static uint32_t tft_fb[MONITOR_HOR_RES * MONITOR_VER_RES];
 
-void display_init(void)
-{
-}
 
-void display_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
-        int32 color_p_offset)
-{
-
-    wasm_module_inst_t module_inst = wasm_runtime_get_current_module_inst();
-    if (!wasm_runtime_validate_app_addr(module_inst, color_p_offset, 1))
-        return;
-    lv_color_t * color_p = wasm_runtime_addr_app_to_native(module_inst,
-            color_p_offset);
-
-    monitor_flush(x1, y1, x2, y2, color_p);
-}
-void display_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
-        lv_color_t color_p)
-{
-    monitor_fill(x1, y1, x2, y2, color_p);
-}
-void display_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
-        const lv_color_t * color_p)
-{
-    monitor_map(x1, y1, x2, y2, color_p);
-}
-
-bool display_input_read(int32 data_p_offset)
-{
-    wasm_module_inst_t module_inst = wasm_runtime_get_current_module_inst();
-    if (!wasm_runtime_validate_app_addr(module_inst, data_p_offset, 1))
-        return false;
-    lv_indev_data_t * data = wasm_runtime_addr_app_to_native(module_inst,
-            data_p_offset);
-    return mouse_read(data);
-}
-
-void display_deinit(void)
-{
-
-}
-
-void display_vdb_write(int32 buf_offset, lv_coord_t buf_w, lv_coord_t x,
-        lv_coord_t y, int32 color_p_offset, lv_opa_t opa)
-{
-    wasm_module_inst_t module_inst = wasm_runtime_get_current_module_inst();
-    if (!wasm_runtime_validate_app_addr(module_inst, color_p_offset, 1))
-        return;
-    lv_color_t *color = wasm_runtime_addr_app_to_native(module_inst,
-            color_p_offset);
-
-    void *buf = wasm_runtime_addr_app_to_native(module_inst, buf_offset);
-
-    unsigned char *buf_xy = buf + 4 * x + 4 * y * buf_w;
-    lv_color_t * temp = (lv_color_t *) buf_xy;
-    *temp = *color;
-    /*
-     if (opa != LV_OPA_COVER) {
-     lv_color_t mix_color;
-
-     mix_color.red = *buf_xy;
-     mix_color.green = *(buf_xy+1);
-     mix_color.blue = *(buf_xy+2);
-     color = lv_color_mix(color, mix_color, opa);
-     }
-     */
-    /*
-     *buf_xy = color->red;
-     *(buf_xy + 1) = color->green;
-     *(buf_xy + 2) = color->blue;
-     */
-}
 
 int time_get_ms()
 {
@@ -220,6 +154,80 @@ void monitor_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
     }
 
     sdl_refr_qry = true;
+}
+
+
+void display_init(void)
+{
+}
+
+void display_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
+        int32 color_p_offset)
+{
+
+    wasm_module_inst_t module_inst = wasm_runtime_get_current_module_inst();
+    if (!wasm_runtime_validate_app_addr(module_inst, color_p_offset, 1))
+        return;
+    lv_color_t * color_p = wasm_runtime_addr_app_to_native(module_inst,
+            color_p_offset);
+
+    monitor_flush(x1, y1, x2, y2, color_p);
+}
+void display_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
+        lv_color_t color_p)
+{
+    monitor_fill(x1, y1, x2, y2, color_p);
+}
+void display_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
+        const lv_color_t * color_p)
+{
+    monitor_map(x1, y1, x2, y2, color_p);
+}
+
+bool display_input_read(int32 data_p_offset)
+{
+    wasm_module_inst_t module_inst = wasm_runtime_get_current_module_inst();
+    if (!wasm_runtime_validate_app_addr(module_inst, data_p_offset, 1))
+        return false;
+    lv_indev_data_t * data = wasm_runtime_addr_app_to_native(module_inst,
+            data_p_offset);
+    return mouse_read(data);
+}
+
+void display_deinit(void)
+{
+
+}
+
+void display_vdb_write(int32 buf_offset, lv_coord_t buf_w, lv_coord_t x,
+        lv_coord_t y, int32 color_p_offset, lv_opa_t opa)
+{
+    wasm_module_inst_t module_inst = wasm_runtime_get_current_module_inst();
+    if (!wasm_runtime_validate_app_addr(module_inst, color_p_offset, 1))
+        return;
+    lv_color_t *color = wasm_runtime_addr_app_to_native(module_inst,
+            color_p_offset);
+
+    void *buf = wasm_runtime_addr_app_to_native(module_inst, buf_offset);
+
+    unsigned char *buf_xy = buf + 4 * x + 4 * y * buf_w;
+    lv_color_t * temp = (lv_color_t *) buf_xy;
+    *temp = *color;
+    /*
+     if (opa != LV_OPA_COVER) {
+     lv_color_t mix_color;
+
+     mix_color.red = *buf_xy;
+     mix_color.green = *(buf_xy+1);
+     mix_color.blue = *(buf_xy+2);
+     color = lv_color_mix(color, mix_color, opa);
+     }
+     */
+    /*
+     *buf_xy = color->red;
+     *(buf_xy + 1) = color->green;
+     *(buf_xy + 2) = color->blue;
+     */
 }
 
 int monitor_sdl_refr_thread(void * param)

@@ -40,7 +40,7 @@ FetchContent_Declare(
     SUBBUILD_DIR   ${lv_SUBBUILD_DIR}
 )
 
-
+message ("git clone lvgl...")
 FetchContent_GetProperties(${lv_name})
 if(NOT ${lv_name}_POPULATED)
     FetchContent_Populate(${lv_name})
