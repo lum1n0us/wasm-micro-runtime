@@ -373,7 +373,10 @@ resolve_sym(const char *module_name, const char *field_name)
         return NULL;
 
     if (field_name[0] == '_'
-            && (sym = wasm_dlsym(NULL, field_name + 1)))
+        && (sym = wasm_dlsym(NULL, field_name + 1)))
+        return sym;
+
+    if ((sym = wasm_dlsym(NULL, field_name)))
         return sym;
 
     return NULL;

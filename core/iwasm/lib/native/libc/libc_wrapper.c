@@ -903,7 +903,9 @@ wasm_native_func_lookup(const char *module_name, const char *func_name)
 
     while (func_def < func_def_end) {
         if (!strcmp(func_def->module_name, module_name)
-            && !strcmp(func_def->func_name, func_name))
+            && (!strcmp(func_def->func_name, func_name)
+                || (func_def->func_name[0] == '_'
+                    && !strcmp(func_def->func_name + 1, func_name))))
             return (void*) (uintptr_t) func_def->func_ptr;
         func_def++;
     }
