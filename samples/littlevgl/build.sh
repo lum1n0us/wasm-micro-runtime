@@ -20,8 +20,8 @@ fi
 
 echo "##################### 1. build native-ui-app start#####################"
 cd $BUILD_DIR
-mkdir -p native-ui-app
-cd native-ui-app
+mkdir -p vgl-native-ui-app
+cd vgl-native-ui-app
 cmake ${PROJECT_DIR}/vgl-native-ui-app
 make
 if [ $? != 0 ];then
@@ -59,6 +59,11 @@ echo "##################### build littlevgl wasm runtime end####################
 
 echo "##################### 3. build wasm ui app start#####################"
 cd ${PROJECT_DIR}/wasm-apps
+if [ ! -d "${PROJECT_DIR}/wasm-apps/lvgl" ]; then
+    if [ -d "$BUILD_DIR/vgl-native-ui-app/ext_proj/Source/lvgl" ]; then
+        cp -fr $BUILD_DIR/vgl-native-ui-app/ext_proj/Source/lvgl ${PROJECT_DIR}/wasm-apps
+    fi
+fi
 ./build_wasm_app.sh
-cp a.out.wasm ${OUT_DIR}/TestApplet1.wasm
+cp ui_app.wasm ${OUT_DIR}/
 echo "#####################  build wasm ui app end#####################"

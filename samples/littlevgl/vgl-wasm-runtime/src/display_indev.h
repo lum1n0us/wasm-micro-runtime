@@ -69,6 +69,6 @@ extern void display_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
 extern bool display_input_read(int32 data_offset);
 void display_vdb_write(int32 buf_offset, lv_coord_t buf_w, lv_coord_t x,
         lv_coord_t y, int32 color_p_offset, lv_opa_t opa);
-
+extern bool mouse_read(lv_indev_data_t * data);
 #endif
 
