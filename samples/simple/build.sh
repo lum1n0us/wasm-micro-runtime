@@ -34,7 +34,7 @@ cp -a simple ${OUT_DIR}
 echo "#####################build simple project success"
 
 echo "#####################build host-tool"
-cd ${ROOT_DIR}/wamr/core/app-mgr/host-tool
+cd ${ROOT_DIR}/wamr/test-tools/host-tool
 mkdir -p bin
 cd bin
 cmake ..
