@@ -26,7 +26,7 @@ endif (NOT TARGET_PLATFORM)
 
 message ("TARGET_PLATFORM = " ${TARGET_PLATFORM})
 
-set(REPO_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/../../..)
+set(REPO_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/../..)
 set(WASM_DIR  ${REPO_ROOT_DIR}/core/iwasm)
 set(APP_MGR_DIR ${REPO_ROOT_DIR}/core/app-mgr)
 set(SHARED_DIR ${REPO_ROOT_DIR}/core/shared-lib)
