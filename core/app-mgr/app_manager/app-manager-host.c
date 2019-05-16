@@ -258,6 +258,9 @@ bool app_manager_host_init(host_interface *interface)
     host_commu.send = interface->send;
     host_commu.destroy = interface->destroy;
 
+    if (host_commu.init != NULL)
+      return host_commu.init();
+
     return true;
 }
 
