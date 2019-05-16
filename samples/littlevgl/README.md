@@ -1,86 +1,32 @@
 Introduction
 ==============
-LittlevGL is an Open-source Embedded GUI Library. We defined a UI APP, which can easily run on Native or on WASM VM. There are 3 binaries to test two scenarios.
-1. Native Linux. The App code built into Linux executables.
-2. WASM VM for Different platforms. WASM VM and native extension being built into Linux and Zephyr platforms. With WASM VM inside, many WASM APP can run on top of it.
-3. WASM APP. This kind of binary can be run on WASM VM.
+This sample demonstrates that a graphic user interface application in WebAssembly  integrates  the LittlevGL, an open-source embedded 2d graphic library.
 
-Directory structure
---------------------------------
-<pre>
-├── build.sh
-├── LICENCE.txt
-├── README.md
-├── UI.JPG
-├── vgl-native-ui-app
-│   ├── CMakeLists.txt
-│   ├── lv-drivers
-│   │   ├── display_indev.h
-│   │   ├── indev
-│   │   │   ├── mouse.c
-│   │   │   └── mouse.h
-│   │   ├── linux_display_indev.c
-│   │   ├── lv_conf.h
-│   │   └── system_header.h
-│   └── main.c
-├── vgl-wasm-runtime
-│   ├── CMakeLists.txt
-│   ├── src
-│   │   ├── display_indev.h
-│   │   ├── ext-lib-export.c
-│   │   └── platform
-│   │       ├── linux
-│   │       │   ├── display_indev.c
-│   │       │   ├── iwasm_main.c
-│   │       │   ├── main.c
-│   │       │   └── mouse.c
-│   │       └── zephyr
-│   │           ├── board_config.h
-│   │           ├── display.h
-│   │           ├── display_ili9340_adafruit_1480.c
-│   │           ├── display_ili9340.c
-│   │           ├── display_ili9340.h
-│   │           ├── display_indev.c
-│   │           ├── iwasm_main.c
-│   │           ├── LICENSE
-│   │           ├── main.c
-│   │           ├── pin_config_jlf.h
-│   │           ├── pin_config_stm32.h
-│   │           ├── XPT2046.c
-│   │           └── XPT2046.h
-│   └── zephyr-build
-│       ├── CMakeLists.txt
-│       └── prj.conf
-└── wasm-apps
-    ├── build_wasm_app.sh
-    ├── Makefile_wasm_app
-    ├── src
-    │   ├── display_indev.h
-    │   ├── lv_conf.h
-    │   ├── main.c
-    │   └── system_header.h
-    └── ui_app.wasm
-</pre>
-- build.sh
-  This build to build and binaries.
-- LICENCE.txt
-- UI.JPG
-- user_guide.md
-- vgl-native-ui-app</br>
-  LittlevGL graphics app has been built into Linux application named "vgl_native_ui_app", which can directly run on Linux.
-- vgl-wasm-runtime</br>
-  Wasm micro-runtime and Littlevgl native interface built into Linux application named "LittlevGL", where the WASM application can run on it.
-- wasm-apps
-  A wasm app with Littlevgl graphics.
+In this sample, the whole LittlevGL source code is built into the WebAssembly code with the user application. The platform interfaces defined by LittlevGL is implemented in the runtime and exported to the application through the declarations from source "ext_lib_export.c" as below:
 
+        EXPORT_WASM_API(display_init),
+        EXPORT_WASM_API(display_input_read),
+        EXPORT_WASM_API(display_flush),
+        EXPORT_WASM_API(display_fill),
+        EXPORT_WASM_API(display_vdb_write),
+        EXPORT_WASM_API(display_map),
+        EXPORT_WASM_API(time_get_ms), };
+
+The runtime component supports building target for Linux and Zephyr/STM Nucleo board. The beauty of this sample is the WebAssembly application can have identical display and behavior when running from both runtime environments. That implies we can do majority of application validation from desktop environment as long as two runtime distributions support the same set of application interface.
+
+The sample also provides the native Linux version of application without the runtime under folder "vgl-native-ui-app". It can help to check differences between the implementations in native and WebAssembly.
+
+ 
+<img src="./UI.JPG">
+
+The number on top will plus one each second, and the number on the bottom will plus one when clicked.
 
 Install required SDK and libraries
 ==============
 - 32 bit SDL(simple directmedia layer)
 Use apt-get</br>
     `sudo apt-get install libsdl2-dev:i386`</br>
-Or, install from source</br>
-   Download source from www.libsdl.org</br>
+Or download source from www.libsdl.org</br>
     `./configure C_FLAGS=-m32 CXX_FLAGS=-m32 LD_FLAGS=-m32`
     `make`</br>
     `sudo make install`</br>
@@ -90,30 +36,27 @@ Or, install from source</br>
 </pre>
 - CMAKE
 <pre>
-     CMAKE version above 3.13.1.
+     CMAKE version must be above 3.13.1.
 </pre>
 
-Build & Run
+Build and Run
 ==============
 
-Build and run on Linux
+Linux
 --------------------------------
 - Build</br>
 `./build.sh`</br>
     All binaries are in "out", which contains "host_tool", "vgl_native_ui_app", "TestApplet1.wasm" and "vgl_wasm_runtime".
 - Run native Linux application</br>
 `./vgl_native_ui_app`</br>
-<pre>
-<img src="./UI.JPG">
-The number on top will plus one each second, and the number on the bottom will plus one when clicked.
-</pre>
+
 - Run WASM VM Linux applicaton & install WASM APP</br>
  First start vgl_wasm_runtime in server mode.</br>
 `./vgl_wasm_runtime -s`</br>
  Then install wasm APP use host tool.</br>
 `./host_tool -i TestApplet1 -f TestApplet1.wasm`</br>
 
-Build and run on Zephyr
+Zephyr
 --------------------------------
 WASM VM and native extension method can be built into Zephyr, Then we can install wasm app into STM32.</br>
 - Build WASM VM into Zephyr system</br>
@@ -140,7 +83,8 @@ WASM VM and native extension method can be built into Zephyr, Then we can instal
 
 - Test on STM32 NUCLEO_F767ZI with ILI9341 Display with XPT2046 touch</br>
 Hardware Connections
-<pre>
+
+```
 +-------------------+-+------------------+
 |NUCLEO-F767ZI || ILI9341  Display |
 +-------------------+-+------------------+
@@ -164,7 +108,9 @@ Hardware Connections
 +-------------------+-+------------------+
 | CN11.16             | PC UART RX       |
 +-------------------+-+------------------+
-</pre>
+```
+
+
 - Install WASM application to Zephyr using host_tool</br>
 First, connect PC and STM32 with UART. Then install to use host_tool.</br>
 `./host_tool -D /dev/ttyUSBXXX -i ui_app -f ui_app.wasm`
