@@ -29,7 +29,7 @@ set_property(DIRECTORY PROPERTY "EP_BASE" ${ep_base})
 set(lv_SOURCE_DIR ${ep_base}/Source/${lv_name})
 set(lv_SUBBUILD_DIR ${ep_base}/Subbuild/${lv_name})
 
-set(LVGL_DRIVER_DIR ${CMAKE_CURRENT_LIST_DIR}/lv_drivers)
+set(LVGL_DRIVER_DIR ${CMAKE_CURRENT_LIST_DIR}/lv-drivers)
 
 FetchContent_Declare(
     ${lv_name}
