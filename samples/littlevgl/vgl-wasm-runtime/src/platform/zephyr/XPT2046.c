@@ -5,6 +5,7 @@
  *      INCLUDES
  *********************/
 #include "XPT2046.h"
+#include "board_config.h"
 #include "stdio.h"
 #include <string.h>
 #include "spi.h"
@@ -73,11 +74,9 @@ void xpt2046_pen_gpio_callback(struct device *port, struct gpio_callback *cb,
         u32_t pins)
 {
     int i;
-    printk("Pin interrupt triggered:%d\n", cnt);
     cnt++;
     if ((k_uptime_get_32() - last_pen_interrupt_time) > 500) {
         k_sem_give(&sem_touch_read);
-        printk("k_sem_give to trigger touch read:%d\n", touch_read_times);
         touch_read_times++;
         last_pen_interrupt_time = k_uptime_get_32();
     }
@@ -87,7 +86,6 @@ void xpt2046_pen_gpio_callback(struct device *port, struct gpio_callback *cb,
 void disable_pen_interrupt()
 {
     int ret = 0;
-    //ret = gpio_pin_configure(xpt2046_pen_gpio_dev, XPT2046_PEN_GPIO_PIN, GPIO_DIR_IN );
     ret = gpio_pin_disable_callback(xpt2046_pen_gpio_dev, XPT2046_PEN_GPIO_PIN);
     if (ret != 0) {
         printf("gpio_pin_configure GPIO_DIR_IN failed\n");
@@ -96,14 +94,9 @@ void disable_pen_interrupt()
 void enable_pen_interrupt()
 {
     int ret = 0;
-    //ret = gpio_pin_configure(xpt2046_pen_gpio_dev, XPT2046_PEN_GPIO_PIN, \
-			 (GPIO_DIR_IN | GPIO_INT |   \
-			  GPIO_INT_EDGE | GPIO_INT_ACTIVE_HIGH |  \
-			  GPIO_INT_DEBOUNCE));
     ret = gpio_pin_enable_callback(xpt2046_pen_gpio_dev, XPT2046_PEN_GPIO_PIN);
     if (ret != 0) {
-        printf(
-                "gpio_pin_configure GPIO_DIR_IN GPIO_INT_EDGE GPIO_INT_ACTIVE_HIGH GPIO_INT_DEBOUNCE failed\n");
+        printf("gpio_pin_configure failed\n");
     }
 }
 
@@ -126,19 +119,15 @@ void touch_screen_read_thread()
                 if ((abs(last_touch_point.point.x - touch_point.point.x) < 4)
                         && (abs(last_touch_point.point.y - touch_point.point.y)
                                 < 4)) {
-                    printf("read complete,times:%d\n", i);
                     break;
                 }
                 last_touch_point = touch_point;
-                printf("x:%d y:%d ,times:%d\n", touch_point.point.x,
-                        touch_point.point.y, i);
 
             }
         }
         enable_pen_interrupt();
         k_mutex_unlock(&spi_display_touch_mutex);
     }
-
 }
 
 void xpt2046_init(void)
@@ -254,7 +243,6 @@ bool xpt2046_read(lv_indev_data_t * data)
     if (y <= 0 || (x > 320)) {
         valid = false;
     }
-    printf("x:%d,y:%d,\n", x, y);
 
     last_x = x;
     last_y = y;

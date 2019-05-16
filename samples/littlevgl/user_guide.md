@@ -11,7 +11,7 @@ Littlevgl is an Open-source Embedded GUI Library. We definde an UI APP, and it c
 ### 1. vgl-native-ui-app
 Littlevgl graphics app has being built into Linux application named "vgl_native_ui_app", which can directly run on Linux.
 ├── vgl-native-ui-app
-│   ├── CMakeLists.txt 
+│   ├── CMakeLists.txt
 │   ├── lv_drivers             **Display and input device driver sources.**
 │   └── main.c                  **UI app logic.**
 ### 2. vgl-wasm-runtime

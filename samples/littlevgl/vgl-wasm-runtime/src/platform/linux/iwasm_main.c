@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2019 Intel Corporation.  All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include <netdb.h>
 #include <netinet/in.h>
 #include <stdlib.h>
@@ -101,11 +116,6 @@ void* func(void* arg)
 static bool host_init()
 {
     return true;
-}
-
-int host_recv(void * ctx, char *buf, int buf_size)
-{
-    return 0;
 }
 
 int host_send(void * ctx, const char *buf, int size)
@@ -250,11 +260,6 @@ static bool host_init()
     return true;
 }
 
-int host_recv(void * ctx, char *buf, int buf_size)
-{
-    return 0;
-}
-
 int host_send(void * ctx, const char *buf, int size)
 {
     for (int i = 0; i < size; i++)
@@ -272,7 +277,7 @@ void host_destroy()
 
 #define DEFAULT_THREAD_STACKSIZE (8 * 1024)
 
-host_interface interface = { .init = host_init, .recv = host_recv, .send =
+host_interface interface = { .init = host_init, .send =
         host_send, .destroy = host_destroy };
 timer_ctx_t timer_ctx;
 

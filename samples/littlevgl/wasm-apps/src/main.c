@@ -27,9 +27,7 @@
 #include <inttypes.h>
 #include "lvgl/lvgl.h"
 #include "display_indev.h"
-#ifndef PLATFORM_NATIVE_LINUX
 #include "wasm_app.h"
-#endif
 /*********************
  *      DEFINES
  *********************/
@@ -65,7 +63,7 @@ lv_obj_t * btn1;
 lv_obj_t * label_count1;
 int label_count1_value = 0;
 char label_count1_str[11] = { 0 };
-#ifndef PLATFORM_NATIVE_LINUX
+
 void timer1_update(user_timer_t timer1)
 {
     if ((count % 100) == 0) {
@@ -75,7 +73,7 @@ void timer1_update(user_timer_t timer1)
     lv_task_handler();
     ++count;
 }
-#endif
+
 
 static lv_res_t btn_rel_action(lv_obj_t * btn)
 {
@@ -85,16 +83,9 @@ static lv_res_t btn_rel_action(lv_obj_t * btn)
     return LV_RES_OK;
 }
 
-#ifndef PLATFORM_NATIVE_LINUX
+
 void on_init()
-#else
-main()
-#endif
 {
-#ifdef PLATFORM_NATIVE_LINUX
-    void display_SDL_init();
-    display_SDL_init();
-#endif
     /*Initialize LittlevGL*/
     lv_init();
 
@@ -120,28 +111,10 @@ main()
     lv_label_set_text(label_count1, "0");
     lv_obj_align(label_count1, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
 
-#ifndef PLATFORM_NATIVE_LINUX
     /* set up a timer */
     user_timer_t timer;
     timer = api_timer_create(10, true, false, timer1_update);
     api_timer_restart(timer, 10);
-
-#else
-
-    while(1) {
-        /* Periodically call the lv_task handler.
-         * It could be done in a timer interrupt or an OS task too.*/
-        if ((count % 100) == 0) {
-            sprintf(count_str, "%d", count/ 100);
-            lv_label_set_text(count_label, count_str);
-        }
-        lv_task_handler();
-        ++count;
-        usleep(10 * 1000); /*Just to let the system breath*/
-    }
-
-    return 0;
-#endif
 }
 
 /**********************

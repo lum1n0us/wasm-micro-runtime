@@ -20,38 +20,37 @@ project(NONE)
 enable_language (ASM)
 
 zephyr_compile_definitions (-DNVALGRIND
-		 -D__JLF__
-		 -D__ZEPHYR__
-		 -DWASM_ENABLE_BASE_LIB
-		 -Dattr_container_malloc=bh_malloc
-		 -Dattr_container_free=bh_free)
+    -D__JLF__
+    -D__ZEPHYR__
+    -DWASM_ENABLE_BASE_LIB
+    -Dattr_container_malloc=bh_malloc
+    -Dattr_container_free=bh_free)
 
 set (IWASM_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/core/iwasm)
 set (APP_MGR_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/core/app-mgr)
 set (SHARED_LIB_ROOT ${IWASM_ROOT}/../shared-lib)
-message("		     ${APP_MGR_ROOT}/app-mgr-shared")
-target_include_directories(app PRIVATE ${IWASM_ROOT}/runtime/include
-                     ${IWASM_ROOT}/runtime/platform/zephyr
-		     ${IWASM_ROOT}/runtime/platform/include
-		     ${IWASM_ROOT}/runtime/utils
-		     ${IWASM_ROOT}/runtime/vmcore_wasm
-		     ${IWASM_ROOT}/lib/native/base
-		     ${IWASM_ROOT}/lib/native/libc
-		     ${IWASM_ROOT}/lib/native/extension/sensor
-		     ${IWASM_ROOT}/lib/native-interface
-		     ${APP_MGR_ROOT}/app_manager
-		     ${APP_MGR_ROOT}/app-mgr-shared
-		     ${SHARED_LIB_ROOT}/include
-		     ${SHARED_LIB_ROOT}/platform/include
-		     ${SHARED_LIB_ROOT}/platform/zephyr
-		     ${SHARED_LIB_ROOT}/mem-alloc/ems
-		     ${SHARED_LIB_ROOT}/utils
-		     ${SHARED_LIB_ROOT}/coap/er-coap
-		     ${SHARED_LIB_ROOT}/coap/extension
-		     ${CMAKE_CURRENT_SOURCE_DIR}/../src
-		    ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/zephyr
-                    )
 
+target_include_directories(app PRIVATE ${IWASM_ROOT}/runtime/include
+    ${IWASM_ROOT}/runtime/platform/zephyr
+    ${IWASM_ROOT}/runtime/platform/include
+    ${IWASM_ROOT}/runtime/utils
+    ${IWASM_ROOT}/runtime/vmcore_wasm
+    ${IWASM_ROOT}/lib/native/base
+    ${IWASM_ROOT}/lib/native/libc
+    ${IWASM_ROOT}/lib/native/extension/sensor
+    ${IWASM_ROOT}/lib/native-interface
+    ${APP_MGR_ROOT}/app_manager
+    ${APP_MGR_ROOT}/app-mgr-shared
+    ${SHARED_LIB_ROOT}/include
+    ${SHARED_LIB_ROOT}/platform/include
+    ${SHARED_LIB_ROOT}/platform/zephyr
+    ${SHARED_LIB_ROOT}/mem-alloc/ems
+    ${SHARED_LIB_ROOT}/utils
+    ${SHARED_LIB_ROOT}/coap/er-coap
+    ${SHARED_LIB_ROOT}/coap/extension
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/zephyr
+    )
 
 set (IWASM_SRCS ${IWASM_ROOT}/runtime/platform/zephyr/wasm_math.c
     ${IWASM_ROOT}/runtime/platform/zephyr/wasm-native.c
@@ -82,14 +81,14 @@ set (IWASM_SRCS ${IWASM_ROOT}/runtime/platform/zephyr/wasm_math.c
     ${APP_MGR_ROOT}/app_manager/module_wasm_app.c
     ${APP_MGR_ROOT}/app_manager/module_wasm_lib.c
     ${APP_MGR_ROOT}/app_manager/resource_reg.c
-    ${APP_MGR_ROOT}/app_manager/watchdog.c		
+    ${APP_MGR_ROOT}/app_manager/watchdog.c
     ${APP_MGR_ROOT}/app_manager/platform/zephyr/app_mgr_zephyr.c
     ${SHARED_LIB_ROOT}/platform/zephyr/bh_assert.c
     ${SHARED_LIB_ROOT}/platform/zephyr/bh_definition.c
     ${SHARED_LIB_ROOT}/platform/zephyr/bh_platform.c
     ${SHARED_LIB_ROOT}/platform/zephyr/bh_platform_log.c
     ${SHARED_LIB_ROOT}/platform/zephyr/bh_thread.c
-    ${SHARED_LIB_ROOT}/platform/zephyr/bh_time.c		
+    ${SHARED_LIB_ROOT}/platform/zephyr/bh_time.c
     ${SHARED_LIB_ROOT}/mem-alloc/bh_memory.c
     ${SHARED_LIB_ROOT}/mem-alloc/mem_alloc.c
     ${SHARED_LIB_ROOT}/mem-alloc/ems/ems_alloc.c
@@ -100,13 +99,12 @@ set (IWASM_SRCS ${IWASM_ROOT}/runtime/platform/zephyr/wasm_math.c
     ${SHARED_LIB_ROOT}/utils/bh_log.c
     ${SHARED_LIB_ROOT}/utils/bh_queue.c
     ${SHARED_LIB_ROOT}/utils/runtime_timer.c
-		
     ${SHARED_LIB_ROOT}/coap/er-coap/er-coap.c
     ${SHARED_LIB_ROOT}/coap/extension/coap_conversion.c
     ${SHARED_LIB_ROOT}/coap/extension/coap_over_tcp.c
     )
-    
-    set (LVGL_DRV_SRCS 
+
+    set (LVGL_DRV_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/zephyr/display_ili9340_adafruit_1480.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/zephyr/display_ili9340.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/zephyr/display_indev.c

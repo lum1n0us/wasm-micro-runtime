@@ -31,7 +31,7 @@ void main(void)
     display_init();
     iwasm_main();
     for(;;){
-    	k_sleep(1000);
+        k_sleep(1000);
     }
 }
 

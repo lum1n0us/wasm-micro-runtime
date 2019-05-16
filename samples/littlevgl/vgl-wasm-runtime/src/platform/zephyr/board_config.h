@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-extern void iwasm_main(int argc, char *argv[]);
-int main(int argc, char *argv[])
-{
-    iwasm_main(argc,argv);
-}
+#ifndef __BOARD_CONFIG_H__
+#define __BOARD_CONFIG_H__
+#include "pin_config_stm32.h"
+
+#endif /* __BOARD_CONFIG_H__ */

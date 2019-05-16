@@ -55,7 +55,7 @@ void display_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
     desc.height = h;
     display_write(NULL, x1, y1, &desc, (void *) color_p);
 
-//	lv_flush_ready();
+    /*lv_flush_ready();*/
 }
 void display_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
         lv_color_t color_p)

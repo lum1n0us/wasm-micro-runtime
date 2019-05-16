@@ -36,7 +36,7 @@ echo "#####################build host-tool"
 cd $BUILD_DIR
 mkdir -p host-tool
 cd host-tool
-cmake ${ROOT_DIR}/wamr/core/app-mgr/host-tool
+cmake ${ROOT_DIR}/wamr/test-tools/host-tool
 make
 if [ $? != 0 ];then
         echo "BUILD_FAIL host tool exit as $?\n"

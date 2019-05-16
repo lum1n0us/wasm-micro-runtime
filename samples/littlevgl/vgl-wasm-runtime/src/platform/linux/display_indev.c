@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2019 Intel Corporation.  All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include <stdio.h>
 #include <stdbool.h>
 #include "display_indev.h"
@@ -233,11 +248,6 @@ void monitor_sdl_refr_core(void)
         SDL_UpdateTexture(texture, NULL, tft_fb,
         MONITOR_HOR_RES * sizeof(uint32_t));
         SDL_RenderClear(renderer);
-        /*Test: Draw a background to test transparent screens (LV_COLOR_SCREEN_TRANSP)*/
-//        SDL_SetRenderDrawColor(renderer, 0xff, 0, 0, 0xff);
-//        SDL_Rect r;
-//        r.x = 0; r.y = 0; r.w = MONITOR_HOR_RES; r.w = MONITOR_VER_RES;
-//        SDL_RenderDrawRect(renderer, &r);
         /*Update the renderer with the texture containing the rendered image*/
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);

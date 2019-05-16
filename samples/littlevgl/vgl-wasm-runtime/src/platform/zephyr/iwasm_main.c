@@ -1,8 +1,23 @@
+/*
+ * Copyright (C) 2019 Intel Corporation.  All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include "bh_platform.h"
 #include "runtime_lib.h"
 #include "native_interface.h"
 #include "app-manager-export.h"
-
+#include "board_config.h"
 #include "bh_common.h"
 #include "bh_queue.h"
 #include "bh_thread.h"
@@ -20,7 +35,6 @@ extern int aee_host_msg_callback(void *msg, uint16_t msg_len);
 #include <uart.h>
 #include <device.h>
 
-#define HOST_LMT_COMM_UART_NAME "UART_6"
 int uart_char_cnt = 0;
 
 static void uart_irq_callback(struct device *dev)
@@ -39,7 +53,7 @@ struct device *uart_dev = NULL;
 
 static bool host_init()
 {
-    uart_dev = device_get_binding(HOST_LMT_COMM_UART_NAME);
+    uart_dev = device_get_binding(HOST_DEVICE_COMM_UART_NAME);
     if (!uart_dev) {
         printf("UART: Device driver not found.\n");
         return;
@@ -47,11 +61,6 @@ static bool host_init()
     uart_irq_rx_enable(uart_dev);
     uart_irq_callback_set(uart_dev, uart_irq_callback);
     return true;
-}
-
-int host_recv(void * ctx, char *buf, int buf_size)
-{
-    return 0;
 }
 
 int host_send(void * ctx, const char *buf, int size)
@@ -70,7 +79,7 @@ void host_destroy()
 
 #define DEFAULT_THREAD_STACKSIZE (8 * 1024)
 
-host_interface interface = { .init = host_init, .recv = host_recv, .send =
+host_interface interface = { .init = host_init, .send =
         host_send, .destroy = host_destroy };
 timer_ctx_t timer_ctx;
 static char global_heap_buf[ 498*1024] = { 0 };
