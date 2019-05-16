@@ -464,7 +464,16 @@ void on_init()
 Samples and Demos
 =========================
 Please refer to the ```samples/simple``` folder for samples of WASM application life cyle management and programming models.
-Please refer to the ```samples/littlevgl``` folder for the 2D UI WASM app. The app is built on top of the littleVGL 2D library and runs on Linux PC or STM board with Zephyr OS.
+
+We provide a 2D UI application demo and the source code is under ```samples/littlevgl``` folder.
+
+The UI application is built on top of the littleVGL 2D library. You can run it directly on Linux. Below picture shows the application UI.
+<img src="./doc/pics/vgl_linux.PNG" width="100%" height="100%">
+
+We can port the native UI application to an STM board as long as it contains WAMR. The UI application is built into a WASM application and loaded into WAMR to execute.
+Below pictures show the WASM application is running on an STM board with an LCD touch pannel. When users click the blue button, the WASM application increases the counter, and the latest counter value is displayed on the top banner of the touch pannel. 
+<img src="./doc/pics/vgl.PNG" width="60%" height="60%">
+<img src="./doc/pics/vgl2.PNG" width="60%" height="60%">
 
 Submit issues and request
 =========================
