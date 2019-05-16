@@ -27,15 +27,15 @@ out/
   `./host_tool -h`
 
 - simple:
-  The simple application with WAMR runtime built in. See the usage of this application by executing "./simple -h".
+  A simple application with WAMR runtime built in. See the usage of this application by executing "./simple -h".
   `./simple -h`
->Note: The connection between simple and host_tool is TCP by default and this guide uses default connection. You can also use the UART mode. To achieve this you have to uncomment the below line in CMakeLists.txt and rebuild. You have to set up a UART hardware connection between 2 machines one of which runs the host_tool and the other runs the simple application. See the help of host_tool and the simple application to know how to specify UART device parameters.
+>Note: The connection between simple and host_tool is TCP by default and is what this guide uses. The simple application works as server and the host_tool works as client. You can also use UART connection. To achieve this you have to uncomment the below line in CMakeLists.txt and rebuild. You have to set up an UART hardware connection between 2 machines one of which runs the host_tool and the other runs the simple application. See the help of host_tool and the simple application to know how to specify UART device parameters.
 `#add_definitions (-DCONNECTION_UART)`
 
 - wasm-apps:
   Sample wasm applications that demonstrate all APIs of the WAMR programming model. The source codes are in the wasm-apps directory under the root of this project.
     + event_publisher.wasm
-    This application shows the sub/sub programming model. The pub application publishes the event "alert/overheat" by calling api_publish_event() API. The subscriber could be host_tool or other wasm application.
+    This application shows the sub/pub programming model. The pub application publishes the event "alert/overheat" by calling api_publish_event() API. The subscriber could be host_tool or other wasm application.
     + event_subscriber.wasm
     This application shows the sub/pub programming model. The sub application subscribes the "alert/overheat" event by calling api_subscribe_event() API so that it is able to receive the event once generated and published by the pub application. To make the process clear to interpret, the sub application dumps the event when receiving it.
     + request_handler.wasm
@@ -82,6 +82,8 @@ out/
   `./host_tool -u request_handler`
   `./host_tool -u pub`
   `./host_tool -u sub`
+
+  >Note: Here we only installed part of the sample WASM applications. You can try others by yourself.
 
   >Note: You have to manually kill the simple process by Ctrl+C after use.
 
