@@ -5,12 +5,12 @@ WebAssembly Micro Runtime (WAMR) is a standalone WebAssembly (WASM) runtime desi
 - The supporting APIs for the WASM applications (code is available but compilation depends on the app manager component)
 - A mechanism for dynamic management of the WASM application (Not available on Github yet. To be released soon)
 
-Why should you use a WASM runtime out of your browser? There are a few points where this might be meaningful:	
-1.	WASM is already an LLVM official backend target. That means WASM can run any programming languages which can be compiled to LLVM IR. It is a huge advantage compared to language bound runtimes like JS or Lua.	
-2.	WASM is an open standard and it is fast becoming supported by the whole web ecosystem.	
-3.	WASM is designed to be very friendly for compiling to native binaries and gaining the native speed.	
-4.	It can potentially change the development practices. Imagine we can do both the WASM application development and validation in a browser, then just download the WASM binary code onto the target device.	
-5.	WASM can work without garbage collection. It is designed to support execution determinics for the time sensitive requirement.
+Why should you use a WASM runtime out of your browser? There are a few points where this might be meaningful:   
+1.  WASM is already an LLVM official backend target. That means WASM can run any programming languages which can be compiled to LLVM IR. It is a huge advantage compared to language bound runtimes like JS or Lua. 
+2.  WASM is an open standard and it is fast becoming supported by the whole web ecosystem.  
+3.  WASM is designed to be very friendly for compiling to native binaries and gaining the native speed. 
+4.  It can potentially change the development practices. Imagine we can do both the WASM application development and validation in a browser, then just download the WASM binary code onto the target device.   
+5.  WASM can work without garbage collection. It is designed to support execution determinics for the time sensitive requirement.
 6.  Maintain the safety goals WASM has of providing a sandboxed execution environment for untrusted code. In addition, because WASM is a compilation target, this implies a benefit of being able to target both an execution and security profile that is consistent across popular high-level programming languages.
 
 
@@ -254,7 +254,7 @@ bool sensor_config_with_attr_container(sensor_t sensor, attr_container_t *cfg);
 bool sensor_close(sensor_t sensor);
 ```
 
-The mechanism of exporting Native API to WASM application
+The mechanism of exporting native API to WASM application
 =======================================================
 
 The basic working flow for WASM application calling into the native API is shown in the following diagram:
@@ -314,7 +314,8 @@ The pre-defined MACRO `EXPORT_WASM_API` should be used to declare a function exp
 ```
 
 Below code example shows how to extend the library to support `customized()`:
-``` C
+
+``` 
 //lib_export_impl.c
 void customized()
 {
@@ -348,6 +349,7 @@ static NativeSymbol extended_native_symbol_defs[] =
 
 #include "ext_lib_export.h"
 ```
+
 Use extended library
 ------------------------
 In the application source project, it will include the WAMR built-in APIs header file and platform extension header files. Assuming the board vendor extends the library which added an API called customized(), the WASM application would be like this:
@@ -416,6 +418,7 @@ void room_temp_handler(request_t *request)
 Pub/sub model
 -------------------------
 One WASM application acts as the event publisher. It publishes events to notify WASM applications or host/cloud applications which subscribe to the events.
+
 <img src="./doc/pics/sub.PNG" width="60%" height="60%">
 
 Below is the reference implementation of the pub application. It utilizes a timer to repeatedly publish an overheat alert event to the subscriber applications. Then the subscriber applications receive the events immediately.
@@ -461,19 +464,36 @@ void on_init()
 }
 ```
 
-Samples and Demos
+Samples and demos
 =========================
+The simple sample
+--------
 Please refer to the ```samples/simple``` folder for samples of WASM application life cyle management and programming models.
 
-We provide a 2D UI application demo and the source code is under ```samples/littlevgl``` folder.
+2D graphic user interface with LittlevGL
+------------------------------------------------
+This sample demonstrates that a graphic user interface application in WebAssembly  integrates  the LittlevGL, an open-source embedded 2d graphic library. The sample source code is under ```samples/littlevgl``` 
 
-The UI application is built on top of the littleVGL 2D library. You can run it directly on Linux. Below picture shows the application UI.
-<img src="./doc/pics/vgl_linux.PNG" width="100%" height="100%">
+In this sample, the LittlevGL source code is built into the WebAssembly code with the user application source files. The platform interfaces defined by LittlevGL is implemented in the runtime and exported to the application through the declarations from source "ext_lib_export.c" as below:
 
-We can port the native UI application to an STM board as long as it contains WAMR. The UI application is built into a WASM application and loaded into WAMR to execute.
-Below pictures show the WASM application is running on an STM board with an LCD touch pannel. When users click the blue button, the WASM application increases the counter, and the latest counter value is displayed on the top banner of the touch pannel. 
+        EXPORT_WASM_API(display_init),
+        EXPORT_WASM_API(display_input_read),
+        EXPORT_WASM_API(display_flush),
+        EXPORT_WASM_API(display_fill),
+        EXPORT_WASM_API(display_vdb_write),
+        EXPORT_WASM_API(display_map),
+        EXPORT_WASM_API(time_get_ms), };
+
+The runtime component supports building target for Linux and Zephyr/STM Nucleo board respectively. The beauty of this sample is the WebAssembly application can have identical display and behavior when running from both runtime environments. That implies we can do majority of application validation from desktop environment then load it to the target device as long as two runtime distributions support the same set of application interface.
+
+
+Below pictures show the WASM application is running on an STM board with an LCD touch panel. When users click the blue button, the WASM application increases the counter, and the latest counter value is displayed on the top banner of the touch panel. 
 <img src="./doc/pics/vgl.PNG" width="60%" height="60%">
 <img src="./doc/pics/vgl2.PNG" width="60%" height="60%">
+
+The sample also provides the native Linux version of application without the runtime under folder "vgl-native-ui-app". It can help to check differences between the implementations in native and WebAssembly.
+<img src="./samples/littlevgl/UI.JPG">
+
 
 Submit issues and request
 =========================
