@@ -18,7 +18,7 @@
 #define DISPLAY_INDEV_H_
 #include <stdio.h>
 #include <inttypes.h>
-
+#include "mouse.h"
 #include "lvgl/lv_misc/lv_color.h"
 #include "lvgl/lv_hal/lv_hal_indev.h"
 extern void display_init(void);

@@ -28,6 +28,6 @@ extern bool display_input_read(lv_indev_data_t * data);
 extern void display_deinit(void);
 extern void display_vdb_write(void *buf, lv_coord_t buf_w, lv_coord_t x,
         lv_coord_t y, lv_color_t *color, lv_opa_t opa);
-extern int time_get_ms();
+extern uint32_t time_get_ms(void);
 
 #endif

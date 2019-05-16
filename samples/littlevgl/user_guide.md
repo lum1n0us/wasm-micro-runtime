@@ -55,8 +55,8 @@ sudo apt-get install libsdl2-dev:i386
 ###b. Install from source
 www.libsdl.org
 `./configure C_FLAGS=-m32 CXX_FLAGS=-m32 LD_FLAGS=-m32`
- ` ./make`
-`./sudo make install`
+ ` make`
+`sudo make install`
 ##2. Install EMSDK
     https://emscripten.org/docs/tools_reference/emsdk.html
 ##3. Cmake
@@ -73,6 +73,8 @@ www.libsdl.org
 `./vgl_wasm_runtime -s`
 ####2. Install wasm APP
 `./host_tool -i TestApplet1 -f TestApplet1.wasm`
+
+
 ##2. Build and run on zephyr
 WASM VM and native extension method can be built into zephyr, Then we can install wasm app into STM32.
 ###1.Build wasm into Zephyr system

@@ -16,4 +16,4 @@
 
 #include <stdio.h>
 
-int time_get_ms();
+uint32_t time_get_ms(void);

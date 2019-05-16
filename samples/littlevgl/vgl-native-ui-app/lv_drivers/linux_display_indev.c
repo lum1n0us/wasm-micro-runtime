@@ -25,37 +25,11 @@
 #define MONITOR_ZOOM        1
 #endif
 #define SDL_REFR_PERIOD     50
+void monitor_sdl_init(void);
+void monitor_sdl_refr_core(void);
+void monitor_sdl_clean_up(void);
 static uint32_t tft_fb[MONITOR_HOR_RES * MONITOR_VER_RES];
 
-void display_init(void)
-{
-}
-
-void display_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
-        const lv_color_t * color_p)
-{
-    monitor_flush(x1, y1, x2, y2, color_p);
-}
-void display_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
-        lv_color_t color_p)
-{
-    monitor_fill(x1, y1, x2, y2, color_p);
-}
-void display_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
-        const lv_color_t * color_p)
-{
-    monitor_map(x1, y1, x2, y2, color_p);
-}
-
-bool display_input_read(lv_indev_data_t * data)
-{
-    return mouse_read(data);
-}
-
-void display_deinit(void)
-{
-
-}
 void display_vdb_write(void *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y,
         lv_color_t *color, lv_opa_t opa)
 {
@@ -192,6 +166,36 @@ void monitor_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
     }
 
     sdl_refr_qry = true;
+}
+
+void display_init(void)
+{
+}
+
+void display_flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
+        const lv_color_t * color_p)
+{
+    monitor_flush(x1, y1, x2, y2, color_p);
+}
+void display_fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
+        lv_color_t color_p)
+{
+    monitor_fill(x1, y1, x2, y2, color_p);
+}
+void display_map(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
+        const lv_color_t * color_p)
+{
+    monitor_map(x1, y1, x2, y2, color_p);
+}
+
+bool display_input_read(lv_indev_data_t * data)
+{
+    return mouse_read(data);
+}
+
+void display_deinit(void)
+{
+
 }
 
 int monitor_sdl_refr_thread(void * param)
