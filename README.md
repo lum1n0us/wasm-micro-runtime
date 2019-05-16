@@ -1,17 +1,17 @@
 WebAssembly Micro Runtime
 =========================
-WebAssembly Micro Runtime (WAMR) is standalone WebAssembly (WASM) runtime designed for a small footprint. It includes:
+WebAssembly Micro Runtime (WAMR) is a standalone WebAssembly (WASM) runtime designed for a small footprint. It includes:
 - A WebAssembly (WASM) VM core
 - The supporting APIs for the WASM applications (code is available but compilation depends on the app manager component)
 - A mechanism for dynamic management of the WASM application (Not available on Github yet. To be released soon)
 
 Why should you use a WASM runtime out of your browser? There are a few points where this might be meaningful:	
-1.	WASM is already a LLVM official backend target. That means WASM can run any programming languages which can be compiled to LLVM IR. It is a huge advantage compared to language bound runtimes like JS or Lua.	
+1.	WASM is already an LLVM official backend target. That means WASM can run any programming languages which can be compiled to LLVM IR. It is a huge advantage compared to language bound runtimes like JS or Lua.	
 2.	WASM is an open standard and it is fast becoming supported by the whole web ecosystem.	
 3.	WASM is designed to be very friendly for compiling to native binaries and gaining the native speed.	
 4.	It can potentially change the development practices. Imagine we can do both the WASM application development and validation in a browser, then just download the WASM binary code onto the target device.	
 5.	WASM can work without garbage collection. It is designed to support execution determinics for the time sensitive requirement.
-6.  Maintain the safety goals WASM has of providing a sandboxed execution enviornment for untrusted code. In addition, because WASM is a compilation target, this implies a benefit of being able to target both an execution and security profile that is consistent across popular high-level programming languages.
+6.  Maintain the safety goals WASM has of providing a sandboxed execution environment for untrusted code. In addition, because WASM is a compilation target, this implies a benefit of being able to target both an execution and security profile that is consistent across popular high-level programming languages.
 
 
 
@@ -24,7 +24,7 @@ Current Features of WAMR
 - Provides a mechanism for exporting native API's to WASM applications
 - Supports the programming of firmware apps in a large range of languages (C/C++/Java/Rust/Go/TypeScript etc.)
 - App sandbox execution environment on embedded OS
-- Purely asynchronized programming model
+- The purely asynchronized programming model
 - Menu configuration for easy platform integration
 - Supports micro-service and pub-sub event inter-app communication models
 - Easy to extend to support remote FW application management from host or cloud
@@ -35,7 +35,7 @@ The application manager component handles the packets that the platform receives
 
 - The WebAssembly runtime provides the execution environment for WASM applications.
 
-- The messaging layer can support the API for WASM applications to communicate to each other and also the host environment.
+- The messaging layer can support the API for WASM applications to communicate with each other and also the host environment.
 
 - When ahead of time (AOT) compilation is enabled (TODO), the WASM application could be either WASM or a compiled native binary.
 
@@ -88,7 +88,7 @@ git clone https://github.com/emscripten-core/emsdk.git
 emsdk install latest
 emsdk activate latest
 ```
-add ```./emsdk_env.sh``` into the path to ease future use, or source it everytime.
+add ```./emsdk_env.sh``` into the path to ease future use, or source it every time.
 The Emscripten website provides other installation methods beyond Linux.
 
 You can write a simple ```test.c``` as the first sample.
@@ -144,7 +144,7 @@ ninja run
 
 Embed WAMR into software production
 =====================================
-WAMR can be built into a standalone executable which takes the WASM application file name as input, and then executes it. To use it in the embedded environment you should embed WAMR into your own software product. WASM provides a set of API's for embedded code to load the WASM module, instantiate the module and invoke a WASM  function from a native call.
+WAMR can be built into a standalone executable which takes the WASM application file name as input, and then executes it. To use it in the embedded environment you should embed WAMR into your own software product. WASM provides a set of APIs for embedded code to load the WASM module, instantiate the module and invoke a WASM  function from a native call.
 
 <img src="./doc/pics/embed.PNG" width="60%" height="60%">
 
@@ -375,7 +375,7 @@ Microservice model
 The microservice model is also known as request and response model. One WASM application acts as the server which provides a specific service. Other WASM applications or host/cloud applications request that service and get the response.
 <img src="./doc/pics/request.PNG" width="60%" height="60%">
 
-Below is the reference implementation of the server application. It provides the room temperature measurement service.
+Below is the reference implementation of the server application. It provides room temperature measurement service.
 
 ``` C
 void on_init()
@@ -415,10 +415,10 @@ void room_temp_handler(request_t *request)
 
 Pub/sub model
 -------------------------
-One WASM application acts as the event publisher. It publish events to notify WASM applications or host/cloud applications which subscribe the events.
+One WASM application acts as the event publisher. It publishes events to notify WASM applications or host/cloud applications which subscribe to the events.
 <img src="./doc/pics/sub.PNG" width="60%" height="60%">
 
-Below is the reference implementation of the pub applicaiton. It utilizes a timer to repeatly publish an overheat alert event to the subcriber applications. Then the subscriber applications receive the events immediately.
+Below is the reference implementation of the pub application. It utilizes a timer to repeatedly publish an overheat alert event to the subscriber applications. Then the subscriber applications receive the events immediately.
 
 ``` C
 void on_init(
@@ -463,8 +463,8 @@ void on_init()
 
 Samples and Demos
 =========================
-Please refer to the ```projects/simple``` folder for samples of WASM application life cyle management and programming models.
-Please refer to the ```projects/littlevgl``` folder for the 2D UI WASM app. The app is built on top of the littleVGL 2D library and runs on Linux PC or STM board with Zephyr OS.
+Please refer to the ```samples/simple``` folder for samples of WASM application life cyle management and programming models.
+Please refer to the ```samples/littlevgl``` folder for the 2D UI WASM app. The app is built on top of the littleVGL 2D library and runs on Linux PC or STM board with Zephyr OS.
 
 Submit issues and request
 =========================
