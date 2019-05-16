@@ -14,24 +14,11 @@
  * limitations under the License.
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include "wasm_assert.h"
-#include "wasm_log.h"
-#include "wasm_platform.h"
-#include "wasm_platform_log.h"
-#include "wasm_thread.h"
-#include "wasm_export.h"
-#include "wasm_memory.h"
-#include "bh_memory.h"
-extern void display_init(void);
-extern int iwasm_main();
-void main(void)
-{
-    display_init();
-    iwasm_main();
-    for(;;){
-        k_sleep(1000);
-    }
-}
+#ifndef _BASE_LIB_EXPORT_H_
+#define _BASE_LIB_EXPORT_H_
+
+#include "attr_container.h"
+#include "native_interface.h"
+
+#endif /* end of _BASE_LIB_EXPORT_H_ */
 

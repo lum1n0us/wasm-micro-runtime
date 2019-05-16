@@ -14,24 +14,41 @@
  * limitations under the License.
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include "wasm_assert.h"
-#include "wasm_log.h"
-#include "wasm_platform.h"
-#include "wasm_platform_log.h"
-#include "wasm_thread.h"
-#include "wasm_export.h"
-#include "wasm_memory.h"
-#include "bh_memory.h"
-extern void display_init(void);
-extern int iwasm_main();
-void main(void)
+#include "app_manager.h"
+
+void*
+app_manager_timer_create(void (*timer_callback)(void*),
+        watchdog_timer *wd_timer)
 {
-    display_init();
-    iwasm_main();
-    for(;;){
-        k_sleep(1000);
-    }
+    /* TODO */
+    return NULL;
+}
+
+void app_manager_timer_destroy(void *timer)
+{
+    /* TODO */
+}
+
+void app_manager_timer_start(void *timer, int timeout)
+{
+    /* TODO */
+}
+
+void app_manager_timer_stop(void *timer)
+{
+    /* TODO */
+}
+
+watchdog_timer *
+app_manager_get_wd_timer_from_timer_handle(void *timer)
+{
+    /* TODO */
+    return NULL;
+}
+
+int app_manager_signature_verify(const uint8_t *file, unsigned int file_len,
+        const uint8_t *signature, unsigned int sig_size)
+{
+    return 1;
 }
 

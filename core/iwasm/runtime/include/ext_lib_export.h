@@ -14,24 +14,25 @@
  * limitations under the License.
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include "wasm_assert.h"
-#include "wasm_log.h"
-#include "wasm_platform.h"
-#include "wasm_platform_log.h"
-#include "wasm_thread.h"
-#include "wasm_export.h"
-#include "wasm_memory.h"
-#include "bh_memory.h"
-extern void display_init(void);
-extern int iwasm_main();
-void main(void)
+#ifndef _EXT_LIB_EXPORT_H_
+#define _EXT_LIB_EXPORT_H_
+
+#include "lib_export.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int
+get_ext_lib_export_apis(NativeSymbol **p_ext_lib_apis)
 {
-    display_init();
-    iwasm_main();
-    for(;;){
-        k_sleep(1000);
-    }
+    *p_ext_lib_apis = extended_native_symbol_defs;
+    return sizeof(extended_native_symbol_defs) / sizeof(NativeSymbol);
 }
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* end of _EXT_LIB_EXPORT_H_ */
 

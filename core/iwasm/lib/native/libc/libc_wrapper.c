@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "wasm-native.h"
-#include "wasm-export.h"
+#include "wasm_native.h"
+#include "wasm_export.h"
 #include "wasm_log.h"
 #include "wasm_platform_log.h"
 

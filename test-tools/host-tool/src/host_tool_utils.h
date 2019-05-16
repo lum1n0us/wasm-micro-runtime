@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-#include "attr-container.h"
+#include "attr_container.h"
 #include "cJSON.h"
 
 /**

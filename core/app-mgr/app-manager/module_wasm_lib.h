@@ -14,24 +14,19 @@
  * limitations under the License.
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include "wasm_assert.h"
-#include "wasm_log.h"
-#include "wasm_platform.h"
-#include "wasm_platform_log.h"
-#include "wasm_thread.h"
-#include "wasm_export.h"
-#include "wasm_memory.h"
-#include "bh_memory.h"
-extern void display_init(void);
-extern int iwasm_main();
-void main(void)
-{
-    display_init();
-    iwasm_main();
-    for(;;){
-        k_sleep(1000);
-    }
-}
+#ifndef _MODULE_WASM_LIB_H_
+#define _MODULE_WASM_LIB_H_
 
+#include "app_manager.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern module_interface wasm_lib_module_interface;
+
+#ifdef __cplusplus
+} /* end of extern "C" */
+#endif
+
+#endif /* _MODULE_WASM_LIB_H_ */

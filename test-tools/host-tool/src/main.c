@@ -23,10 +23,10 @@
 
 #include "host_tool_utils.h"
 #include "shared_utils.h"
-#include "attr-container.h"
+#include "attr_container.h"
 #include "coap_ext.h"
 #include "cJSON.h"
-#include "app-manager-export.h" /* for Module_WASM_App */
+#include "app_manager_export.h" /* for Module_WASM_App */
 #include "host_link.h" /* for REQUEST_PACKET */
 #include "transport.h"
 #include "iagent_bsp.h" /* for bh_get_elpased_ms */

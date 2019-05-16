@@ -197,7 +197,7 @@ Built-in application library
 Built-in API's include Libc APIs, Base library and Extension library reference.
 
 **Libc APIs**<br/>
-This is a minimal set of Libc APIs for memory allocation, string manipulation and printing. The header file is located at ```lib/app-libs/libc/lib-base.h```. The current supported API set is listed here:
+This is a minimal set of Libc APIs for memory allocation, string manipulation and printing. The header file is located at ```lib/app-libs/libc/lib_base.h```. The current supported API set is listed here:
 ``` C
 void *malloc(size_t size);
 void *calloc(size_t n, size_t size);
@@ -218,7 +218,7 @@ char *strncpy(char *dest, const char *src, unsigned long n);
 ```
 
 **Base library**<br/>
-Basic support for communication, timers, etc is available. You can refer to the header file ```lib/app-libs/base/wasm-app.h``` which contains the definitions for request and response API's, event pub/sub APIs and timer APIs. Please note that these API's require the native implementations.
+Basic support for communication, timers, etc is available. You can refer to the header file ```lib/app-libs/base/wasm_app.h``` which contains the definitions for request and response API's, event pub/sub APIs and timer APIs. Please note that these API's require the native implementations.
 The API set is listed below:
 ``` C
 typedef void(*request_handler_f)(request_t *) ;
@@ -295,15 +295,15 @@ WAMR implemented a framework for developers to export API's. Below is the proced
 Declare the API's for your WASM application source project to include.
 
 **Step 2. Create a source file**<br/>
-Export the platform API's, for example in ``` products/linux/ext-lib-export.c ```
+Export the platform API's, for example in ``` products/linux/ext_lib_export.c ```
 ``` C
-#include "lib-export.h"
+#include "lib_export.h"
 
 static NativeSymbol extended_native_symbol_defs[] =
 {
 };
 
-#include "ext-lib-export.h"
+#include "ext_lib_export.h"
 ```
 
 **Step 3. Register new APIs**<br/>
@@ -315,14 +315,14 @@ The pre-defined MACRO `EXPORT_WASM_API` should be used to declare a function exp
 
 Below code example shows how to extend the library to support `customized()`:
 ``` C
-//lib-export-impl.c
+//lib_export_impl.c
 void customized()
 {
    // your code
 }
 
 
-// lib-export-dec.h
+// lib_export_dec.h
 #ifndef _LIB_EXPORT_DEC_H_
 #define _LIB_EXPORT_DEC_H_
 #ifdef __cplusplus
@@ -337,23 +337,23 @@ void customized();
 #endif
 
 
-// ext-lib-export.c
-#include "lib-export.h"
-#include "lib-export-dec.h"
+// ext_lib_export.c
+#include "lib_export.h"
+#include "lib_export_dec.h"
 
 static NativeSymbol extended_native_symbol_defs[] =
 {
     EXPORT_WASM_API(customized)
 };
 
-#include "ext-lib-export.h"
+#include "ext_lib_export.h"
 ```
 Use extended library
 ------------------------
 In the application source project, it will include the WAMR built-in APIs header file and platform extension header files. Assuming the board vendor extends the library which added an API called customized(), the WASM application would be like this:
 ``` C
 #include <stdio.h>
-#include "lib-export-dec.h" // provided by the platform vendor
+#include "lib_export_dec.h" // provided by the platform vendor
 
 int main(int argc, char **argv)
 {

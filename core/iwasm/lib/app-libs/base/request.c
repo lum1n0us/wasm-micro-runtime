@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "attr-container.h"
+#include "attr_container.h"
 #include "request.h"
 #include "shared_utils.h"
 #include "wasm_app.h"

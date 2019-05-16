@@ -18,9 +18,9 @@
 #include "bh_queue.h"
 #include "bh_thread.h"
 #include "runtime_sensor.h"
-#include "attr-container.h"
+#include "attr_container.h"
 #include "module_wasm_app.h"
-#include "wasm-export.h"
+#include "wasm_export.h"
 
 /*
  *

@@ -68,12 +68,12 @@ add_library (vmlib
              ${WASM_PLATFORM_LIB_SOURCE}
              ${WASM_UTILS_LIB_SOURCE}
              ${VMCORE_LIB_SOURCE}
-             ${WASM_LIB_BASE_DIR}/base-lib-export.c
+             ${WASM_LIB_BASE_DIR}/base_lib_export.c
              ${WASM_LIBC_SOURCE}
              ${PLATFORM_SHARED_SOURCE}
              ${MEM_ALLOC_SHARED_SOURCE})
 
-add_executable (iwasm main.c ext-lib-export.c)
+add_executable (iwasm main.c ext_lib_export.c)
 
 install (TARGETS iwasm DESTINATION bin)
 
@@ -83,7 +83,7 @@ add_library (libiwasm SHARED
              ${WASM_PLATFORM_LIB_SOURCE}
              ${WASM_UTILS_LIB_SOURCE}
              ${VMCORE_LIB_SOURCE}
-             ${WASM_LIB_BASE_DIR}/base-lib-export.c
+             ${WASM_LIB_BASE_DIR}/base_lib_export.c
              ${WASM_LIBC_SOURCE}
              ${PLATFORM_SHARED_SOURCE}
              ${MEM_ALLOC_SHARED_SOURCE})

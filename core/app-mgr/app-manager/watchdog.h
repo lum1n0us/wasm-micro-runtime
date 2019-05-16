@@ -14,24 +14,36 @@
  * limitations under the License.
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include "wasm_assert.h"
-#include "wasm_log.h"
-#include "wasm_platform.h"
-#include "wasm_platform_log.h"
-#include "wasm_thread.h"
-#include "wasm_export.h"
-#include "wasm_memory.h"
-#include "bh_memory.h"
-extern void display_init(void);
-extern int iwasm_main();
-void main(void)
-{
-    display_init();
-    iwasm_main();
-    for(;;){
-        k_sleep(1000);
-    }
-}
 
+#ifndef _WATCHDOG_H_
+#define _WATCHDOG_H_
+
+#include "app_manager.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+bool
+watchdog_timer_init(module_data *module_data);
+
+void
+watchdog_timer_destroy(watchdog_timer *wd_timer);
+
+void
+watchdog_timer_start(watchdog_timer *wd_timer);
+
+void
+watchdog_timer_stop(watchdog_timer *wd_timer);
+
+watchdog_timer*
+app_manager_get_watchdog_timer(void *timer);
+
+bool
+watchdog_startup();
+
+#ifdef __cplusplus
+} /* end of extern "C" */
+#endif
+
+#endif /* _WATCHDOG_H_ */

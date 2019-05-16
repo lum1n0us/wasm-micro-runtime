@@ -19,7 +19,7 @@
 #include "display_indev.h"
 #include "SDL2/SDL.h"
 #include "sys/time.h"
-#include "wasm-export.h"
+#include "wasm_export.h"
 
 #define MONITOR_HOR_RES 320
 #define MONITOR_VER_RES 240

@@ -14,24 +14,13 @@
  * limitations under the License.
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include "wasm_assert.h"
-#include "wasm_log.h"
-#include "wasm_platform.h"
-#include "wasm_platform_log.h"
-#include "wasm_thread.h"
-#include "wasm_export.h"
-#include "wasm_memory.h"
-#include "bh_memory.h"
-extern void display_init(void);
-extern int iwasm_main();
-void main(void)
+#include "wasm_native.h"
+
+
+void*
+wasm_platform_native_func_lookup(const char *module_name,
+                                 const char *func_name)
 {
-    display_init();
-    iwasm_main();
-    for(;;){
-        k_sleep(1000);
-    }
+    return NULL;
 }
 

@@ -23,15 +23,15 @@
 #include "runtime_lib.h"
 #include "runtime_timer.h"
 #include "native_interface.h"
-#include "app-manager-export.h"
+#include "app_manager_export.h"
 #include "bh_common.h"
 #include "bh_queue.h"
 #include "bh_thread.h"
 #include "bh_memory.h"
 #include "runtime_sensor.h"
-#include "attr-container.h"
+#include "attr_container.h"
 #include "module_wasm_app.h"
-#include "wasm-export.h"
+#include "wasm_export.h"
 #define MAX 2048
 
 #ifndef CONNECTION_UART

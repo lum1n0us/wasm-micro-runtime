@@ -25,7 +25,7 @@
 #include "runtime_sensor.h"
 #include "attr-container.h"
 #include "module_wasm_app.h"
-#include "wasm-export.h"
+#include "wasm_export.h"
 
 extern void * thread_timer_check(void *);
 extern void init_sensor_framework();

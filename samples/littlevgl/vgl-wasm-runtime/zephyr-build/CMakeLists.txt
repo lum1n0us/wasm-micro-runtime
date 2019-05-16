@@ -39,7 +39,7 @@ target_include_directories(app PRIVATE ${IWASM_ROOT}/runtime/include
     ${IWASM_ROOT}/lib/native/libc
     ${IWASM_ROOT}/lib/native/extension/sensor
     ${IWASM_ROOT}/lib/native-interface
-    ${APP_MGR_ROOT}/app_manager
+    ${APP_MGR_ROOT}/app-manager
     ${APP_MGR_ROOT}/app-mgr-shared
     ${SHARED_LIB_ROOT}/include
     ${SHARED_LIB_ROOT}/platform/include
@@ -69,20 +69,20 @@ set (IWASM_SRCS ${IWASM_ROOT}/runtime/platform/zephyr/wasm_math.c
     ${IWASM_ROOT}/lib/native/base/timer_wrapper.c
     ${IWASM_ROOT}/lib/native/libc/libc_wrapper.c
     ${IWASM_ROOT}/lib/native/extension/sensor/runtime_sensor.c
-    ${IWASM_ROOT}/lib/native-interface/attr-container.c
+    ${IWASM_ROOT}/lib/native-interface/attr_container.c
     ${IWASM_ROOT}/lib/native-interface/restful_utils.c
-    ${APP_MGR_ROOT}/app_manager/app-manager.c
-    ${APP_MGR_ROOT}/app_manager/app-manager-host.c
-    ${APP_MGR_ROOT}/app_manager/ble_msg.c
-    ${APP_MGR_ROOT}/app_manager/event.c
-    ${APP_MGR_ROOT}/app_manager/message.c
-    ${APP_MGR_ROOT}/app_manager/module_jeff.c
-    ${APP_MGR_ROOT}/app_manager/module_utils.c
-    ${APP_MGR_ROOT}/app_manager/module_wasm_app.c
-    ${APP_MGR_ROOT}/app_manager/module_wasm_lib.c
-    ${APP_MGR_ROOT}/app_manager/resource_reg.c
-    ${APP_MGR_ROOT}/app_manager/watchdog.c
-    ${APP_MGR_ROOT}/app_manager/platform/zephyr/app_mgr_zephyr.c
+    ${APP_MGR_ROOT}/app-manager/app_manager.c
+    ${APP_MGR_ROOT}/app-manager/app_manager_host.c
+    ${APP_MGR_ROOT}/app-manager/ble_msg.c
+    ${APP_MGR_ROOT}/app-manager/event.c
+    ${APP_MGR_ROOT}/app-manager/message.c
+    ${APP_MGR_ROOT}/app-manager/module_jeff.c
+    ${APP_MGR_ROOT}/app-manager/module_utils.c
+    ${APP_MGR_ROOT}/app-manager/module_wasm_app.c
+    ${APP_MGR_ROOT}/app-manager/module_wasm_lib.c
+    ${APP_MGR_ROOT}/app-manager/resource_reg.c
+    ${APP_MGR_ROOT}/app-manager/watchdog.c
+    ${APP_MGR_ROOT}/app-manager/platform/zephyr/app_mgr_zephyr.c
     ${SHARED_LIB_ROOT}/platform/zephyr/bh_assert.c
     ${SHARED_LIB_ROOT}/platform/zephyr/bh_definition.c
     ${SHARED_LIB_ROOT}/platform/zephyr/bh_platform.c
@@ -115,4 +115,4 @@ target_sources(app PRIVATE ${IWASM_SRCS}
     ${LVGL_DRV_SRCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/zephyr/main.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/zephyr/iwasm_main.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/ext-lib-export.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/ext_lib_export.c)

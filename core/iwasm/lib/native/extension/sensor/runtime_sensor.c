@@ -15,7 +15,7 @@
  */
 
 #include "runtime_sensor.h"
-#include "app-manager-export.h"
+#include "app_manager_export.h"
 #include "module_wasm_app.h"
 #include "bh_thread.h"
 #include "bh_time.h"

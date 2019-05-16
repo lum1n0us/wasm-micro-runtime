@@ -44,7 +44,7 @@ set (IWASM_SRCS ${IWASM_ROOT}/runtime/utils/wasm_hashmap.c
                 ${IWASM_ROOT}/runtime/vmcore_wasm/wasm-runtime.c
                 ${IWASM_ROOT}/runtime/vmcore_wasm/invokeNative_general.c
                 ${IWASM_ROOT}/lib/native/libc/libc_wrapper.c
-                ${IWASM_ROOT}/lib/native/base/base-lib-export.c
+                ${IWASM_ROOT}/lib/native/base/base_lib_export.c
                 ${SHARED_LIB_ROOT}/platform/zephyr/bh_platform.c
                 ${SHARED_LIB_ROOT}/platform/zephyr/bh_assert.c
                 ${SHARED_LIB_ROOT}/platform/zephyr/bh_thread.c
@@ -54,4 +54,4 @@ set (IWASM_SRCS ${IWASM_ROOT}/runtime/utils/wasm_hashmap.c
                 ${SHARED_LIB_ROOT}/mem-alloc/ems/ems_alloc.c
                 ${SHARED_LIB_ROOT}/mem-alloc/ems/ems_hmu.c)
 
-target_sources(app PRIVATE ${IWASM_SRCS} src/main.c src/ext-lib-export.c)
+target_sources(app PRIVATE ${IWASM_SRCS} src/main.c src/ext_lib_export.c)

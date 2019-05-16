@@ -58,7 +58,7 @@ include (${WASM_DIR}/lib/native/base/wasm_lib_base.cmake)
 include (${WASM_DIR}/lib/native/libc/wasm_libc.cmake)
 include (${WASM_DIR}/lib/native/extension/sensor/wasm_lib_sensor.cmake)
 include (${WASM_DIR}/lib/native-interface/native_interface.cmake)
-include (${APP_MGR_DIR}/app_manager/app_mgr.cmake)
+include (${APP_MGR_DIR}/app-manager/app_mgr.cmake)
 include (${APP_MGR_DIR}/app-mgr-shared/app_mgr_shared.cmake)
 include (${SHARED_DIR}/platform/${TARGET_PLATFORM}/shared_platform.cmake)
 include (${SHARED_DIR}/utils/shared_utils.cmake)
@@ -87,7 +87,7 @@ add_library (vmlib
              ${NATIVE_INTERFACE_SOURCE}
             )
 
-add_executable (vgl_wasm_runtime src/platform/${TARGET_PLATFORM}/main.c src/platform/${TARGET_PLATFORM}/iwasm_main.c src/ext-lib-export.c src/platform/${TARGET_PLATFORM}/display_indev.c src/platform/${TARGET_PLATFORM}/mouse.c)
+add_executable (vgl_wasm_runtime src/platform/${TARGET_PLATFORM}/main.c src/platform/${TARGET_PLATFORM}/iwasm_main.c src/ext_lib_export.c src/platform/${TARGET_PLATFORM}/display_indev.c src/platform/${TARGET_PLATFORM}/mouse.c)
 
 target_link_libraries (vgl_wasm_runtime vmlib -lm -ldl -lpthread -lSDL2)
 
