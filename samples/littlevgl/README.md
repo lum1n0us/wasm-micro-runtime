@@ -27,16 +27,12 @@ Install required SDK and libraries
 Use apt-get</br>
     `sudo apt-get install libsdl2-dev:i386`</br>
 Or download source from www.libsdl.org</br>
-    `./configure C_FLAGS=-m32 CXX_FLAGS=-m32 LD_FLAGS=-m32`
+    `./configure C_FLAGS=-m32 CXX_FLAGS=-m32 LD_FLAGS=-m32`</br>
     `make`</br>
     `sudo make install`</br>
 - Install EMSDK
 <pre>
     https://emscripten.org/docs/tools_reference/emsdk.html
-</pre>
-- CMAKE
-<pre>
-     CMAKE version must be above 3.13.1.
 </pre>
 
 Build and Run
@@ -54,7 +50,7 @@ Linux
  First start vgl_wasm_runtime in server mode.</br>
 `./vgl_wasm_runtime -s`</br>
  Then install wasm APP use host tool.</br>
-`./host_tool -i TestApplet1 -f TestApplet1.wasm`</br>
+`./host_tool -i ui_app -f ui_app.wasm`</br>
 
 Zephyr
 --------------------------------

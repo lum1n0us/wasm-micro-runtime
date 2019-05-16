@@ -53,7 +53,7 @@ enable_language (ASM)
 
 include (${WASM_DIR}/runtime/platform/${TARGET_PLATFORM}/platform.cmake)
 include (${WASM_DIR}/runtime/utils/utils.cmake)
-include (${WASM_DIR}/runtime/vmcore_wasm/vmcore.cmake)
+include (${WASM_DIR}/runtime/vmcore-wasm/vmcore.cmake)
 include (${WASM_DIR}/lib/native/base/wasm_lib_base.cmake)
 include (${WASM_DIR}/lib/native/libc/wasm_libc.cmake)
 include (${WASM_DIR}/lib/native/extension/sensor/wasm_lib_sensor.cmake)

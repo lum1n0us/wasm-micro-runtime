@@ -60,8 +60,8 @@ echo "##################### build littlevgl wasm runtime end####################
 echo "##################### 3. build wasm ui app start#####################"
 cd ${PROJECT_DIR}/wasm-apps
 if [ ! -d "${PROJECT_DIR}/wasm-apps/lvgl" ]; then
-    if [ -d "$BUILD_DIR/vgl-native-ui-app/ext_proj/Source/lvgl" ]; then
-        cp -fr $BUILD_DIR/vgl-native-ui-app/ext_proj/Source/lvgl ${PROJECT_DIR}/wasm-apps
+    if [ -d "$BUILD_DIR/vgl-native-ui-app/lvgl" ]; then
+        cp -fr $BUILD_DIR/vgl-native-ui-app/lvgl ${PROJECT_DIR}/wasm-apps
     fi
 fi
 ./build_wasm_app.sh
