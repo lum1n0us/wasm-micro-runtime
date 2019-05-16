@@ -145,9 +145,9 @@ include_directories(
     ${ep_base}/Source
     ${LVGL_DRIVER_DIR}
     ${LVGL_DRIVER_DIR}/display
+    ${LVGL_DRIVER_DIR}/indev
     ${LVGL_SOURCE_DIR}
     ${CMAKE_CURRENT_LIST_DIR}
-    ${CMAKE_CURRENT_LIST_DIR}/../wasm-apps/src/
 )
 add_executable(vgl_native_ui_app ${SOURCES} )
 

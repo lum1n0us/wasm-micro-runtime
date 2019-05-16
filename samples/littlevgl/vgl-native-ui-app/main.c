@@ -26,9 +26,8 @@
 #include <inttypes.h>
 #include "lvgl/lvgl.h"
 #include "display_indev.h"
-#ifndef PLATFORM_NATIVE_LINUX
-#include "wasm_app.h"
-#endif
+#include <unistd.h>
+
 /*********************
  *      DEFINES
  *********************/
@@ -73,7 +72,7 @@ static lv_res_t btn_rel_action(lv_obj_t * btn)
 }
 
 
-main()
+int main()
 {
     void display_SDL_init();
     display_SDL_init();
@@ -131,7 +130,7 @@ void display_flush_wrapper(int32_t x1, int32_t y1, int32_t x2, int32_t y2,
     display_flush(x1, y1, x2, y2, color_p);
     lv_flush_ready();
 }
-void display_vdb_write_wrapper(void *buf, lv_coord_t buf_w, lv_coord_t x,
+void display_vdb_write_wrapper(uint8_t *buf, lv_coord_t buf_w, lv_coord_t x,
         lv_coord_t y, lv_color_t color, lv_opa_t opa)
 {
     display_vdb_write(buf, buf_w, x, y, &color, opa);
