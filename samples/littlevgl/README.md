@@ -17,7 +17,7 @@ The runtime component supports building target for Linux and Zephyr/STM Nucleo b
 The sample also provides the native Linux version of application without the runtime under folder "vgl-native-ui-app". It can help to check differences between the implementations in native and WebAssembly.
 
  
-<img src="./UI.JPG">
+<img src="../../doc/pics/vgl_linux.PNG">
 
 The number on top will plus one each second, and the number on the bottom will plus one when clicked.
 
