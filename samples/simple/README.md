@@ -6,7 +6,7 @@ It demonstrates an end to end scenario, the wasm applications life cycle managem
 
 Directory structure
 ------------------------------
-<pre>
+```
 simple/
 ├── build.sh
 ├── CMakeLists.txt
@@ -28,7 +28,7 @@ simple/
     │   └── sensor.c
     └── timer
         └── timer.c
-</pre>
+```
 
 - build.sh<br/>
   The script to build all binaries.
@@ -61,7 +61,7 @@ app_manager_startup(&interface);
 ```
 
 The `host_init_func` is called when the application manager starts up. And `host_send_fun` is called by the application manager to send data to the host.
->Note: Currently application manager keeps running and never exit, `host_destroy_fun` has no chance to get executed. So you can leave this API implementation empty.
+>**Note:** Currently application manager keeps running and never exit, `host_destroy_fun` has no chance to get executed. So you can leave this API implementation empty.
 
 - src/main.c<br/>
   The main file.
@@ -75,7 +75,7 @@ Execute the build.sh script then all binaries including wasm application files w
 
 Out directory structure
 ------------------------------
- <pre>
+ ```
 out/
 ├── host_tool
 ├── simple
@@ -86,7 +86,7 @@ out/
     ├── request_sender.wasm
     ├── sensor.wasm
     └── timer.wasm
- </pre>
+ ```
 
 - host_tool:
   A small testing tool to interact with WAMR. See the usage of this tool by executing "./host_tool -h".
@@ -95,7 +95,7 @@ out/
 - simple:
   A simple testing tool running on the host side that interact with WAMR. It is used to install, uninstall and query WASM applications in WAMR, and send request or subscribe event, etc. See the usage of this application by executing "./simple -h".
   `./simple -h`
->Note: The connection between simple and host_tool is TCP by default and is what this guide uses. The simple application works as a server and the host_tool works as a client. You can also use UART connection. To achieve this you have to uncomment the below line in CMakeLists.txt and rebuild. You have to set up a UART hardware connection between 2 machines one of which runs the host_tool and the other runs the simple application. See the help of host_tool and the simple application to know how to specify UART device parameters.<br/>
+>****Note:**** The connection between simple and host_tool is TCP by default and is what this guide uses. The simple application works as a server and the host_tool works as a client. You can also use UART connection. To achieve this you have to uncomment the below line in CMakeLists.txt and rebuild. You have to set up a UART hardware connection between 2 machines one of which runs the host_tool and the other runs the simple application. See the help of host_tool and the simple application to know how to specify UART device parameters.<br/>
 `#add_definitions (-DCONNECTION_UART)`
 
 - wasm-apps:
@@ -322,6 +322,6 @@ response status 69
 }
 ```
 
-  >Note: Here we only installed part of the sample WASM applications. You can try others by yourself.
+  >**Note:** Here we only installed part of the sample WASM applications. You can try others by yourself.
 
-  >Note: You have to manually kill the simple process by Ctrl+C after use.
+  >**Note:** You have to manually kill the simple process by Ctrl+C after use.
