@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "wasm-runtime.h"
+#include "wasm_runtime.h"
 
 void invokeNative(uint32 argv[], uint32 argc, void (*native_code)())
 {

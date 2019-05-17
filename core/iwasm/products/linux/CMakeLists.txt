@@ -58,7 +58,7 @@ enable_language (ASM)
 
 include (../../runtime/platform/${PLATFORM}/platform.cmake)
 include (../../runtime/utils/utils.cmake)
-include (../../runtime/vmcore_wasm/vmcore.cmake)
+include (../../runtime/vmcore-wasm/vmcore.cmake)
 include (../../lib/native/base/wasm_lib_base.cmake)
 include (../../lib/native/libc/wasm_libc.cmake)
 include (${SHARED_LIB_DIR}/platform/${PLATFORM}/shared_platform.cmake)

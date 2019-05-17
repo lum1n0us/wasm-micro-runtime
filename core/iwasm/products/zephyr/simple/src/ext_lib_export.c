@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "lib-export.h"
+#include "lib_export.h"
 
 static NativeSymbol extended_native_symbol_defs[] = { };
 
-#include "ext-lib-export.h"
+#include "ext_lib_export.h"

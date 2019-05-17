@@ -53,18 +53,18 @@ target_include_directories(app PRIVATE ${IWASM_ROOT}/runtime/include
     )
 
 set (IWASM_SRCS ${IWASM_ROOT}/runtime/platform/zephyr/wasm_math.c
-    ${IWASM_ROOT}/runtime/platform/zephyr/wasm-native.c
+    ${IWASM_ROOT}/runtime/platform/zephyr/wasm_native.c
     ${IWASM_ROOT}/runtime/platform/zephyr/wasm_platform.c
     ${IWASM_ROOT}/runtime/utils/wasm_dlfcn.c
     ${IWASM_ROOT}/runtime/utils/wasm_hashmap.c
     ${IWASM_ROOT}/runtime/utils/wasm_log.c
     ${IWASM_ROOT}/runtime/utils/wasm_vector.c
-    ${IWASM_ROOT}/runtime/vmcore_wasm/wasm-application.c
-    ${IWASM_ROOT}/runtime/vmcore_wasm/wasm-interp.c
-    ${IWASM_ROOT}/runtime/vmcore_wasm/wasm-loader.c
-    ${IWASM_ROOT}/runtime/vmcore_wasm/wasm-runtime.c
-    ${IWASM_ROOT}/runtime/vmcore_wasm/invokeNative_general.c
-    ${IWASM_ROOT}/lib/native/base/base-lib-export.c
+    ${IWASM_ROOT}/runtime/vmcore-wasm/wasm_application.c
+    ${IWASM_ROOT}/runtime/vmcore-wasm/wasm_interp.c
+    ${IWASM_ROOT}/runtime/vmcore-wasm/wasm_loader.c
+    ${IWASM_ROOT}/runtime/vmcore-wasm/wasm_runtime.c
+    ${IWASM_ROOT}/runtime/vmcore-wasm/invokeNative_general.c
+    ${IWASM_ROOT}/lib/native/base/base_lib_export.c
     ${IWASM_ROOT}/lib/native/base/request_response.c
     ${IWASM_ROOT}/lib/native/base/timer_wrapper.c
     ${IWASM_ROOT}/lib/native/libc/libc_wrapper.c
