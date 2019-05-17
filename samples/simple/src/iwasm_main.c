@@ -213,8 +213,6 @@ void* func_server_mode(void* arg)
                 sockfd = -1;
                 pthread_mutex_unlock(&sock_lock);
 
-                printf(
-                        "connection lost, and waiting for client to reconnect...\n");
                 sleep(2);
                 break;
             }

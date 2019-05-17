@@ -190,7 +190,6 @@ App request_handler got request, url url1, action 1
 [resp] ### user resource 1 handler called
 sent 150 bytes to host
 Wasm app process request success.
-connection lost, and waiting for client to reconnect...
 ```
 
 - Send a general request from host (not specify target application name)<br/>
@@ -212,7 +211,6 @@ App request_handler got request, url /url1, action 1
 [resp] ### user resource 1 handler called
 sent 150 bytes to host
 Wasm app process request success.
-connection lost, and waiting for client to reconnect...
 ```
 
 - Install the event publisher wasm application<br/>
@@ -257,7 +255,6 @@ sent 142 bytes to host
 sent 142 bytes to host
 sent 142 bytes to host
 sent 142 bytes to host
-connection lost, and waiting for client to reconnect...
 ```
 - Install the event subscriber wasm application<br/>
 ```
@@ -275,7 +272,6 @@ WASM app 'sub' started
 am_register_event adding url:(alert/overheat)
 client: 3 registered event (alert/overheat)
 sent 16 bytes to host
-connection lost, and waiting for client to reconnect...
 Send request to app sub success.
 App sub got request, url alert/overheat, action 6
 ### user over heat event handler called
