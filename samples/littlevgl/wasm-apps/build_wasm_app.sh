@@ -14,7 +14,7 @@
 
 #!/bin/sh
 if [ ! -d "lvgl" ]; then
-    git clone https://github.com/littlevgl/lvgl.git
+    git clone https://github.com/littlevgl/lvgl.git --branch v5.3
 fi
 make -f Makefile_wasm_app
 
