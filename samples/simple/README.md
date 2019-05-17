@@ -12,7 +12,7 @@ simple/
 ├── CMakeLists.txt
 ├── README.md
 ├── src
-│   ├── ext-lib-export.c
+│   ├── ext_lib_export.c
 │   ├── iwasm_main.c
 │   └── main.c
 └── wasm-apps
@@ -27,7 +27,7 @@ simple/
     ├── sensor
     │   └── sensor.c
     └── timer
-        └── timer.c
+        └── timer.c
 ```
 
 - build.sh<br/>
@@ -36,10 +36,10 @@ simple/
   CMake file used to build the simple application.
 - README.md<br/>
   The file you are reading currently.
-- src/ext-lib-export.c<br/>
+- src/ext_lib_export.c<br/>
   This file is used to export native APIs. See the `The mechanism of exporting Native API to WASM application` section in WAMR README.md for detail.
 - src/iwam_main.c<br/>
-  This file is the implementation by platform integrator. It implements the interfaces that enable the application manager communicating with the host side. See `{WAMR_ROOT}/core/app-mgr/app-mgr-shared/app-manager-export.h` for the definition of the host interface.
+  This file is the implementation by platform integrator. It implements the interfaces that enable the application manager communicating with the host side. See `{WAMR_ROOT}/core/app-mgr/app-mgr-shared/app_manager_export.h` for the definition of the host interface.
 ```
 /* Interfaces of host communication */
 typedef struct host_interface {
