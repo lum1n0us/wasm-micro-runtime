@@ -32,7 +32,7 @@ set(APP_MGR_DIR ${REPO_ROOT_DIR}/core/app-mgr)
 set(SHARED_DIR ${REPO_ROOT_DIR}/core/shared-lib)
 #TODO: use soft-plc/tools/iec-runtime/external/cJSON instead
 set(CJSON_DIR ${CMAKE_CURRENT_LIST_DIR}/external/cJSON)
-set(SSG_LIB_DIR ${REPO_ROOT_DIR}/../host_agent/lib)
+set(SSG_LIB_DIR ${REPO_ROOT_DIR}/../host-agent/lib)
 
 include (${WASM_DIR}/lib/native-interface/native_interface.cmake)
 include (${APP_MGR_DIR}/app-mgr-shared/app_mgr_shared.cmake)
