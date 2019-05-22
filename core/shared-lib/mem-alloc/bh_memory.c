@@ -14,10 +14,29 @@
  * limitations under the License.
  */
 
+#include "bh_config.h"
 #include "bh_memory.h"
 #include "mem_alloc.h"
 #include <stdio.h>
 #include <stdlib.h>
+
+#if BEIHAI_ENABLE_MEMORY_PROFILING != 0
+#include "bh_thread.h"
+typedef struct memory_profile {
+  struct memory_profile *next;
+  const char *function_name;
+  const char *file_name;
+  int line_in_file;
+  int malloc_num;
+  int free_num;
+  int total_malloc;
+  int total_free;
+} memory_profile_t;
+
+static memory_profile_t *memory_profiles_list = NULL;
+
+static korp_mutex profile_lock;
+#endif
 
 #ifndef MALLOC_MEMORY_FROM_SYSTEM
 
@@ -39,6 +58,9 @@ int bh_memory_init_with_pool(void *mem, unsigned int bytes)
     if (_allocator) {
         memory_mode = MEMORY_MODE_POOL;
         pool_allocator = _allocator;
+#if BEIHAI_ENABLE_MEMORY_PROFILING != 0
+        vm_mutex_init(&profile_lock);
+#endif
         return 0;
     }
     printf("Init memory with pool (%p, %u) failed.\n", mem, bytes);
@@ -51,6 +73,9 @@ int bh_memory_init_with_allocator(void *_malloc_func, void *_free_func)
         memory_mode = MEMORY_MODE_ALLOCATOR;
         malloc_func = _malloc_func;
         free_func = _free_func;
+#if BEIHAI_ENABLE_MEMORY_PROFILING != 0
+        vm_mutex_init(&profile_lock);
+#endif
         return 0;
     }
     printf("Init memory with allocator (%p, %p) failed.\n", _malloc_func,
@@ -60,12 +85,15 @@ int bh_memory_init_with_allocator(void *_malloc_func, void *_free_func)
 
 void bh_memory_destroy()
 {
+#if BEIHAI_ENABLE_MEMORY_PROFILING != 0
+    vm_mutex_destroy(&profile_lock);
+#endif
     if (memory_mode == MEMORY_MODE_POOL)
         mem_allocator_destroy(pool_allocator);
     memory_mode = MEMORY_MODE_UNKNOWN;
 }
 
-void* bh_malloc(unsigned int size)
+void* bh_malloc_internal(unsigned int size)
 {
     if (memory_mode == MEMORY_MODE_UNKNOWN) {
         printf("bh_malloc failed: memory hasn't been initialize.\n");
@@ -77,7 +105,7 @@ void* bh_malloc(unsigned int size)
     }
 }
 
-void bh_free(void *ptr)
+void bh_free_internal(void *ptr)
 {
     if (memory_mode == MEMORY_MODE_UNKNOWN) {
         printf("bh_free failed: memory hasn't been initialize.\n");
@@ -88,7 +116,137 @@ void bh_free(void *ptr)
     }
 }
 
+#if BEIHAI_ENABLE_MEMORY_PROFILING != 0
+void* bh_malloc_profile(const char *file, int line, const char *func, unsigned int size)
+{
+    void *p;
+
+    p = bh_malloc_internal(size + 8);
+
+    if (p) {
+        memory_profile_t *profile;
+
+        vm_mutex_lock(&profile_lock);
+
+        profile = memory_profiles_list;
+        while (profile) {
+            if (strcmp(profile->function_name, func) == 0
+                && strcmp(profile->file_name, file) == 0) {
+                break;
+            }
+            profile = profile->next;
+        }
+
+        if (profile) {
+            profile->total_malloc += size;/* TODO: overflow check */
+            profile->malloc_num++;
+        } else {
+            profile = bh_malloc_internal(sizeof(memory_profile_t));
+            if (!profile) {
+              vm_mutex_unlock(&profile_lock);
+              memcpy(p, &size, sizeof(size));
+              return (char *)p + 8;
+            }
+
+            memset(profile, 0, sizeof(memory_profile_t));
+            profile->file_name = file;
+            profile->line_in_file = line;
+            profile->function_name = func;
+            profile->malloc_num = 1;
+            profile->total_malloc = size;
+            profile->next = memory_profiles_list;
+            memory_profiles_list = profile;
+        }
+
+        vm_mutex_unlock(&profile_lock);
+
+        memcpy(p, &size, sizeof(size));
+        return (char *)p + 8;
+    }
+
+    return NULL;
+}
+
+void bh_free_profile(const char *file, int line, const char *func, void *ptr)
+{
+    unsigned int size = *(unsigned int *)((char *)ptr - 8);
+    memory_profile_t *profile;
+
+    bh_free_internal((char *)ptr - 8);
+
+    vm_mutex_lock(&profile_lock);
+
+    profile = memory_profiles_list;
+    while (profile) {
+        if (strcmp(profile->function_name, func) == 0
+            && strcmp(profile->file_name, file) == 0) {
+            break;
+        }
+        profile = profile->next;
+    }
+
+    if (profile) {
+        profile->total_free += size;/* TODO: overflow check */
+        profile->free_num++;
+    } else {
+        profile = bh_malloc_internal(sizeof(memory_profile_t));
+        if (!profile) {
+            vm_mutex_unlock(&profile_lock);
+            return;
+        }
+
+        memset(profile, 0, sizeof(memory_profile_t));
+        profile->file_name = file;
+        profile->line_in_file = line;
+        profile->function_name = func;
+        profile->free_num = 1;
+        profile->total_free = size;
+        profile->next = memory_profiles_list;
+        memory_profiles_list = profile;
+    }
+
+    vm_mutex_unlock(&profile_lock);
+}
+
+void memory_profile_dump()
+{
+    memory_profile_t *profile;
+
+    vm_mutex_lock(&profile_lock);
+    profile = memory_profiles_list;
+    while (profile) {
+        printf("malloc:%d:malloc_num:%d:free:%d:free_num:%d:%s\n",
+            profile->total_malloc,
+            profile->malloc_num,
+            profile->total_free,
+            profile->free_num,
+            /*profile->file_name,
+            profile->line_in_file,*/
+            profile->function_name);
+
+        /* To analyse the output:
+         *   awk -F: '{print $2,$4,$6,$8,$9}' OFS="\t"
+         *       ./mem_profile_out.txt | sort -n -r -k 1 */
+        profile = profile->next;
+    }
+    vm_mutex_unlock(&profile_lock);
+}
+#else
+
+void* bh_malloc(unsigned int size)
+{
+    return bh_malloc_internal(size);
+}
+
+void bh_free(void *ptr)
+{
+    bh_free_internal(ptr);
+}
+#endif
+
 #else /* else of MALLOC_MEMORY_FROM_SYSTEM */
+
+#if BEIHAI_ENABLE_MEMORY_PROFILING == 0
 
 void* bh_malloc(unsigned int size)
 {
@@ -98,8 +256,32 @@ void* bh_malloc(unsigned int size)
 void bh_free(void *ptr)
 {
     if (ptr)
-    free(ptr);
+        free(ptr);
 }
 
+#else /* else of BEIHAI_ENABLE_MEMORY_PROFILING */
+
+void* bh_malloc_profile(const char *file, int line, const char *func, unsigned int size)
+{
+    (void)file;
+    (void)line;
+    (void)func;
+
+    (void)memory_profiles_list;
+    (void)profile_lock;
+
+    return malloc(size);
+}
+
+void bh_free_profile(const char *file, int line, const char *func, void *ptr)
+{
+    (void)file;
+    (void)line;
+    (void)func;
+
+    if (ptr)
+        free(ptr);
+}
+#endif /* end of BEIHAI_ENABLE_MEMORY_PROFILING */
 #endif /* end of MALLOC_MEMORY_FROM_SYSTEM*/
 

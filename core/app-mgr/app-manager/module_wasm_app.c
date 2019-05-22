@@ -564,7 +564,9 @@ static bool wasm_app_module_install(request_t * msg)
 
     app_manager_printf("Install WASM app success!\n");
     send_error_response_to_host(msg->mid, CREATED_2_01, NULL); /* CREATED */
-
+#if BEIHAI_ENABLE_MEMORY_PROFILING != 0
+    memory_profile_dump();
+#endif
     return true;
 
     fail: if (m_data)

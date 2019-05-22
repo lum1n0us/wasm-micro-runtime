@@ -76,13 +76,10 @@ void host_destroy()
 
 }
 
-
-#define DEFAULT_THREAD_STACKSIZE (8 * 1024)
-
 host_interface interface = { .init = host_init, .send =
         host_send, .destroy = host_destroy };
 timer_ctx_t timer_ctx;
-static char global_heap_buf[ 498*1024] = { 0 };
+static char global_heap_buf[364 * 1024] = { 0 };
 extern void display_init(void);
 int iwasm_main()
 {

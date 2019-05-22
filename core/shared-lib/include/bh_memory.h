@@ -52,6 +52,8 @@ int bh_memory_init_with_allocator(void *malloc_func, void *free_func);
  */
 void bh_memory_destroy();
 
+#if BEIHAI_ENABLE_MEMORY_PROFILING == 0
+
 /**
  * This function allocates a memory chunk from system
  *
@@ -67,6 +69,16 @@ void* bh_malloc(unsigned int size);
  * @param ptr the pointer to memory need free
  */
 void bh_free(void *ptr);
+
+#else
+
+void* bh_malloc_profile(const char *file, int line, const char *func, unsigned int size);
+void bh_free_profile(const char *file, int line, const char *func, void *ptr);
+
+#define bh_malloc(size) bh_malloc_profile(__FILE__, __LINE__, __func__, size)
+#define bh_free(ptr) bh_free_profile(__FILE__, __LINE__, __func__, ptr)
+
+#endif
 
 #ifdef __cplusplus
 }

@@ -1198,6 +1198,15 @@ branch_set_value_destroy(void *value)
     wasm_free(value);
 }
 
+#if BEIHAI_ENABLE_MEMORY_PROFILING != 0
+static void wasm_loader_free(void *ptr)
+{
+    wasm_free(ptr);
+}
+#else
+#define wasm_loader_free wasm_free
+#endif
+
 static WASMModule*
 create_module(char *error_buf, uint32 error_buf_size)
 {
@@ -1218,7 +1227,7 @@ create_module(char *error_buf, uint32 error_buf_size)
                     (HashFunc)wasm_string_hash,
                     (KeyEqualFunc)wasm_string_equal,
                     NULL,
-                    wasm_free)))
+                    wasm_loader_free)))
         goto fail;
 
     if (!(module->branch_set = wasm_hash_map_create(64, true,
@@ -1361,7 +1370,7 @@ wasm_loader_load(const uint8 *buf, uint32 size, char *error_buf, uint32 error_bu
                                         (HashFunc)wasm_string_hash,
                                         (KeyEqualFunc)wasm_string_equal,
                                         NULL,
-                                        wasm_free)))
+                                        wasm_loader_free)))
         goto fail;
 
     if (!(module->branch_set = wasm_hash_map_create(64, true,

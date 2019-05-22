@@ -78,13 +78,18 @@
 */
 
 /* Default/min/max heap size of each app */
-#define APP_HEAP_SIZE_DEFAULT (48 * 1024)
+#define APP_HEAP_SIZE_DEFAULT (8 * 1024)
 #define APP_HEAP_SIZE_MIN (2 * 1024)
 #define APP_HEAP_SIZE_MAX (1024 * 1024)
 
 /* Default/min/max stack size of each app thread */
+#ifndef __ZEPHYR__
 #define APP_THREAD_STACK_SIZE_DEFAULT (20 * 1024)
 #define APP_THREAD_STACK_SIZE_MIN (16 * 1024)
 #define APP_THREAD_STACK_SIZE_MAX (256 * 1024)
-
+#else
+#define APP_THREAD_STACK_SIZE_DEFAULT (4 * 1024)
+#define APP_THREAD_STACK_SIZE_MIN (2 * 1024)
+#define APP_THREAD_STACK_SIZE_MAX (256 * 1024)
+#endif
 #endif
