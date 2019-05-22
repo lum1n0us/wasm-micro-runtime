@@ -1457,8 +1457,8 @@ wasm_loader_unload(WASMModule *module)
 
 typedef struct block_addr {
     uint8 block_type;
-    uint8 *else_addr;
     uint8 *end_addr;
+    uint8 *else_addr;
 } block_addr;
 
 bool
@@ -1512,7 +1512,13 @@ wasm_loader_find_block_addr(HashMap *branch_set,
                         *p_else_addr = else_addr;
                     *p_end_addr = (uint8*)(p - 1);
 
-                    if ((block = wasm_malloc(sizeof(block_addr)))) {
+#if WASM_ENABLE_HASH_BLOCK_ADDR != 0
+                    if (block_type == BLOCK_TYPE_IF)
+                        block = wasm_malloc(sizeof(block_addr));
+                    else
+                        block = wasm_malloc(offsetof(block_addr, else_addr));
+
+                    if (block) {
                         block->block_type = block_type;
                         if (block_type == BLOCK_TYPE_IF)
                             block->else_addr = else_addr;
@@ -1521,6 +1527,7 @@ wasm_loader_find_block_addr(HashMap *branch_set,
                         if (!wasm_hash_map_insert(branch_set, (void*)start_addr, block))
                             wasm_free(block);
                     }
+#endif
 
                     return true;
                 }
@@ -2091,11 +2098,9 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
     HashMap *branch_set = module->branch_set;
     block_addr *block;
     uint8 *p = func->code, *p_end = func->code + func->code_size;
-    uint8 *frame_lp_ref_bottom = NULL;
     uint8 *frame_ref_bottom = NULL, *frame_ref_boundary, *frame_ref;
     BranchBlock *frame_csp_bottom = NULL, *frame_csp_boundary, *frame_csp;
     uint32 param_count, local_count, global_count;
-    uint32 param_cell_num, local_cell_num;
     uint32 max_stack_cell_num = 0, max_csp_num = 0;
     uint32 stack_cell_num = 0, csp_num = 0;
     uint32 frame_ref_size, frame_csp_size;
@@ -2115,16 +2120,6 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
 
     local_count = func->local_count;
     local_types = func->local_types;
-
-    param_cell_num = wasm_get_cell_num(param_types, param_count);
-    local_cell_num = wasm_get_cell_num(local_types, local_count);
-
-    if (!(frame_lp_ref_bottom = wasm_malloc(param_cell_num + local_cell_num))) {
-        set_error_buf(error_buf, error_buf_size,
-                      "WASM loader prepare bytecode failed: alloc memory failed");
-        goto fail;
-    }
-    memset(frame_lp_ref_bottom, 0, param_cell_num + local_cell_num);
 
     frame_ref_size = 32;
     if (!(frame_ref_bottom = frame_ref = wasm_malloc(frame_ref_size))) {
@@ -2219,10 +2214,16 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
                 if (csp_num > 0) {
                     frame_csp->end_addr = p - 1;
 
+#if WASM_ENABLE_HASH_BLOCK_ADDR != 0
                     if (wasm_hash_map_find(branch_set, (void*)frame_csp->start_addr))
                         break;
 
-                    if (!(block = wasm_malloc(sizeof(block_addr)))) {
+                    if (frame_csp->block_type == BLOCK_TYPE_IF)
+                        block = wasm_malloc(sizeof(block_addr));
+                    else
+                        block = wasm_malloc(offsetof(block_addr, else_addr));
+
+                    if (!block) {
                         set_error_buf(error_buf, error_buf_size,
                                       "WASM loader prepare bytecode failed: "
                                       "alloc memory failed");
@@ -2230,7 +2231,8 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
                     }
 
                     block->block_type = frame_csp->block_type;
-                    block->else_addr = (void*)frame_csp->else_addr;
+                    if (frame_csp->block_type == BLOCK_TYPE_IF)
+                        block->else_addr = (void*)frame_csp->else_addr;
                     block->end_addr = (void*)frame_csp->end_addr;
 
                     if (!wasm_hash_map_insert(branch_set, (void*)frame_csp->start_addr,
@@ -2241,6 +2243,7 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
                         wasm_free(block);
                         goto fail;
                     }
+#endif
                 }
                 break;
             }
@@ -2871,8 +2874,6 @@ handle_op_br:
     return_value = true;
 
 fail:
-    if (frame_lp_ref_bottom)
-        wasm_free(frame_lp_ref_bottom);
     if (frame_ref_bottom)
         wasm_free(frame_ref_bottom);
     if (frame_csp_bottom)

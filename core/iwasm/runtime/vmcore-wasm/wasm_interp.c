@@ -705,6 +705,45 @@ wasm_interp_call_func_native(WASMThread *self,
 
 #endif  /* end of WASM_ENABLE_LABELS_AS_VALUES */
 
+static bool
+find_block_addr(WASMThread *self, WASMModuleInstance *module,
+                const uint8 *start_addr, const uint8 *code_end_addr,
+                uint8 block_type, uint8 **p_else_addr, uint8 **p_end_addr)
+{
+#if WASM_ENABLE_HASH_BLOCK_ADDR == 0
+    uint32 i = ((uint32)start_addr >> 4) ^ ((uint32)start_addr >> 14);
+
+    i = i % BLOCK_ADDR_CACHE_SIZE;
+    if (self->block_addr_cache[i].start_addr == start_addr) {
+        *p_else_addr = self->block_addr_cache[i].else_addr;
+        *p_end_addr = self->block_addr_cache[i].end_addr;
+        return true;
+    }
+
+    if (!wasm_loader_find_block_addr(module->branch_set, start_addr,
+                                     code_end_addr, block_type,
+                                     p_else_addr, p_end_addr,
+                                     NULL, 0)) {
+        wasm_runtime_set_exception(module, "find block addr failed");
+        return false;
+    }
+
+    self->block_addr_cache[i].start_addr = start_addr;;
+    self->block_addr_cache[i].else_addr = *p_else_addr;;
+    self->block_addr_cache[i].end_addr = *p_end_addr;
+    return true;
+#else /* else of WASM_ENABLE_HASH_BLOCK_ADDR */
+    if (!wasm_loader_find_block_addr(module->branch_set, start_addr,
+                                     code_end_addr, block_type,
+                                     p_else_addr, p_end_addr,
+                                     NULL, 0)) {
+        wasm_runtime_set_exception(module, "find block addr failed");
+        return false;
+    }
+    return true;
+#endif /* end of WASM_ENABLE_HASH_BLOCK_ADDR */
+}
+
 static void
 wasm_interp_call_func_bytecode(WASMThread *self,
                                WASMFunctionInstance *cur_func,
@@ -760,11 +799,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
       HANDLE_OP (WASM_OP_BLOCK):
         read_leb_uint32(frame_ip, frame_ip_end, block_ret_type);
 
-        if (!wasm_loader_find_block_addr(module->branch_set, frame_ip,
-                                         frame_ip_end, BLOCK_TYPE_BLOCK,
-                                         &else_addr, &end_addr,
-                                         NULL, 0)) {
-          wasm_runtime_set_exception(module, "wasm loader find block addr failed");
+        if (!find_block_addr(self, module, frame_ip, frame_ip_end,
+                             BLOCK_TYPE_BLOCK, &else_addr, &end_addr)) {
           goto got_exception;
         }
 
@@ -774,11 +810,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
       HANDLE_OP (WASM_OP_LOOP):
         read_leb_uint32(frame_ip, frame_ip_end, block_ret_type);
 
-        if (!wasm_loader_find_block_addr(module->branch_set, frame_ip,
-                                         frame_ip_end, BLOCK_TYPE_LOOP,
-                                         &else_addr, &end_addr,
-                                         NULL, 0)) {
-          wasm_runtime_set_exception(module, "wasm loader find block addr failed");
+        if (!find_block_addr(self, module, frame_ip, frame_ip_end,
+                             BLOCK_TYPE_LOOP, &else_addr, &end_addr)) {
           goto got_exception;
         }
 
@@ -788,11 +821,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
       HANDLE_OP (WASM_OP_IF):
         read_leb_uint32(frame_ip, frame_ip_end, block_ret_type);
 
-        if (!wasm_loader_find_block_addr(module->branch_set, frame_ip,
-                                         frame_ip_end, BLOCK_TYPE_IF,
-                                         &else_addr, &end_addr,
-                                         NULL, 0)) {
-          wasm_runtime_set_exception(module, "wasm loader find block addr failed");
+        if (!find_block_addr(self, module, frame_ip, frame_ip_end,
+                             BLOCK_TYPE_IF, &else_addr, &end_addr)) {
           goto got_exception;
         }
 
