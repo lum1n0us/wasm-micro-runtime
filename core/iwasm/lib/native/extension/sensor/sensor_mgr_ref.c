@@ -140,6 +140,5 @@ void init_sensor_framework()
 
     vm_thread_create(&tid, (void *)thread_sensor_check, NULL,
                      BH_APPLET_PRESERVED_STACK_SIZE);
-
 }
 
