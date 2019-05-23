@@ -36,16 +36,6 @@ typedef struct WASMStack {
     uint8 *top_boundary;
 } WASMStack;
 
-#if WASM_ENABLE_HASH_BLOCK_ADDR == 0
-typedef struct BlockAddr {
-    const uint8 *start_addr;
-    uint8 *else_addr;
-    uint8 *end_addr;
-} BlockAddr;
-
-#define BLOCK_ADDR_CACHE_SIZE 256
-#endif
-
 typedef struct WASMThread {
     /* Previous thread's tlr of an instance. */
     struct WASMThread *prev;
@@ -72,11 +62,6 @@ typedef struct WASMThread {
 
     /* Current suspend count of this thread.  */
     uint32 suspend_count;
-
-#if WASM_ENABLE_HASH_BLOCK_ADDR == 0
-    /* Cache the block address if hashmap is disabled. */
-    BlockAddr block_addr_cache[BLOCK_ADDR_CACHE_SIZE];
-#endif
 } WASMThread;
 
 /**

@@ -706,7 +706,7 @@ execute_start_function(WASMModuleInstance *module_inst)
  * Instantiate module
  */
 WASMModuleInstance*
-wasm_runtime_instantiate(const WASMModule *module,
+wasm_runtime_instantiate(WASMModule *module,
                          uint32 stack_size, uint32 heap_size,
                          char *error_buf, uint32 error_buf_size)
 {
@@ -909,7 +909,6 @@ wasm_runtime_instantiate(const WASMModule *module,
             &module_inst->functions[module->start_function];
     }
 
-    module_inst->branch_set = module->branch_set;
     module_inst->module = module;
 
     /* module instance type */

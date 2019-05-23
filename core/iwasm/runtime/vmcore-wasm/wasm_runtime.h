@@ -153,8 +153,7 @@ typedef struct WASMModuleInstance {
 
     WASMFunctionInstance *start_function;
 
-    HashMap *branch_set;
-    const WASMModule *module;
+    WASMModule *module;
 
     uint32 DYNAMICTOP_PTR_offset;
     uint32 temp_ret;
