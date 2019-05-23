@@ -78,6 +78,22 @@ void bh_free_profile(const char *file, int line, const char *func, void *ptr);
 #define bh_malloc(size) bh_malloc_profile(__FILE__, __LINE__, __func__, size)
 #define bh_free(ptr) bh_free_profile(__FILE__, __LINE__, __func__, ptr)
 
+/**
+ * Print current memory profiling data
+ *
+ * @param file file name of the caller
+ * @param line line of the file of the caller
+ * @param func function name of the caller
+ */
+void memory_profile_print(const char *file, int line, const char *func, int alloc);
+
+/**
+ * Summarize memory usage and print it out
+ * Can use awk to analyze the output like below:
+ * awk -F: '{print $2,$4,$6,$8,$9}' OFS="\t" ./out.txt | sort -n -r -k 1
+ */
+void memory_usage_summarize();
+
 #endif
 
 #ifdef __cplusplus

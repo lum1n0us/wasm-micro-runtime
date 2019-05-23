@@ -726,9 +726,11 @@ wasm_runtime_instantiate(WASMModule *module,
     /* Check heap size */
     heap_size = align_uint(heap_size, 8);
     if (heap_size == 0)
-        heap_size = DEFAULT_WASM_HEAP_SIZE;
-    if (heap_size < MIN_WASM_HEAP_SIZE)
-        heap_size = MIN_WASM_HEAP_SIZE;
+        heap_size = APP_HEAP_SIZE_DEFAULT;
+    if (heap_size < APP_HEAP_SIZE_MIN)
+        heap_size = APP_HEAP_SIZE_MIN;
+    if (heap_size > APP_HEAP_SIZE_MAX)
+        heap_size = APP_HEAP_SIZE_MAX;
 
     /* Instantiate global firstly to get the mutable data size */
     global_count = module->import_global_count + module->global_count;

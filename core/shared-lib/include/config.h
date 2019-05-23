@@ -80,10 +80,13 @@
 #define WORKING_FLOW_HEAP_SIZE 0
 */
 
-/* Default/min/max heap size of each app */
+/* Default min/max heap size of each app */
 #define APP_HEAP_SIZE_DEFAULT (8 * 1024)
 #define APP_HEAP_SIZE_MIN (2 * 1024)
 #define APP_HEAP_SIZE_MAX (1024 * 1024)
+
+/* Default wasm stack size of each app */
+#define DEFAULT_WASM_STACK_SIZE (8 * 1024)
 
 /* Default/min/max stack size of each app thread */
 #ifndef __ZEPHYR__

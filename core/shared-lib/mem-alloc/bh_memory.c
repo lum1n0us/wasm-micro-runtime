@@ -22,6 +22,8 @@
 
 #if BEIHAI_ENABLE_MEMORY_PROFILING != 0
 #include "bh_thread.h"
+
+/* Memory profile data of a function */
 typedef struct memory_profile {
   struct memory_profile *next;
   const char *function_name;
@@ -33,8 +35,14 @@ typedef struct memory_profile {
   int total_free;
 } memory_profile_t;
 
+/* Memory in use which grows when bh_malloc was called
+ * and decreases when bh_free was called */
+static unsigned int memory_in_use = 0;
+
+/* Memory profile data list */
 static memory_profile_t *memory_profiles_list = NULL;
 
+/* Lock of the memory profile list */
 static korp_mutex profile_lock;
 #endif
 
@@ -117,11 +125,12 @@ void bh_free_internal(void *ptr)
 }
 
 #if BEIHAI_ENABLE_MEMORY_PROFILING != 0
-void* bh_malloc_profile(const char *file, int line, const char *func, unsigned int size)
+void* bh_malloc_profile(const char *file,
+                        int line,
+                        const char *func,
+                        unsigned int size)
 {
-    void *p;
-
-    p = bh_malloc_internal(size + 8);
+    void *p = bh_malloc_internal(size + 8);
 
     if (p) {
         memory_profile_t *profile;
@@ -161,6 +170,10 @@ void* bh_malloc_profile(const char *file, int line, const char *func, unsigned i
         vm_mutex_unlock(&profile_lock);
 
         memcpy(p, &size, sizeof(size));
+        memory_in_use += size;
+
+        memory_profile_print(file, line, func, size);
+
         return (char *)p + 8;
     }
 
@@ -173,6 +186,9 @@ void bh_free_profile(const char *file, int line, const char *func, void *ptr)
     memory_profile_t *profile;
 
     bh_free_internal((char *)ptr - 8);
+
+    if (memory_in_use >= size)
+        memory_in_use -= size;
 
     vm_mutex_lock(&profile_lock);
 
@@ -208,11 +224,17 @@ void bh_free_profile(const char *file, int line, const char *func, void *ptr)
     vm_mutex_unlock(&profile_lock);
 }
 
-void memory_profile_dump()
+/**
+ * Summarize memory usage and print it out
+ * Can use awk to analyze the output like below:
+ * awk -F: '{print $2,$4,$6,$8,$9}' OFS="\t" ./out.txt | sort -n -r -k 1
+ */
+void memory_usage_summarize()
 {
     memory_profile_t *profile;
 
     vm_mutex_lock(&profile_lock);
+
     profile = memory_profiles_list;
     while (profile) {
         printf("malloc:%d:malloc_num:%d:free:%d:free_num:%d:%s\n",
@@ -220,17 +242,22 @@ void memory_profile_dump()
             profile->malloc_num,
             profile->total_free,
             profile->free_num,
-            /*profile->file_name,
-            profile->line_in_file,*/
             profile->function_name);
-
-        /* To analyse the output:
-         *   awk -F: '{print $2,$4,$6,$8,$9}' OFS="\t"
-         *       ./mem_profile_out.txt | sort -n -r -k 1 */
         profile = profile->next;
     }
+
     vm_mutex_unlock(&profile_lock);
 }
+
+void memory_profile_print(const char *file,
+                          int line,
+                          const char *func,
+                          int alloc)
+{
+    printf("location:%s@%d:used:%d:contribution:%d\n",
+           func, line, memory_in_use, alloc);
+}
+
 #else
 
 void* bh_malloc(unsigned int size)
@@ -261,7 +288,10 @@ void bh_free(void *ptr)
 
 #else /* else of BEIHAI_ENABLE_MEMORY_PROFILING */
 
-void* bh_malloc_profile(const char *file, int line, const char *func, unsigned int size)
+void* bh_malloc_profile(const char *file,
+                        int line,
+                        const char *func,
+                        unsigned int size)
 {
     (void)file;
     (void)line;
@@ -269,6 +299,7 @@ void* bh_malloc_profile(const char *file, int line, const char *func, unsigned i
 
     (void)memory_profiles_list;
     (void)profile_lock;
+    (void)memory_in_use;
 
     return malloc(size);
 }
