@@ -1578,8 +1578,12 @@ wasm_loader_find_block_addr(WASMModule *module,
                                 if (!block[j].start_addr)
                                     break;
 
-                            j = j % BLOCK_ADDR_CONFLICT_SIZE;
+                            if (j == BLOCK_ADDR_CONFLICT_SIZE) {
+                                memmove(block + 1, block, (BLOCK_ADDR_CONFLICT_SIZE - 1) *
+                                                          sizeof(BlockAddr));
+                                j = 0;
 
+                            }
                             block[j].start_addr = block_stack[t].start_addr;
                             block[j].else_addr = block_stack[t].else_addr;
                             block[j].end_addr = block_stack[t].end_addr;
