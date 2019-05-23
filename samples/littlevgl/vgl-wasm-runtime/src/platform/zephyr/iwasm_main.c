@@ -82,7 +82,7 @@ host_interface interface = {
 
 timer_ctx_t timer_ctx;
 
-static char global_heap_buf[364 * 1024] = { 0 };
+static char global_heap_buf[270 * 1024] = { 0 };
 
 extern void display_init(void);
 
