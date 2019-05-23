@@ -1530,8 +1530,10 @@ wasm_loader_find_block_addr(WASMModule *module,
             case WASM_OP_IF:
                 read_leb_uint32(p, p_end, u32); /* blocktype */
 #if WASM_ENABLE_HASH_BLOCK_ADDR == 0
-                if (block_nested_depth < sizeof(block_stack)/sizeof(BlockAddr))
+                if (block_nested_depth < sizeof(block_stack)/sizeof(BlockAddr)) {
                     block_stack[block_nested_depth].start_addr = p;
+                    block_stack[block_nested_depth].else_addr = NULL;
+                }
 #endif
                 block_nested_depth++;
                 break;
