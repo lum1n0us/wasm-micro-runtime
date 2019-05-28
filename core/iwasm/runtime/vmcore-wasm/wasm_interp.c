@@ -74,12 +74,6 @@ GET_F64_FROM_ADDR (uint32 *addr)
 }
 #endif  /* WASM_CPU_SUPPORTS_UNALIGNED_64BIT_ACCESS != 0 */
 
-#define is_valid_mem_addr(addr)     \
-    (memory->base_addr <= addr && addr <= memory->end_addr)
-
-#define is_valid_heap_addr(addr)    \
-    (memory->heap_data <= addr && addr <= memory->heap_data_end)
-
 #define CHECK_MEMORY_OVERFLOW() do {                                            \
     uint32 offset1 = offset + addr;                                             \
     uint8 *maddr1;                                                              \
@@ -87,20 +81,20 @@ GET_F64_FROM_ADDR (uint32 *addr)
       LOG_VERBOSE("unaligned load/store in wasm interp, flag is: %d.\n", flags);\
     if (offset1 < offset)                                                       \
       goto out_of_bounds;                                                       \
-    if (offset1 < memory->heap_base_offset) {                                   \
+    if (offset1 < heap_base_offset) {                                           \
       maddr = memory->memory_data + offset1;                                    \
-      if (!is_valid_mem_addr(maddr))                                            \
+      if (maddr < memory->base_addr)                                            \
         goto out_of_bounds;                                                     \
       maddr1 = maddr + LOAD_SIZE[opcode - WASM_OP_I32_LOAD];                    \
-      if (!is_valid_mem_addr(maddr1))                                           \
+      if (maddr1 > memory->end_addr)                                            \
         goto out_of_bounds;                                                     \
     }                                                                           \
     else {                                                                      \
       maddr = memory->heap_data + offset1 - memory->heap_base_offset;           \
-      if (!is_valid_heap_addr(maddr))                                           \
+      if (maddr < memory->heap_data)                                            \
         goto out_of_bounds;                                                     \
       maddr1 = maddr + LOAD_SIZE[opcode - WASM_OP_I32_LOAD];                    \
-      if (!is_valid_heap_addr(maddr1))                                          \
+      if (maddr1 > memory->heap_data_end)                                       \
         goto out_of_bounds;                                                     \
     }                                                                           \
   } while (0)
@@ -720,6 +714,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
 {
   WASMModuleInstance *module = self->module_inst;
   WASMMemoryInstance *memory = module->default_memory;
+  int32 heap_base_offset = memory ? memory->heap_base_offset : 0;
   WASMTableInstance *table = module->default_table;
   uint8 opcode_IMPDEP2 = WASM_OP_IMPDEP2;
   WASMInterpFrame *frame = NULL;
