@@ -27,25 +27,8 @@ _stdout_hook_iwasm(int c)
 extern void __stdout_hook_install(int (*hook)(int));
 #endif
 
-bool is_little_endian = false;
-
-bool __is_little_endian()
-{
-    union w
-    {
-        int a;
-        char b;
-    }c;
-
-    c.a = 1;
-    return (c.b == 1);
-}
-
 int wasm_platform_init()
 {
-    if (__is_little_endian())
-        is_little_endian = true;
-
 #ifndef CONFIG_AEE_ENABLE
     /* Enable printf() in Zephyr */
     __stdout_hook_install(_stdout_hook_iwasm);

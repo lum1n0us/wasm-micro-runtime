@@ -17,82 +17,13 @@
 #ifndef _WASM_PLATFORM_H
 #define _WASM_PLATFORM_H
 
-#include <inttypes.h>
-#include <stdbool.h>
-#include "wasm_config.h"
-#include "wasm_types.h"
-
-typedef uint64_t uint64;
-typedef int64_t int64;
-typedef float float32;
-typedef double float64;
-
-#ifndef NULL
-#  define NULL ((void*) 0)
-#endif
-
-#define WASM_PLATFORM "VxWorks"
-
-#include <stdarg.h>
-#include <ctype.h>
-#include <pthread.h>
-#include <limits.h>
-#include <semaphore.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-
-/**
- * Return the offset of the given field in the given type.
- *
- * @param Type the type containing the filed
- * @param field the field in the type
- *
- * @return the offset of field in Type
- */
-#ifndef offsetof
-#define offsetof(Type, field) ((size_t)(&((Type *)0)->field))
-#endif
-
-typedef pthread_t       korp_tid;
-typedef pthread_mutex_t korp_mutex;
-
-int wasm_platform_init();
-
-extern bool is_little_endian;
-
-#include <string.h>
-
-/* The following operations declared in string.h may be defined as
-   macros on Linux, so don't declare them as functions here.  */
-/* memset */
-/* memcpy */
-/* memmove */
-
-/* #include <stdio.h> */
-
-/* Unit test framework is based on C++, where the declaration of
-   snprintf is different.  */
-#ifndef __cplusplus
-int snprintf(char *buffer, size_t count, const char *format, ...);
-#endif
+#include "bh_platform.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* #include <math.h> */
-
-#ifndef __cplusplus
-double sqrt(double x);
-#endif
-
-#include <stdio.h>
-
-
-char*
-wasm_read_file_to_buffer(const char *filename, int *ret_size);
+int wasm_platform_init();
 
 void*
 wasm_dlsym(void *handle, const char *symbol);

@@ -16,25 +16,8 @@
 
 #include "wasm_platform.h"
 
-bool is_little_endian = false;
-
-bool __is_little_endian()
-{
-    union w
-    {
-        int a;
-        char b;
-    }c;
-
-    c.a = 1;
-    return (c.b == 1);
-}
-
 int wasm_platform_init()
 {
-    if (__is_little_endian())
-        is_little_endian = true;
-
     return 0;
 }
 
