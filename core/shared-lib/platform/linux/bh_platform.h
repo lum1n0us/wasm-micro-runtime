@@ -111,7 +111,9 @@ int fopen_s(FILE ** pFile, const char *filename, const char *mode);
 
 char *bh_read_file_to_buffer(const char *filename, int *ret_size);
 
-extern char *bh_strdup(const char *s);
+char *bh_strdup(const char *s);
+
+int bh_platform_init();
 
 #ifdef __cplusplus
 }

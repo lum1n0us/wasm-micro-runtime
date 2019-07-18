@@ -124,4 +124,6 @@ double trunc(double x);
 int signbit(double x);
 int isnan(double x);
 
+int bh_platform_init();
+
 #endif

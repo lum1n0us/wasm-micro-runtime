@@ -55,7 +55,6 @@ target_include_directories(app PRIVATE ${IWASM_ROOT}/runtime/include
 
 set (IWASM_SRCS
     ${IWASM_ROOT}/runtime/platform/zephyr/wasm_native.c
-    ${IWASM_ROOT}/runtime/platform/zephyr/wasm_platform.c
     ${IWASM_ROOT}/runtime/utils/wasm_dlfcn.c
     ${IWASM_ROOT}/runtime/utils/wasm_hashmap.c
     ${IWASM_ROOT}/runtime/utils/wasm_log.c

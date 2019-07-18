@@ -35,7 +35,6 @@ include_directories (${IWASM_ROOT}/runtime/include
 set (IWASM_SRCS ${IWASM_ROOT}/runtime/utils/wasm_hashmap.c
                 ${IWASM_ROOT}/runtime/utils/wasm_log.c
                 ${IWASM_ROOT}/runtime/utils/wasm_dlfcn.c
-                ${IWASM_ROOT}/runtime/platform/zephyr/wasm_platform.c
                 ${IWASM_ROOT}/runtime/platform/zephyr/wasm_native.c
                 ${IWASM_ROOT}/runtime/vmcore-wasm/wasm_application.c
                 ${IWASM_ROOT}/runtime/vmcore-wasm/wasm_interp.c

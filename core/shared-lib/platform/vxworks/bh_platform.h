@@ -109,6 +109,8 @@ char *bh_read_file_to_buffer(const char *filename, int *ret_size);
 
 char *bh_strdup(const char *s);
 
+int bh_platform_init();
+
 #ifdef __cplusplus
 }
 #endif

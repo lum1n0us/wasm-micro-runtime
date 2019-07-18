@@ -32,6 +32,11 @@ char *bh_strdup(const char *s)
     return s1;
 }
 
+int bh_platform_init()
+{
+    return 0;
+}
+
 char*
 bh_read_file_to_buffer(const char *filename, int *ret_size)
 {

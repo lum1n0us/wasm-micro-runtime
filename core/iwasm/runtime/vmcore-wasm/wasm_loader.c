@@ -21,6 +21,7 @@
 #include "wasm_runtime.h"
 #include "wasm_log.h"
 #include "wasm_memory.h"
+#include "wasm_dlfcn.h"
 
 /* Read a value of given type from the address pointed to by the given
    pointer and increase the pointer to the position just after the

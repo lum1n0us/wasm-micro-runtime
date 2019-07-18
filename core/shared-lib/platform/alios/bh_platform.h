@@ -108,5 +108,7 @@ double trunc(double x);
 int signbit(double x);
 int isnan(double x);
 
+int bh_platform_init();
+
 #endif /* end of _BH_PLATFORM_H */
 
