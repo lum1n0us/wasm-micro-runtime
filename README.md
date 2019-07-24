@@ -247,7 +247,7 @@ Run WASM app
 
 Assume you are using Linux, the command to run the test.wasm is:
 ``` Bash
-cd iwasm/products/linux/bin
+cd iwasm/products/linux/build
 ./iwasm test.wasm
 ```
 You will get the following output:
