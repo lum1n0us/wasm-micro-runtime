@@ -622,7 +622,9 @@ Please refer to the ```samples/simple``` folder for samples of WASM application 
 
 2D graphic user interface with LittlevGL
 ------------------------------------------------
-This sample demonstrates that a graphic user interface application in WebAssembly  integrates  the LittlevGL, an open-source embedded 2d graphic library. The sample source code is under ```samples/littlevgl``` 
+We have 2 samples for 2D graphic user interface.
+
+One of them demonstrates that a graphic user interface application in WebAssembly  integrates  the LittlevGL, an open-source embedded 2d graphic library. The sample source code is under ```samples/littlevgl``` 
 
 In this sample, the LittlevGL source code is built into the WebAssembly code with the user application source files. The platform interfaces defined by LittlevGL is implemented in the runtime and exported to the application through the declarations from source "ext_lib_export.c" as below:
 
@@ -644,6 +646,10 @@ Below pictures show the WASM application is running on an STM board with an LCD 
 
 The sample also provides the native Linux version of application without the runtime under folder "vgl-native-ui-app". It can help to check differences between the implementations in native and WebAssembly.
 <img src="./doc/pics/vgl_linux.PNG">
+
+The other sample demonstrates that a graphic user interface application in WebAssembly programming with WAMR graphic library(WGL), which is implemented based on LittlevGL, an open-source embedded 2d graphic library. The sample source code is under ```samples/littlevgl-native```
+
+Unlike `sample/littlevgl/val-wasm-runtime`, in this sample, the whole LittlevGL source code is built into the WAMR runtime but not into Webassembly application. And WGL provides a group of WebAssembly wrapper API's for user to write graphic application. These API's is listed in: `<wamr_root>/core/iwasm/lib/app-libs/extension/gui/wgl.h`. Currently only a few API's are provided and there will be more.
 
 
 Submit issues and contact the maintainers
