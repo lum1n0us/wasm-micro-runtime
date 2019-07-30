@@ -286,7 +286,7 @@ static void* lv_task_handler_thread_routine (void *arg)
     return NULL;
 }
 
-void wgl_manager_init(void)
+void wgl_init(void)
 {
     korp_thread tid;
 

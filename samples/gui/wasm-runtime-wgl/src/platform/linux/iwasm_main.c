@@ -152,10 +152,10 @@ void host_destroy()
 }
 
 host_interface interface = {
-    .init = host_init,
-    .send = host_send,
-    .destroy = host_destroy
-};
+                             .init = host_init,
+                             .send = host_send,
+                             .destroy = host_destroy
+                           };
 
 void* func_server_mode(void* arg)
 {
@@ -219,7 +219,7 @@ void* func_server_mode(void* arg)
                 sockfd = -1;
                 pthread_mutex_unlock(&sock_lock);
 
-                sleep(1);
+                sleep(2);
                 break;
             }
 
@@ -348,24 +348,24 @@ static host_interface interface = { .send = uart_send, .destroy = uart_destroy }
 
 #endif
 
-static char global_heap_buf[512 * 1024] = { 0 };
+static char global_heap_buf[270 * 1024] = { 0 };
 
 static void showUsage()
 {
 #ifndef CONNECTION_UART
      printf("Usage:\n");
      printf("\nWork as TCP server mode:\n");
-     printf("\tsimple -s|--server_mode -p|--port <Port>\n");
+     printf("\tvgl_wasm_runtime -s|--server_mode -p|--port <Port>\n");
      printf("where\n");
      printf("\t<Port> represents the port that would be listened on and the default is 8888\n");
      printf("\nWork as TCP client mode:\n");
-     printf("\tsimple -a|--host_address <Host Address> -p|--port <Port>\n");
+     printf("\tvgl_wasm_runtime -a|--host_address <Host Address> -p|--port <Port>\n");
      printf("where\n");
      printf("\t<Host Address> represents the network address of host and the default is 127.0.0.1\n");
      printf("\t<Port> represents the listen port of host and the default is 8888\n");
 #else
      printf("Usage:\n");
-     printf("\tsimple -u <Uart Device> -b <Baudrate>\n\n");
+     printf("\tvgl_wasm_runtime -u <Uart Device> -b <Baudrate>\n\n");
      printf("where\n");
      printf("\t<Uart Device> represents the UART device name and the default is /dev/ttyS2\n");
      printf("\t<Baudrate> represents the UART device baudrate and the default is 115200\n");
@@ -461,6 +461,7 @@ static void hal_init(void)
     indev_drv.read_cb = mouse_read;         /*This function will be called periodically (by the library) to get the mouse position and state*/
     lv_indev_drv_register(&indev_drv);
 }
+
 // Driver function
 int iwasm_main(int argc, char *argv[])
 {
@@ -485,7 +486,9 @@ int iwasm_main(int argc, char *argv[])
     }
 
     wgl_init();
+
     hal_init();
+
     init_sensor_framework();
 
     // timer manager

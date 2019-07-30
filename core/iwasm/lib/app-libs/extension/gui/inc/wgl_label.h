@@ -47,6 +47,29 @@ enum {
 };
 typedef uint8_t wgl_label_style_t;
 
+/* Create a label */
+wgl_obj_t wgl_label_create(wgl_obj_t par, wgl_obj_t copy);
+
+/* Set text for the label */
+void wgl_label_set_text(wgl_obj_t label, const char * text);
+
+/**
+ * Get the length of the text of a label
+ * @param label the label object
+ * @return the length of the text of the label
+ */
+unsigned int wgl_label_get_text_length(wgl_obj_t label);
+
+/**
+ * Get the text of a label
+ * @param label the label object
+ * @param buffer buffer to save the text
+ * @param buffer_len length of the buffer
+ * @return the text of the label, note that the text will be truncated if buffer is not long enough
+ */
+char *wgl_label_get_text(wgl_obj_t label, char *buffer, int buffer_len);
+
+
 #ifdef __cplusplus
 }
 #endif

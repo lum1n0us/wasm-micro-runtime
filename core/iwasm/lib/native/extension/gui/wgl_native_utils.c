@@ -119,9 +119,10 @@ void wgl_native_func_call(WGLNativeFuncDef *funcs,
     while (func_def < func_def_end) {
         if (func_def->func_id == func_id) {
             int i, obj_arg_num = 0, ptr_arg_num = 0;
-            intptr_t *argv_copy = NULL;
+            intptr_t argv_copy_buf[16];
+            intptr_t *argv_copy = argv_copy_buf;
 
-            if (func_def->arg_num > 0) {
+            if (func_def->arg_num > 16) {
                 argv_copy = (intptr_t *)bh_malloc(func_def->arg_num *
                                                   sizeof(intptr_t));
                 if (argv_copy == NULL)
@@ -171,12 +172,6 @@ void wgl_native_func_call(WGLNativeFuncDef *funcs,
                 argv_copy[index] = (intptr_t)addr_app_to_native(argv[index]);
             }
 
-            /* Check argument number. */
-            if (func_def->arg_num + ptr_arg_num != argc) {
-                THROW_EXC("argument number unmatch");
-                goto fail;
-            }
-
             if (func_def->has_ret == NO_RET)
                 invokeNative_Void(argv_copy,
                                   func_def->arg_num,
@@ -186,19 +181,21 @@ void wgl_native_func_call(WGLNativeFuncDef *funcs,
                                              func_def->arg_num,
                                              func_def->func_ptr);
 
-            if (argv_copy != NULL)
+            if (argv_copy != argv_copy_buf)
                 bh_free(argv_copy);
 
             /* success return */
             return;
 
         fail:
-            if (argv_copy != NULL)
+            if (argv_copy != argv_copy_buf)
                 bh_free(argv_copy);
             return;
         }
 
         func_def++;
     }
+
+    THROW_EXC("the native widget function is not found!");
 }
 

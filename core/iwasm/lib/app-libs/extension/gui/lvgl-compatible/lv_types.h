@@ -14,24 +14,26 @@
  * limitations under the License.
  */
 
-#ifndef GUI_API_H_
-#define GUI_API_H_
-#include "bh_platform.h"
+#ifndef WAMR_GRAPHIC_LIBRARY_TYPES_LVGL_COMPATIBLE_H
+#define WAMR_GRAPHIC_LIBRARY_TYPES_LVGL_COMPATIBLE_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void wasm_obj_native_call(int32 func_id, uint32 argv_offset, uint32 argc);
-void wasm_btn_native_call(int32 func_id, uint32 argv_offset, uint32 argc);
-void wasm_label_native_call(int32 func_id, uint32 argv_offset, uint32 argc);
-void wasm_cb_native_call(int32 func_id, uint32 argv_offset, uint32 argc);
-void wasm_list_native_call(int32 func_id, uint32 argv_offset, uint32 argc);
+#include "../inc/wgl_types.h"
 
+/**
+ * error codes.
+ */
+enum {
+    LV_RES_INV,
+    LV_RES_OK,
+};
+typedef wgl_res_t lv_res_t;
 
 #ifdef __cplusplus
 }
 #endif
 
-
-#endif /* GUI_API_H_ */
+#endif /* WAMR_GRAPHIC_LIBRARY_TYPES_LVGL_COMPATIBLE_H */

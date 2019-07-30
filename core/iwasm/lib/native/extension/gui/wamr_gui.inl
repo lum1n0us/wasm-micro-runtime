@@ -30,7 +30,7 @@ EXPORT_WASM_API(wasm_label_native_call),
 //EXPORT_WASM_API(wasm_page_native_call),
 
 /* list */
-//EXPORT_WASM_API(wasm_list_native_call),
+EXPORT_WASM_API(wasm_list_native_call),
 
 /* drop down list */
 //EXPORT_WASM_API(wasm_ddlist_native_call),

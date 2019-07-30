@@ -28,11 +28,36 @@ static int32 _cb_create(lv_obj_t *par, lv_obj_t *copy)
     return wgl_native_wigdet_create(WIDGET_TYPE_CB, par, copy);
 }
 
+static int32 _cb_get_text_length(lv_obj_t *cb)
+{
+    const char *text = lv_cb_get_text(cb);
+
+    if (text == NULL)
+        return 0;
+
+    return strlen(text);
+}
+
+static int32 _cb_get_text(lv_obj_t *cb, char *buffer, int buffer_len)
+{
+    wasm_module_inst_t module_inst = get_module_inst();
+    const char *text = lv_cb_get_text(cb);
+
+    if (text == NULL)
+        return 0;
+
+    strncpy(buffer, text, buffer_len - 1);
+    buffer[buffer_len - 1] = '\0';
+
+    return addr_native_to_app(buffer);
+}
+
 static WGLNativeFuncDef cb_native_func_defs[] = {
         { CB_FUNC_ID_CREATE, _cb_create, HAS_RET, 2, {0 | NULL_OK, 1 | NULL_OK, -1}, {-1} },
         { CB_FUNC_ID_SET_TEXT, lv_cb_set_text, NO_RET, 2, {0, -1}, {1, -1} },
         { CB_FUNC_ID_SET_STATIC_TEXT, lv_cb_set_static_text, NO_RET, 2, {0, -1}, {1, -1} },
-        { CB_FUNC_ID_GET_TEXT, lv_cb_get_text, HAS_RET, 1, {0, -1}, {-1} },
+        { CB_FUNC_ID_GET_TEXT_LENGTH, _cb_get_text_length, HAS_RET, 1, {0, -1}, {-1} },
+        { CB_FUNC_ID_GET_TEXT, _cb_get_text, HAS_RET, 3, {0, -1}, {1, -1} },
 };
 
 /*************** Native Interface to Wasm App ***********/

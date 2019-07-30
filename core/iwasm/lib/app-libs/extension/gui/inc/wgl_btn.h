@@ -64,6 +64,108 @@ enum {
 typedef uint8_t wgl_btn_style_t;
 
 
+/* Create a button */
+wgl_obj_t wgl_btn_create(wgl_obj_t par, wgl_obj_t copy);
+
+/*=====================
+ * Setter functions
+ *====================*/
+
+/**
+ * Enable the toggled states. On release the button will change from/to toggled state.
+ * @param btn pointer to a button object
+ * @param tgl true: enable toggled states, false: disable
+ */
+void wgl_btn_set_toggle(wgl_obj_t btn, bool tgl);
+
+/**
+ * Set the state of the button
+ * @param btn pointer to a button object
+ * @param state the new state of the button (from wgl_btn_state_t enum)
+ */
+void wgl_btn_set_state(wgl_obj_t btn, wgl_btn_state_t state);
+
+/**
+ * Toggle the state of the button (ON->OFF, OFF->ON)
+ * @param btn pointer to a button object
+ */
+void wgl_btn_toggle(wgl_obj_t btn);
+
+/**
+ * Set time of the ink effect (draw a circle on click to animate in the new state)
+ * @param btn pointer to a button object
+ * @param time the time of the ink animation
+ */
+void wgl_btn_set_ink_in_time(wgl_obj_t btn, uint16_t time);
+
+/**
+ * Set the wait time before the ink disappears
+ * @param btn pointer to a button object
+ * @param time the time of the ink animation
+ */
+void wgl_btn_set_ink_wait_time(wgl_obj_t btn, uint16_t time);
+
+/**
+ * Set time of the ink out effect (animate to the released state)
+ * @param btn pointer to a button object
+ * @param time the time of the ink animation
+ */
+void wgl_btn_set_ink_out_time(wgl_obj_t btn, uint16_t time);
+
+/**
+ * Set a style of a button.
+ * @param btn pointer to button object
+ * @param type which style should be set
+ * @param style pointer to a style
+ *  */
+//void wgl_btn_set_style(wgl_obj_t btn, wgl_btn_style_t type, const wgl_style_t * style);
+
+/*=====================
+ * Getter functions
+ *====================*/
+
+/**
+ * Get the current state of the button
+ * @param btn pointer to a button object
+ * @return the state of the button (from wgl_btn_state_t enum)
+ */
+wgl_btn_state_t wgl_btn_get_state(wgl_obj_t btn);
+
+/**
+ * Get the toggle enable attribute of the button
+ * @param btn pointer to a button object
+ * @return true: toggle enabled, false: disabled
+ */
+bool wgl_btn_get_toggle(wgl_obj_t btn);
+
+/**
+ * Get time of the ink in effect (draw a circle on click to animate in the new state)
+ * @param btn pointer to a button object
+ * @return the time of the ink animation
+ */
+uint16_t wgl_btn_get_ink_in_time(wgl_obj_t btn);
+
+/**
+ * Get the wait time before the ink disappears
+ * @param btn pointer to a button object
+ * @return the time of the ink animation
+ */
+uint16_t wgl_btn_get_ink_wait_time(wgl_obj_t btn);
+
+/**
+ * Get time of the ink out effect (animate to the releases state)
+ * @param btn pointer to a button object
+ * @return the time of the ink animation
+ */
+uint16_t wgl_btn_get_ink_out_time(wgl_obj_t btn);
+
+/**
+ * Get style of a button.
+ * @param btn pointer to button object
+ * @param type which style should be get
+ * @return style pointer to the style
+ *  */
+//const wgl_style_t * wgl_btn_get_style(const wgl_obj_t btn, wgl_btn_style_t type);
 #ifdef __cplusplus
 }
 #endif

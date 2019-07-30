@@ -291,11 +291,20 @@ enum {
     CB_FUNC_ID_SET_TEXT,
     CB_FUNC_ID_SET_STATIC_TEXT,
     CB_FUNC_ID_GET_TEXT,
+    CB_FUNC_ID_GET_TEXT_LENGTH,
 
     /* Number of functions */
     _CB_FUNC_ID_NUM,
 };
 
+/* List native function IDs */
+enum {
+    LIST_FUNC_ID_CREATE,
+    LIST_FUNC_ID_ADD_BTN,
+
+    /* Number of functions */
+    _LIST_FUNC_ID_NUM,
+};
 
 /* Label native function IDs */
 enum {
@@ -311,6 +320,7 @@ enum {
     LABEL_FUNC_ID_SET_TEXT_SEL_START,
     LABEL_FUNC_ID_SET_TEXT_SEL_END,
     LABEL_FUNC_ID_GET_TEXT,
+    LABEL_FUNC_ID_GET_TEXT_LENGTH,
     LABEL_FUNC_ID_GET_LONG_MODE,
     LABEL_FUNC_ID_GET_ALIGN,
     LABEL_FUNC_ID_GET_RECOLOR,

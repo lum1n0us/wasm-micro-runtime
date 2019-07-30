@@ -35,6 +35,29 @@ enum {
 };
 typedef uint8_t wgl_list_style_t;
 
+
+/**
+ * Create a list objects
+ * @param par pointer to an object, it will be the parent of the new list
+ * @param copy pointer to a list object, if not NULL then the new object will be copied from it
+ * @return pointer to the created list
+ */
+wgl_obj_t wgl_list_create(wgl_obj_t par, wgl_obj_t copy);
+
+
+/*======================
+ * Add/remove functions
+ *=====================*/
+
+/**
+ * Add a list element to the list
+ * @param list pointer to list object
+ * @param img_fn file name of an image before the text (NULL if unused)
+ * @param txt text of the list element (NULL if unused)
+ * @return pointer to the new list element which can be customized (a button)
+ */
+wgl_obj_t wgl_list_add_btn(wgl_obj_t list, const void * img_src, const char * txt);
+
 #ifdef __cplusplus
 }
 #endif

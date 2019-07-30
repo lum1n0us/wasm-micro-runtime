@@ -21,6 +21,7 @@
 extern "C" {
 #endif
 
+typedef void * wgl_obj_t;
 
 enum {
     WGL_EVENT_PRESSED,             /**< The object has been pressed*/
@@ -83,7 +84,13 @@ enum {
 
 typedef uint8_t wgl_drag_dir_t;
 
+typedef void (*wgl_event_cb_t)(wgl_obj_t obj, wgl_event_t event);
 
+void wgl_obj_align(wgl_obj_t obj, wgl_obj_t base, wgl_align_t align, wgl_coord_t x_mod, wgl_coord_t y_mod);
+void wgl_obj_set_event_cb(wgl_obj_t obj, wgl_event_cb_t event_cb);
+wgl_res_t wgl_obj_del(wgl_obj_t obj);
+void wgl_obj_del_async(wgl_obj_t obj);
+void wgl_obj_clean(wgl_obj_t obj);
 
 
 

@@ -8,7 +8,7 @@ BUILD_DIR=${PWD}/build
 IWASM_ROOT=${PWD}/../../core/iwasm
 APP_LIBS=${IWASM_ROOT}/lib/app-libs
 NATIVE_LIBS=${IWASM_ROOT}/lib/native-interface
-APP_LIB_SRC="${APP_LIBS}/base/*.c ${APP_LIBS}/extension/sensor/*.c ${APP_LIBS}/extension/connection/*.c ${NATIVE_LIBS}/*.c"
+APP_LIB_SRC="${APP_LIBS}/base/*.c ${APP_LIBS}/extension/sensor/*.c ${APP_LIBS}/extension/connection/*.c ${APP_LIBS}/extension/gui/src/*.c ${NATIVE_LIBS}/*.c"
 WASM_APPS=${PWD}/wasm-apps
 
 rm -rf ${OUT_DIR}
