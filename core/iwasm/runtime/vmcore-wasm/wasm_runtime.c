@@ -950,8 +950,8 @@ wasm_runtime_instantiate(WASMModule *module,
     /* Execute __post_instantiate and start function */
     if (!execute_post_inst_function(module_inst)
         || !execute_start_function(module_inst)) {
-        const char *exception = wasm_runtime_get_exception(module_inst);
-        wasm_printf("%s\n", exception);
+        set_error_buf(error_buf, error_buf_size,
+                      module_inst->cur_exception);
         wasm_runtime_deinstantiate(module_inst);
         return NULL;
     }
