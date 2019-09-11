@@ -1116,7 +1116,7 @@ wasm_runtime_create_exec_env(uint32 stack_size)
 }
 
 void
-wasm_runtime_destory_exec_env(WASMExecEnv *env)
+wasm_runtime_destroy_exec_env(WASMExecEnv *env)
 {
     if (env) {
         wasm_free(env->stack);
@@ -1386,7 +1386,6 @@ wasm_runtime_get_native_addr_range(WASMModuleInstance *module_inst,
         *p_native_end_addr = native_end_addr;
     return true;
 }
-
 
 uint32
 wasm_runtime_get_temp_ret(WASMModuleInstance *module_inst)
