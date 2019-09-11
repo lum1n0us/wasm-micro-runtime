@@ -23,12 +23,14 @@
 /* -------------------------------------------------------------------------
  * Label widget native function wrappers
  * -------------------------------------------------------------------------*/
-static int32 _cb_create(lv_obj_t *par, lv_obj_t *copy)
+static int32 _cb_create(wasm_module_inst_t module_inst,
+                        lv_obj_t *par, lv_obj_t *copy)
 {
     return wgl_native_wigdet_create(WIDGET_TYPE_CB, par, copy);
 }
 
-static int32 _cb_get_text_length(lv_obj_t *cb)
+static int32 _cb_get_text_length(wasm_module_inst_t module_inst,
+                                 lv_obj_t *cb)
 {
     const char *text = lv_cb_get_text(cb);
 
@@ -38,9 +40,9 @@ static int32 _cb_get_text_length(lv_obj_t *cb)
     return strlen(text);
 }
 
-static int32 _cb_get_text(lv_obj_t *cb, char *buffer, int buffer_len)
+static int32 _cb_get_text(wasm_module_inst_t module_inst,
+                          lv_obj_t *cb, char *buffer, int buffer_len)
 {
-    wasm_module_inst_t module_inst = get_module_inst();
     const char *text = lv_cb_get_text(cb);
 
     if (text == NULL)
@@ -53,11 +55,11 @@ static int32 _cb_get_text(lv_obj_t *cb, char *buffer, int buffer_len)
 }
 
 static WGLNativeFuncDef cb_native_func_defs[] = {
-        { CB_FUNC_ID_CREATE, _cb_create, HAS_RET, 2, {0 | NULL_OK, 1 | NULL_OK, -1}, {-1} },
-        { CB_FUNC_ID_SET_TEXT, lv_cb_set_text, NO_RET, 2, {0, -1}, {1, -1} },
-        { CB_FUNC_ID_SET_STATIC_TEXT, lv_cb_set_static_text, NO_RET, 2, {0, -1}, {1, -1} },
-        { CB_FUNC_ID_GET_TEXT_LENGTH, _cb_get_text_length, HAS_RET, 1, {0, -1}, {-1} },
-        { CB_FUNC_ID_GET_TEXT, _cb_get_text, HAS_RET, 3, {0, -1}, {1, -1} },
+        { CB_FUNC_ID_CREATE, _cb_create, HAS_RET, 3, NOT_LV_API, {1 | NULL_OK, 2 | NULL_OK, -1}, {-1} },
+        { CB_FUNC_ID_SET_TEXT, lv_cb_set_text, NO_RET, 2, IS_LV_API, {0, -1}, {1, -1} },
+        { CB_FUNC_ID_SET_STATIC_TEXT, lv_cb_set_static_text, NO_RET, 2, IS_LV_API, {0, -1}, {1, -1} },
+        { CB_FUNC_ID_GET_TEXT_LENGTH, _cb_get_text_length, HAS_RET, 2, NOT_LV_API, {1, -1}, {-1} },
+        { CB_FUNC_ID_GET_TEXT, _cb_get_text, HAS_RET, 4, NOT_LV_API, {1, -1}, {2, -1} },
 };
 
 /*************** Native Interface to Wasm App ***********/
@@ -67,7 +69,8 @@ wasm_cb_native_call(wasm_module_inst_t module_inst,
 {
     uint32 size = sizeof(cb_native_func_defs) / sizeof(WGLNativeFuncDef);
 
-    wgl_native_func_call(cb_native_func_defs,
+    wgl_native_func_call(module_inst,
+                         cb_native_func_defs,
                          size,
                          func_id,
                          argv_offset,

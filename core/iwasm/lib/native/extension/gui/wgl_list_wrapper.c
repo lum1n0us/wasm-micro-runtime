@@ -22,12 +22,14 @@
 /* -------------------------------------------------------------------------
  * List widget native function wrappers
  * -------------------------------------------------------------------------*/
-static int32 _list_create(lv_obj_t *par, lv_obj_t *copy)
+static int32 _list_create(wasm_module_inst_t module_inst,
+                          lv_obj_t *par, lv_obj_t *copy)
 {
     return wgl_native_wigdet_create(WIDGET_TYPE_LIST, par, copy);
 }
 
-static int32 _list_add_btn(lv_obj_t *list, const char *text)
+static int32 _list_add_btn(wasm_module_inst_t module_inst,
+                           lv_obj_t *list, const char *text)
 {
     uint32 btn_obj_id;
     lv_obj_t *btn;
@@ -46,8 +48,8 @@ static int32 _list_add_btn(lv_obj_t *list, const char *text)
 }
 
 static WGLNativeFuncDef list_native_func_defs[] = {
-    { LIST_FUNC_ID_CREATE, _list_create, HAS_RET, 2, {0 | NULL_OK, 1 | NULL_OK, -1},  {-1} },
-    { LIST_FUNC_ID_ADD_BTN, _list_add_btn, HAS_RET, 2, {0, -1}, {1, -1} },
+    { LIST_FUNC_ID_CREATE, _list_create, HAS_RET, 3, NOT_LV_API, {1 | NULL_OK, 2 | NULL_OK, -1},  {-1} },
+    { LIST_FUNC_ID_ADD_BTN, _list_add_btn, HAS_RET, 3, NOT_LV_API, {1, -1}, {2, -1} },
 };
 
 /*************** Native Interface to Wasm App ***********/
@@ -57,7 +59,8 @@ wasm_list_native_call(wasm_module_inst_t module_inst,
 {
     uint32 size = sizeof(list_native_func_defs) / sizeof(WGLNativeFuncDef);
 
-    wgl_native_func_call(list_native_func_defs,
+    wgl_native_func_call(module_inst,
+                         list_native_func_defs,
                          size,
                          func_id,
                          argv_offset,

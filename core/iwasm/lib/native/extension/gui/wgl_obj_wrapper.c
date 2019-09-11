@@ -306,7 +306,7 @@ void wgl_init(void)
 /* -------------------------------------------------------------------------
  * Obj native function wrappers
  * -------------------------------------------------------------------------*/
-static lv_res_t _obj_del(lv_obj_t *obj)
+static lv_res_t _obj_del(wasm_module_inst_t module_inst, lv_obj_t *obj)
 {
     /* Recursively delete object node in the list belong to this
      * parent object including itself */
@@ -315,7 +315,7 @@ static lv_res_t _obj_del(lv_obj_t *obj)
     return lv_obj_del(obj);
 }
 
-static void _obj_clean(lv_obj_t *obj)
+static void _obj_clean(wasm_module_inst_t module_inst, lv_obj_t *obj)
 {
     /* Recursively delete child object node in the list belong to this
      * parent object */
@@ -325,7 +325,7 @@ static void _obj_clean(lv_obj_t *obj)
     lv_obj_clean(obj);
 }
 
-static void _obj_set_event_cb(lv_obj_t *obj)
+static void _obj_set_event_cb(wasm_module_inst_t module_inst, lv_obj_t *obj)
 {
     lv_obj_set_event_cb(obj, internal_lv_obj_event_cb);
 }
@@ -333,11 +333,11 @@ static void _obj_set_event_cb(lv_obj_t *obj)
 
 
 static WGLNativeFuncDef obj_native_func_defs[] = {
-    { OBJ_FUNC_ID_DEL, _obj_del, HAS_RET, 1, {0, -1}, {-1} },
-    { OBJ_FUNC_ID_DEL_ASYNC, lv_obj_del_async, NO_RET, 1, {0, -1}, {-1} },
-    { OBJ_FUNC_ID_CLEAN, _obj_clean, NO_RET, 1, {0, -1}, {-1} },
-    { OBJ_FUNC_ID_ALIGN, lv_obj_align, NO_RET, 5, {0, 1 | NULL_OK, -1}, {-1} },
-    { OBJ_FUNC_ID_SET_EVT_CB, _obj_set_event_cb, NO_RET, 1, {0, -1}, {-1} },
+    { OBJ_FUNC_ID_DEL, _obj_del, HAS_RET, 2, NOT_LV_API, {1, -1}, {-1} },
+    { OBJ_FUNC_ID_DEL_ASYNC, lv_obj_del_async, NO_RET, 1, IS_LV_API, {0, -1}, {-1} },
+    { OBJ_FUNC_ID_CLEAN, _obj_clean, NO_RET, 2, NOT_LV_API, {1, -1}, {-1} },
+    { OBJ_FUNC_ID_ALIGN, lv_obj_align, NO_RET, 5, IS_LV_API, {0, 1 | NULL_OK, -1}, {-1} },
+    { OBJ_FUNC_ID_SET_EVT_CB, _obj_set_event_cb, NO_RET, 2, NOT_LV_API, {1, -1}, {-1} },
 };
 
 /*************** Native Interface to Wasm App ***********/
@@ -347,7 +347,8 @@ wasm_obj_native_call(wasm_module_inst_t module_inst,
 {
     uint32 size = sizeof(obj_native_func_defs) / sizeof(WGLNativeFuncDef);
 
-    wgl_native_func_call(obj_native_func_defs,
+    wgl_native_func_call(module_inst,
+                         obj_native_func_defs,
                          size,
                          func_id,
                          argv_offset,

@@ -22,6 +22,11 @@ enum {
 };
 
 enum {
+    NOT_LV_API,
+    IS_LV_API
+};
+
+enum {
   WIDGET_TYPE_BTN,
   WIDGET_TYPE_LABEL,
   WIDGET_TYPE_CB,
@@ -44,6 +49,9 @@ typedef struct WGLNativeFuncDef {
     /* argument number */
     uint8 arg_num;
 
+    /* whether is lvgl api or not */
+    uint8 is_lvgl_api;
+
     /* low 7 bit: obj argument index
      * highest 1 bit: allow obj be null or not
      * -1 means the end of this array */
@@ -61,14 +69,12 @@ uint32 wgl_native_wigdet_create(int8 widget_type,
                                 lv_obj_t *par,
                                 lv_obj_t *copy);
 
-void wgl_native_func_call(WGLNativeFuncDef *funcs,
+void wgl_native_func_call(wasm_module_inst_t module_inst,
+                          WGLNativeFuncDef *funcs,
                           uint32 size,
                           int32 func_id,
                           uint32 argv_offset,
                           uint32 argc);
-
-wasm_module_inst_t wasm_runtime_get_current_module_inst();
-#define get_module_inst() wasm_runtime_get_current_module_inst()
 
 #ifdef __cplusplus
 }

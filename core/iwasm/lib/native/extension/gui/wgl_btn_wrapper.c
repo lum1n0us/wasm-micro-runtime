@@ -22,25 +22,26 @@
 /* -------------------------------------------------------------------------
  * Button widget native function wrappers
  * -------------------------------------------------------------------------*/
-static int32 _btn_create(lv_obj_t *par, lv_obj_t *copy)
+static int32 _btn_create(wasm_module_inst_t module_inst,
+                         lv_obj_t *par, lv_obj_t *copy)
 {
     return wgl_native_wigdet_create(WIDGET_TYPE_BTN, par, copy);
 }
 
 static WGLNativeFuncDef btn_native_func_defs[] = {
-    { BTN_FUNC_ID_CREATE, _btn_create, HAS_RET, 2, {0 | NULL_OK, 1 | NULL_OK, -1},  {-1} },
-    { BTN_FUNC_ID_SET_TOGGLE, lv_btn_set_toggle, NO_RET, 2, {0, -1}, {-1} },
-    { BTN_FUNC_ID_SET_STATE, lv_btn_set_state, NO_RET, 2, {0, -1}, {-1} },
+    { BTN_FUNC_ID_CREATE, _btn_create, HAS_RET, 3, NOT_LV_API, {1 | NULL_OK, 2 | NULL_OK, -1},  {-1} },
+    { BTN_FUNC_ID_SET_TOGGLE, lv_btn_set_toggle, NO_RET, 2, IS_LV_API, {0, -1}, {-1} },
+    { BTN_FUNC_ID_SET_STATE, lv_btn_set_state, NO_RET, 2, IS_LV_API, {0, -1}, {-1} },
 //    { BTN_FUNC_ID_SET_STYLE, _btn_set_style, NO_RET, 2, {0, -1}, {-1} },
-    { BTN_FUNC_ID_SET_INK_IN_TIME, lv_btn_set_ink_in_time, NO_RET, 2, {0, -1}, {-1} },
-    { BTN_FUNC_ID_SET_INK_OUT_TIME, lv_btn_set_ink_out_time, NO_RET, 2, {0, -1}, {-1} },
-    { BTN_FUNC_ID_SET_INK_WAIT_TIME, lv_btn_set_ink_wait_time, NO_RET, 2, {0, -1}, {-1} },
-    { BTN_FUNC_ID_GET_INK_IN_TIME, lv_btn_get_ink_in_time, HAS_RET, 1, {0, -1}, {-1} },
-    { BTN_FUNC_ID_GET_INK_OUT_TIME, lv_btn_get_ink_out_time, HAS_RET, 1, {0, -1}, {-1} },
-    { BTN_FUNC_ID_GET_INK_WAIT_TIME, lv_btn_get_ink_wait_time, HAS_RET, 1, {0, -1}, {-1} },
-    { BTN_FUNC_ID_GET_STATE, lv_btn_get_state, HAS_RET, 1, {0, -1}, {-1} },
-    { BTN_FUNC_ID_GET_TOGGLE, lv_btn_get_toggle, HAS_RET, 1, {0, -1}, {-1} },
-    { BTN_FUNC_ID_TOGGLE, lv_btn_toggle, NO_RET, 1, {0, -1}, {-1} },
+    { BTN_FUNC_ID_SET_INK_IN_TIME, lv_btn_set_ink_in_time, NO_RET, 2, IS_LV_API, {0, -1}, {-1} },
+    { BTN_FUNC_ID_SET_INK_OUT_TIME, lv_btn_set_ink_out_time, NO_RET, 2, IS_LV_API, {0, -1}, {-1} },
+    { BTN_FUNC_ID_SET_INK_WAIT_TIME, lv_btn_set_ink_wait_time, NO_RET, 2, IS_LV_API, {0, -1}, {-1} },
+    { BTN_FUNC_ID_GET_INK_IN_TIME, lv_btn_get_ink_in_time, HAS_RET, 1, IS_LV_API, {0, -1}, {-1} },
+    { BTN_FUNC_ID_GET_INK_OUT_TIME, lv_btn_get_ink_out_time, HAS_RET, 1, IS_LV_API, {0, -1}, {-1} },
+    { BTN_FUNC_ID_GET_INK_WAIT_TIME, lv_btn_get_ink_wait_time, HAS_RET, 1, IS_LV_API, {0, -1}, {-1} },
+    { BTN_FUNC_ID_GET_STATE, lv_btn_get_state, HAS_RET, 1, IS_LV_API, {0, -1}, {-1} },
+    { BTN_FUNC_ID_GET_TOGGLE, lv_btn_get_toggle, HAS_RET, 1, IS_LV_API, {0, -1}, {-1} },
+    { BTN_FUNC_ID_TOGGLE, lv_btn_toggle, NO_RET, 1, IS_LV_API, {0, -1}, {-1} },
 
 };
 
@@ -51,7 +52,8 @@ wasm_btn_native_call(wasm_module_inst_t module_inst,
 {
     uint32 size = sizeof(btn_native_func_defs) / sizeof(WGLNativeFuncDef);
 
-    wgl_native_func_call(btn_native_func_defs,
+    wgl_native_func_call(module_inst,
+                         btn_native_func_defs,
                          size,
                          func_id,
                          argv_offset,
