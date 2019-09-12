@@ -17,13 +17,12 @@ extern "C" {
 #define NULL_OK  0x80
 
 enum {
+    /* The function has a normal return value (not a pointer) */
     HAS_RET,
-    NO_RET
-};
-
-enum {
-    NOT_LV_API,
-    IS_LV_API
+    /* The function doesn't have return value */
+    NO_RET,
+    /* The function's return value is a native address pointer */
+    RET_PTR
 };
 
 enum {
@@ -48,9 +47,6 @@ typedef struct WGLNativeFuncDef {
 
     /* argument number */
     uint8 arg_num;
-
-    /* whether is lvgl api or not */
-    uint8 is_lvgl_api;
 
     /* low 7 bit: obj argument index
      * highest 1 bit: allow obj be null or not

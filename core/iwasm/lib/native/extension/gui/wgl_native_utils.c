@@ -118,7 +118,7 @@ void wgl_native_func_call(wasm_module_inst_t module_inst,
 
     while (func_def < func_def_end) {
         if (func_def->func_id == func_id) {
-            int i, j, obj_arg_num = 0, ptr_arg_num = 0;
+            int i, obj_arg_num = 0, ptr_arg_num = 0;
             intptr_t argv_copy_buf[16];
             intptr_t *argv_copy = argv_copy_buf;
 
@@ -130,11 +130,8 @@ void wgl_native_func_call(wasm_module_inst_t module_inst,
             }
 
             /* Init argv_copy */
-            i = 0;
-            if (func_def->is_lvgl_api == NOT_LV_API)
-                argv_copy[i++] = (intptr_t)module_inst;
-            for (j = 0; i < func_def->arg_num; i++, j++)
-                argv_copy[i] = (intptr_t)argv[j];
+            for (i = 0; i < func_def->arg_num; i++)
+                argv_copy[i] = (intptr_t)argv[i];
 
             /* Validate object arguments */
             i = 0;
@@ -146,7 +143,7 @@ void wgl_native_func_call(wasm_module_inst_t module_inst,
                 index = index & (~NULL_OK);
 
                 /* Some API's allow to pass NULL obj, such as xxx_create() */
-                if (argv_copy[index] == 0) {
+                if (argv[index] == 0) {
                     if (!null_ok) {
                         THROW_EXC("the object id is 0 and invalid");
                         goto fail;
@@ -155,9 +152,7 @@ void wgl_native_func_call(wasm_module_inst_t module_inst,
                     continue;
                 }
 
-                if (!wgl_native_validate_object(
-                                         argv_copy[index],
-                                         (lv_obj_t **)&argv_copy[index])) {
+                if (!wgl_native_validate_object(argv[index], (lv_obj_t **)&argv_copy[index])) {
                     THROW_EXC("the object is invalid");
                     goto fail;
                 }
@@ -167,21 +162,14 @@ void wgl_native_func_call(wasm_module_inst_t module_inst,
             i = 0;
             for (; i < PTR_ARG_NUM_MAX && func_def->ptr_arg_indexes[i] != 0xff;
                    i++, ptr_arg_num++) {
-                uint8 index = func_def->ptr_arg_indexes[i], index_in_argv;
+                uint8 index = func_def->ptr_arg_indexes[i];
 
-                if (func_def->is_lvgl_api == NOT_LV_API)
-                    index_in_argv = index - 1;
-                else
-                    index_in_argv = index;
-
-                /* The index_in_argv +1 arg is the data size to be validated */
-                if (!validate_app_addr(argv[index_in_argv],
-                                       argv[index_in_argv + 1]))
+                /* The index+1 arg is the data size to be validated */
+                if (!validate_app_addr(argv[index], argv[index + 1]))
                     goto fail;
 
                 /* Convert to native address before call lvgl function */
-                argv_copy[index] = (intptr_t)addr_app_to_native(
-                                                         argv[index_in_argv]);
+                argv_copy[index] = (intptr_t)addr_app_to_native(argv[index]);
             }
 
             if (func_def->has_ret == NO_RET)
@@ -189,11 +177,16 @@ void wgl_native_func_call(wasm_module_inst_t module_inst,
                                   argv_copy,
                                   func_def->arg_num,
                                   func_def->func_ptr);
-            else
+            else {
                 argv[0] = invokeNative_Int32(module_inst,
                                              argv_copy,
                                              func_def->arg_num,
                                              func_def->func_ptr);
+                /* Convert to app memory offset if return value is a
+                 * native address pointer */
+                if (func_def->has_ret == RET_PTR)
+                    argv[0] = addr_native_to_app((char *)(intptr_t)argv[0]);
+            }
 
             if (argv_copy != argv_copy_buf)
                 bh_free(argv_copy);
