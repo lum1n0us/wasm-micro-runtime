@@ -50,7 +50,7 @@ wasm_register_resource(wasm_module_inst_t module_inst, int32 url_offset)
 {
     char *url = NULL;
 
-    if (!validate_app_addr(url_offset, 1))
+    if (!validate_app_str_addr(url_offset))
         return;
 
     url = addr_app_to_native(url_offset);
@@ -98,7 +98,7 @@ wasm_sub_event(wasm_module_inst_t module_inst, int32 url_offset)
 {
     char *url = NULL;
 
-    if (!validate_app_addr(url_offset, 1))
+    if (!validate_app_str_addr(url_offset))
         return;
 
     url = addr_app_to_native(url_offset);

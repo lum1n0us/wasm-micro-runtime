@@ -343,6 +343,23 @@ wasm_runtime_validate_app_addr(wasm_module_inst_t module_inst,
                                int32_t app_offset, uint32_t size);
 
 /**
+ * Similar to wasm_runtime_validate_app_addr(), except that the size parameter
+ * is not provided. This function validates the app string address, check whether it
+ * belongs to WASM module instance's address space, or in its heap space or
+ * memory space. Moreover, it checks whether it is the offset of a string that
+ * is end with '\0'.
+ * @param module_inst the WASM module instance
+ * @param app_str_offset the app address of the string to validate, which is a
+ *        relative address
+ *
+ * @return true if success, false otherwise. If failed, an exception will
+ *         be thrown.
+ */
+bool
+wasm_runtime_validate_app_str_addr(wasm_module_inst_t module_inst,
+                                   int32_t app_str_offset);
+
+/**
  * Validate the native address, check whether it belongs to WASM module
  * instance's address space, or in its heap space or memory space.
  *

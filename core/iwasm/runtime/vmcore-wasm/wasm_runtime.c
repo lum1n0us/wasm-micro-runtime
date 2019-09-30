@@ -1248,6 +1248,30 @@ fail:
 }
 
 bool
+wasm_runtime_validate_app_str_addr(WASMModuleInstance *module_inst,
+                                   int32 app_str_offset)
+{
+    int32 app_end_offset;
+    char *str, *str_end;
+
+    if (!wasm_runtime_get_app_addr_range(module_inst, app_str_offset,
+                                         NULL, &app_end_offset))
+        goto fail;
+
+    str = wasm_runtime_addr_app_to_native(module_inst, app_str_offset);
+    str_end = str + (app_end_offset - app_str_offset);
+    while (str < str_end && *str != '\0')
+        str++;
+    if (str == str_end)
+        goto fail;
+    return true;
+
+fail:
+    wasm_runtime_set_exception(module_inst, "out of bounds memory access");
+    return false;
+}
+
+bool
 wasm_runtime_validate_native_addr(WASMModuleInstance *module_inst,
                                   void *native_ptr, uint32 size)
 {
