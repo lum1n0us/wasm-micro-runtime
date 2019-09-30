@@ -106,7 +106,8 @@ wasm_sensor_config(wasm_module_inst_t module_inst,
     if (s == NULL)
         return false;
 
-    unsigned int mod_id = app_manager_get_module_id(Module_WASM_App);
+    unsigned int mod_id = app_manager_get_module_id(Module_WASM_App,
+                                                    module_inst);
 
     vm_mutex_lock(&s->lock);
 
@@ -155,7 +156,8 @@ wasm_sensor_open(wasm_module_inst_t module_inst,
         if (s == NULL)
             return -1;
 
-        unsigned int mod_id = app_manager_get_module_id(Module_WASM_App);
+        unsigned int mod_id = app_manager_get_module_id(Module_WASM_App,
+                                                        module_inst);
 
         vm_mutex_lock(&s->lock);
 
@@ -222,7 +224,8 @@ wasm_sensor_config_with_attr_container(wasm_module_inst_t module_inst,
 bool
 wasm_sensor_close(wasm_module_inst_t module_inst, uint32 sensor)
 {
-    unsigned int mod_id = app_manager_get_module_id(Module_WASM_App);
+    unsigned int mod_id = app_manager_get_module_id(Module_WASM_App,
+                                                    module_inst);
     unsigned int client_id = mod_id;
     sensor_obj_t s = find_sys_sensor_id(sensor);
     sensor_client_t *c;

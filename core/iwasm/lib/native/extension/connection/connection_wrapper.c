@@ -39,7 +39,7 @@ wasm_open_connection(wasm_module_inst_t module_inst,
     args = (attr_container_t *)args_buf;
 
     if (connection_impl._open != NULL)
-        return connection_impl._open(name, args);
+        return connection_impl._open(module_inst, name, args);
 
     return -1;
 }

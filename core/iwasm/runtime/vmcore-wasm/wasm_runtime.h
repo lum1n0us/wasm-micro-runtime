@@ -164,8 +164,9 @@ typedef struct WASMModuleInstance {
     /* The exception buffer of wasm interpreter for current thread. */
     char cur_exception[128];
 
-    /* The thread data of the attaching thread */
-    void *thread_data;
+    /* The custom data that can be set/get by
+     * wasm_runtime_set_custom_data/wasm_runtime_get_custom_data */
+    void *custom_data;
 
     /* Main Thread */
     WASMThread main_tlr;
