@@ -144,7 +144,7 @@ wasm_sensor_open(wasm_module_inst_t module_inst,
 {
     char *name = NULL;
 
-    if (!validate_app_addr(name_offset, 1))
+    if (!validate_app_str_addr(name_offset))
         return -1;
 
     name = addr_app_to_native(name_offset);

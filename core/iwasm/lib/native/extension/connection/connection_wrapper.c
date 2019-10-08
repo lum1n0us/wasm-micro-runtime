@@ -30,7 +30,7 @@ wasm_open_connection(wasm_module_inst_t module_inst,
     attr_container_t *args;
     char *name, *args_buf;
 
-    if (!validate_app_addr(name_offset, 1) ||
+    if (!validate_app_str_addr(name_offset) ||
         !validate_app_addr(args_offset, len) ||
         !(name = addr_app_to_native(name_offset)) ||
         !(args_buf = addr_app_to_native(args_offset)))
