@@ -679,6 +679,11 @@ load_function_section(const uint8 *buf, const uint8 *buf_end,
             /* Calculate total local count */
             for (j = 0; j < local_set_count; j++) {
                 read_leb_uint32(p_code, buf_code_end, sub_local_count);
+                if (sub_local_count > UINT32_MAX - local_count) {
+                    set_error_buf(error_buf, error_buf_size,
+                                  "too many locals");
+                    return false;
+                }
                 read_leb_uint8(p_code, buf_code_end, type);
                 local_count += sub_local_count;
             }
@@ -2563,7 +2568,14 @@ handle_op_br:
                 }
 
                 read_leb_uint32(p, p_end, type_idx);
-                read_leb_uint8(p, p_end, u8); /* 0x00 */
+
+                /* reserved byte 0x00 */
+                if (*p++ != 0x00) {
+                    set_error_buf(error_buf, error_buf_size,
+                                  "zero flag expected");
+                    goto fail;
+                }
+
                 POP_I32();
 
                 if (type_idx >= module->type_count) {
@@ -2775,13 +2787,23 @@ handle_op_br:
 
             case WASM_OP_MEMORY_SIZE:
                 CHECK_MEMORY();
-                read_leb_uint32(p, p_end, u32); /* 0x00 */
+                /* reserved byte 0x00 */
+                if (*p++ != 0x00) {
+                    set_error_buf(error_buf, error_buf_size,
+                                  "zero flag expected");
+                    goto fail;
+                }
                 PUSH_I32();
                 break;
 
             case WASM_OP_MEMORY_GROW:
                 CHECK_MEMORY();
-                read_leb_uint32(p, p_end, u32); /* 0x00 */
+                /* reserved byte 0x00 */
+                if (*p++ != 0x00) {
+                    set_error_buf(error_buf, error_buf_size,
+                                  "zero flag expected");
+                    goto fail;
+                }
                 POP_I32();
                 PUSH_I32();
                 break;
