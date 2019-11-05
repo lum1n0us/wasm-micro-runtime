@@ -80,6 +80,7 @@ int snprintf(char *buffer, size_t count, const char *format, ...);
 
 extern void bh_assert_internal(int v, const char *file_name, int line_number, const char *expr_string);
 #define bh_assert(expr) bh_assert_internal((int)(expr), __FILE__, __LINE__, # expr)
+#define bh_strncasecmp strncasecmp
 
 extern int b_memcpy_s(void * s1, unsigned int s1max, const void * s2, unsigned int n);
 extern int b_strcat_s(char * s1, size_t s1max, const char * s2);

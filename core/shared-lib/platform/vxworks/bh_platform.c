@@ -4,6 +4,7 @@
  */
 
 #include "bh_platform.h"
+#include "bh_common.h"
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>

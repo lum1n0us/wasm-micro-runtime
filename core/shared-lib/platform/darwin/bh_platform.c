@@ -4,6 +4,7 @@
  */
 
 #include "bh_platform.h"
+#include "bh_common.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>

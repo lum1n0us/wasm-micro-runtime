@@ -95,6 +95,7 @@ int b_strcat_s(char * s1, size_t s1max, const char * s2);
 int b_strcpy_s(char * s1, size_t s1max, const char * s2);
 
 char *bh_strdup(const char *s);
+int bh_strncasecmp(const char *s1, const char *s2, size_t n);
 
 int bh_platform_init();
 

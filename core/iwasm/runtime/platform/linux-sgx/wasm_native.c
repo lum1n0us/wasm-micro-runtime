@@ -12,6 +12,7 @@
 #include "wasm_log.h"
 #include "wasm_memory.h"
 #include "wasm_platform_log.h"
+#include "bh_common.h"
 
 #include <sys/ioctl.h>
 #include <sys/uio.h>

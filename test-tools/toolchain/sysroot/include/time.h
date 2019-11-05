@@ -10,8 +10,9 @@
 extern "C" {
 #endif
 
+typedef long time_t;
 
-
+time_t time(time_t *t);
 
 #ifdef __cplusplus
 }

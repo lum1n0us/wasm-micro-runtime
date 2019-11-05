@@ -66,6 +66,7 @@ typedef void* (*thread_start_routine_t)(void*);
 
 #define wa_malloc bh_malloc
 #define wa_free bh_free
+#define bh_strncasecmp strncasecmp
 
 /* Unit test framework is based on C++, where the declaration of
  snprintf is different.  */

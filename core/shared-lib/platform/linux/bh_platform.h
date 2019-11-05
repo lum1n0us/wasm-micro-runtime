@@ -91,6 +91,7 @@ double sqrt(double x);
 #endif
 
 #define bh_assert assert
+#define bh_strncasecmp strncasecmp
 
 int b_memcpy_s(void * s1, unsigned int s1max, const void * s2,
                unsigned int n);

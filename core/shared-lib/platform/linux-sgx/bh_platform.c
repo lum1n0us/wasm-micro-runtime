@@ -26,6 +26,22 @@ char *bh_strdup(const char *s)
     return s1;
 }
 
+int bh_strncasecmp(const char *s1, const char *s2, size_t n)
+{
+    unsigned char c1, c2;
+
+    for (; n != 0; n--) {
+        c1 = tolower(*s1++);
+        c2 = tolower(*s2++);
+
+        if (c1 != c2) {
+            return (c1 > c2) - (c1 < c2);
+        }
+    }
+
+    return 0;
+}
+
 int bh_platform_init()
 {
     return 0;

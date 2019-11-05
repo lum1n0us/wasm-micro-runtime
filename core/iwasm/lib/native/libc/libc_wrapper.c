@@ -747,6 +747,260 @@ _free_wrapper(wasm_module_inst_t module_inst,
     return module_free(ptr_offset);
 }
 
+static int32
+_atoi_wrapper(wasm_module_inst_t module_inst,
+              int32 s_offset)
+{
+    char *str;
+
+    if (!validate_app_str_addr(s_offset))
+        return 0;
+
+    str = addr_app_to_native(s_offset);
+
+    return atoi(str);
+}
+
+static int32
+_bsearch_wrapper(wasm_module_inst_t module_inst,
+                 int32 key_offset,     /* const void * */
+                 int32 array_offset,   /* const void * */
+                 uint32 count,
+                 uint32 size,
+                 int32 cmp_index)
+{
+    wasm_runtime_set_exception(module_inst, "bsearch not implemented.");
+
+    return 0;
+}
+
+static void
+_exit_wrapper(wasm_module_inst_t module_inst,
+              int32 status)
+{
+    char buf[32];
+    snprintf(buf, sizeof(buf), "env.exit(%i)", status);
+    wasm_runtime_set_exception(module_inst, buf);
+}
+
+static int32
+_strtol_wrapper(wasm_module_inst_t module_inst,
+                int32 nptr_offset,      /* const char * */
+                int32 endptr_offset,    /* char ** */
+                int32 base)
+{
+    char *nptr, **endptr;
+    int32 num = 0;
+
+    if (!validate_app_str_addr(nptr_offset)
+        || !validate_app_addr(endptr_offset, sizeof(int32)))
+        return 0;
+
+    nptr = addr_app_to_native(nptr_offset);
+    endptr = addr_app_to_native(endptr_offset);
+
+    num = (int32)strtol(nptr, endptr, base);
+    *(int32 *)endptr = addr_native_to_app(*endptr);
+
+    return num;
+}
+
+static uint32
+_strtoul_wrapper(wasm_module_inst_t module_inst,
+                 int32 nptr_offset,      /* const char * */
+                 int32 endptr_offset,    /* char ** */
+                 int32 base)
+{
+    char *nptr, **endptr;
+    uint32 num = 0;
+
+    if (!validate_app_str_addr(nptr_offset)
+        || !validate_app_addr(endptr_offset, sizeof(int32)))
+        return 0;
+
+    nptr = addr_app_to_native(nptr_offset);
+    endptr = addr_app_to_native(endptr_offset);
+
+    num = (uint32)strtoul(nptr, endptr, base);
+    *(int32 *)endptr = addr_native_to_app(*endptr);
+
+    return num;
+}
+
+static int32
+_memchr_wrapper(wasm_module_inst_t module_inst,
+                int32 s_offset,     /* const void * */
+                int32 c,
+                uint32 n)
+{
+    void *s, *res;
+
+    if (!validate_app_addr(s_offset, n))
+        return 0;
+
+    s = (void*)addr_app_to_native(s_offset);
+
+    res = memchr(s, c, n);
+
+    return addr_native_to_app(res);
+}
+
+static int32
+_strncasecmp_wrapper(wasm_module_inst_t module_inst,
+                     int32 s1_offset,   /* const char * */
+                     int32 s2_offset,   /* const char * */
+                     uint32 n)
+{
+    char *s1, *s2;
+
+    if (!validate_app_str_addr(s1_offset)
+        || !validate_app_str_addr(s2_offset))
+        return 0;
+
+    s1 = addr_app_to_native(s1_offset);
+    s2 = addr_app_to_native(s2_offset);
+
+    return bh_strncasecmp(s1, s2, n);
+}
+
+static uint32
+_strspn_wrapper(wasm_module_inst_t module_inst,
+                int32 s_offset,         /* const char * */
+                int32 accept_offset)    /* const char * */
+{
+    char *s, *accept;
+
+    if (!validate_app_str_addr(s_offset)
+        || !validate_app_str_addr(accept_offset))
+        return 0;
+
+    s = addr_app_to_native(s_offset);
+    accept = addr_app_to_native(accept_offset);
+
+    return (uint32)strspn(s, accept);
+}
+
+static uint32
+_strcspn_wrapper(wasm_module_inst_t module_inst,
+                 int32 s_offset,        /* const char * */
+                 int32 reject_offset)   /* const char * */
+{
+    char *s, *reject;
+
+    if (!validate_app_str_addr(s_offset)
+        || !validate_app_str_addr(reject_offset))
+        return 0;
+
+    s = addr_app_to_native(s_offset);
+    reject = addr_app_to_native(reject_offset);
+
+    return (uint32)strcspn(s, reject);
+}
+
+static int32
+_strstr_wrapper(wasm_module_inst_t module_inst,
+                int32 s_offset,     /* const char * */
+                int32 find_offset)  /* const char * */
+{
+    char *s, *find, *res;
+
+    if (!validate_app_str_addr(s_offset)
+        || !validate_app_str_addr(find_offset))
+        return 0;
+
+    s = addr_app_to_native(s_offset);
+    find = addr_app_to_native(find_offset);
+
+    res = strstr(s, find);
+
+    return addr_native_to_app(res);
+}
+
+static int32
+_time_wrapper(wasm_module_inst_t module_inst,
+              int32 t_offset)       /* const time_t * */
+{
+    time_t *t = NULL;
+
+    if (!validate_app_addr(t_offset, sizeof(time_t)))
+        return 0;
+
+    if (t_offset != 0)
+        t = addr_app_to_native(t_offset);
+
+    return (int32)time(t);
+}
+
+static int32
+_isupper_wrapper(wasm_module_inst_t module_inst,
+                 int32 c)
+{
+    return isupper(c);
+}
+
+static int32
+_isalpha_wrapper(wasm_module_inst_t module_inst,
+                 int32 c)
+{
+    return isalpha(c);
+}
+
+static int32
+_isspace_wrapper(wasm_module_inst_t module_inst,
+                 int32 c)
+{
+    return isspace(c);
+}
+
+static int32
+_isgraph_wrapper(wasm_module_inst_t module_inst,
+                 int32 c)
+{
+    return isgraph(c);
+}
+
+static int32
+_isprint_wrapper(wasm_module_inst_t module_inst,
+                 int32 c)
+{
+    return isprint(c);
+}
+
+static int32
+_isdigit_wrapper(wasm_module_inst_t module_inst,
+                 int32 c)
+{
+    return isdigit(c);
+}
+
+static int32
+_isxdigit_wrapper(wasm_module_inst_t module_inst,
+                  int32 c)
+{
+    return isxdigit(c);
+}
+
+static int32
+_tolower_wrapper(wasm_module_inst_t module_inst,
+                 int32 c)
+{
+    return tolower(c);
+}
+
+static int32
+_toupper_wrapper(wasm_module_inst_t module_inst,
+                 int32 c)
+{
+    return toupper(c);
+}
+
+static int32
+_isalnum_wrapper(wasm_module_inst_t module_inst,
+                 int32 c)
+{
+    return isalnum(c);
+}
+
 static void
 setTempRet0_wrapper(wasm_module_inst_t module_inst,
                     uint32 temp_ret)
@@ -957,6 +1211,27 @@ static WASMNativeFuncDef native_func_defs[] = {
     REG_NATIVE_FUNC(env, _calloc),
     REG_NATIVE_FUNC(env, _strdup),
     REG_NATIVE_FUNC(env, _free),
+    REG_NATIVE_FUNC(env, _atoi),
+    REG_NATIVE_FUNC(env, _bsearch),
+    REG_NATIVE_FUNC(env, _exit),
+    REG_NATIVE_FUNC(env, _strtol),
+    REG_NATIVE_FUNC(env, _strtoul),
+    REG_NATIVE_FUNC(env, _memchr),
+    REG_NATIVE_FUNC(env, _strncasecmp),
+    REG_NATIVE_FUNC(env, _strspn),
+    REG_NATIVE_FUNC(env, _strcspn),
+    REG_NATIVE_FUNC(env, _strstr),
+    REG_NATIVE_FUNC(env, _time),
+    REG_NATIVE_FUNC(env, _isupper),
+    REG_NATIVE_FUNC(env, _isalpha),
+    REG_NATIVE_FUNC(env, _isspace),
+    REG_NATIVE_FUNC(env, _isgraph),
+    REG_NATIVE_FUNC(env, _isprint),
+    REG_NATIVE_FUNC(env, _isdigit),
+    REG_NATIVE_FUNC(env, _isxdigit),
+    REG_NATIVE_FUNC(env, _tolower),
+    REG_NATIVE_FUNC(env, _toupper),
+    REG_NATIVE_FUNC(env, _isalnum),
     REG_NATIVE_FUNC(env, setTempRet0),
     REG_NATIVE_FUNC(env, getTempRet0),
     REG_NATIVE_FUNC(env, _llvm_bswap_i16),
