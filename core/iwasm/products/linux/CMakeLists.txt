@@ -86,6 +86,14 @@ include (${SHARED_LIB_DIR}/platform/${PLATFORM}/shared_platform.cmake)
 include (${SHARED_LIB_DIR}/mem-alloc/mem_alloc.cmake)
 include (${SHARED_LIB_DIR}/utils/shared_utils.cmake)
 
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wformat -Wformat-security")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wconversion -Wsign-conversion")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mindirect-branch=thunk -mfunction-return=thunk -mindirect-branch-register")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-strong --param ssp-buffer-size=4")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pie -fPIE -ftrapv -D_FORTIFY_SOURCE=2")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,-z,noexecstack,-z,relro,-z,now")
+#message ("-- CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
+
 add_library (vmlib
              ${WASM_PLATFORM_LIB_SOURCE}
              ${WASM_UTILS_LIB_SOURCE}

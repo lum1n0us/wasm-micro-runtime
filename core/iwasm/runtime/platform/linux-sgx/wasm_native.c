@@ -91,7 +91,7 @@ __syscall3_wrapper(WASMModuleInstance *module_inst,
                 uint32 iov_len;
             } *vec;
             int32 vec_offset = arg2, str_offset;
-            uint32 iov_count = arg3, i;
+            uint32 iov_count = (uint32)arg3, i;
             int32 count = 0;
             char *iov_base, *str;
 
@@ -219,7 +219,7 @@ EMCC_SYSCALL_WRAPPER3(221)
 
 EMCC_SYSCALL_WRAPPER5(140)
 
-static int32
+static uint32
 getTotalMemory_wrapper(WASMModuleInstance *module_inst)
 {
     WASMMemoryInstance *memory = module_inst->default_memory;

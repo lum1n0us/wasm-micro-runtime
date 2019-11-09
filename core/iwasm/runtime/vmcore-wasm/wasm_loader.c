@@ -108,7 +108,7 @@ read_leb(const uint8 *buf, const uint8 *buf_end,
                 error_buf, error_buf_size))         \
     return false;                                   \
   p += off;                                         \
-  res = (uint32)res64;                              \
+  res = (int32)res64;                               \
 } while (0)
 
 #define read_leb_uint8(p, p_end, res) do {          \
@@ -118,11 +118,11 @@ read_leb(const uint8 *buf, const uint8 *buf_end,
                 error_buf, error_buf_size))         \
     return false;                                   \
   p += off;                                         \
-  res = (uint32)res64;                              \
+  res = (uint8)res64;                               \
 } while (0)
 
 static char*
-const_str_set_insert(const uint8 *str, int32 len, WASMModule *module,
+const_str_set_insert(const uint8 *str, uint32 len, WASMModule *module,
                      char* error_buf, uint32 error_buf_size)
 {
     HashMap *set = module->const_str_set;
@@ -215,6 +215,7 @@ load_type_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 {
     const uint8 *p = buf, *p_end = buf_end, *p_org;
     uint32 type_count, param_count, result_count, i, j;
+    uint64 total_size;
     uint8 flag;
     WASMType *type;
 
@@ -222,13 +223,15 @@ load_type_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
     if (type_count) {
         module->type_count = type_count;
-        if (!(module->types = wasm_malloc(sizeof(WASMType*) * type_count))) {
+        total_size = sizeof(WASMType*) * (uint64)type_count;
+        if (total_size >= UINT32_MAX
+            || !(module->types = wasm_malloc((uint32)total_size))) {
             set_error_buf(error_buf, error_buf_size,
                           "Load type section failed: allocate memory failed.");
             return false;
         }
 
-        memset(module->types, 0, sizeof(WASMType*) * type_count);
+        memset(module->types, 0, (uint32)total_size);
 
         for (i = 0; i < type_count; i++) {
             CHECK_BUF(p, p_end, 1);
@@ -254,8 +257,10 @@ load_type_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
             CHECK_BUF(p, p_end, result_count);
             p = p_org;
 
-            if (!(type = module->types[i] = wasm_malloc(offsetof(WASMType, types) +
-                                        sizeof(uint8) * (param_count + result_count)))) {
+            total_size = offsetof(WASMType, types) +
+                         sizeof(uint8) * (uint64)(param_count + result_count);
+            if (total_size >= UINT32_MAX
+                || !(type = module->types[i] = wasm_malloc((uint32)total_size))) {
                 set_error_buf(error_buf, error_buf_size,
                               "Load type section failed: allocate memory failed.");
                 return false;
@@ -398,6 +403,7 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 {
     const uint8 *p = buf, *p_end = buf_end, *p_old;
     uint32 import_count, name_len, type_index, i, u32, flags;
+    uint64 total_size;
     WASMImport *import;
     WASMImport *import_functions = NULL, *import_tables = NULL;
     WASMImport *import_memories = NULL, *import_globals = NULL;
@@ -408,13 +414,15 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
     if (import_count) {
         module->import_count = import_count;
-        if (!(module->imports = wasm_malloc(sizeof(WASMImport) * import_count))) {
+        total_size = sizeof(WASMImport) * (uint64)import_count;
+        if (total_size >= UINT32_MAX
+            || !(module->imports = wasm_malloc((uint32)total_size))) {
             set_error_buf(error_buf, error_buf_size,
                           "Load import section failed: allocate memory failed.");
             return false;
         }
 
-        memset(module->imports, 0, sizeof(WASMImport) * import_count);
+        memset(module->imports, 0, (uint32)total_size);
 
         p_old = p;
 
@@ -613,7 +621,8 @@ load_function_section(const uint8 *buf, const uint8 *buf_end,
 {
     const uint8 *p = buf, *p_end = buf_end;
     const uint8 *p_code = buf_code, *p_code_end, *p_code_save;
-    uint32 func_count, total_size;
+    uint32 func_count;
+    uint64 total_size;
     uint32 code_count = 0, code_size, type_index, i, j, k, local_type_index;
     uint32 local_count, local_set_count, sub_local_count;
     uint8 type;
@@ -632,13 +641,15 @@ load_function_section(const uint8 *buf, const uint8 *buf_end,
 
     if (func_count) {
         module->function_count = func_count;
-        if (!(module->functions = wasm_malloc(sizeof(WASMFunction*) * func_count))) {
+        total_size = sizeof(WASMFunction*) * (uint64)func_count;
+        if (total_size >= UINT32_MAX
+            || !(module->functions = wasm_malloc((uint32)total_size))) {
             set_error_buf(error_buf, error_buf_size,
                           "Load function section failed: allocate memory failed.");
             return false;
         }
 
-        memset(module->functions, 0, sizeof(WASMFunction*) * func_count);
+        memset(module->functions, 0, (uint32)total_size);
 
         for (i = 0; i < func_count; i++) {
             /* Resolve function type */
@@ -678,10 +689,11 @@ load_function_section(const uint8 *buf, const uint8 *buf_end,
             }
 
             /* Alloc memory, layout: function structure + local types */
-            code_size = p_code_end - p_code;
-            total_size = sizeof(WASMFunction) + local_count;
+            code_size = (uint32)(p_code_end - p_code);
 
-            if (!(func = module->functions[i] = wasm_malloc(total_size))) {
+            total_size = sizeof(WASMFunction) + (uint64)local_count;
+            if (total_size >= UINT32_MAX
+                || !(func = module->functions[i] = wasm_malloc((uint32)total_size))) {
                 set_error_buf(error_buf, error_buf_size,
                               "Load function section failed: "
                               "allocate memory failed.");
@@ -689,7 +701,7 @@ load_function_section(const uint8 *buf, const uint8 *buf_end,
             }
 
             /* Set function type, local count, code size and code body */
-            memset(func, 0, total_size);
+            memset(func, 0, (uint32)total_size);
             func->func_type = module->types[type_index];
             func->local_count = local_count;
             if (local_count > 0)
@@ -741,6 +753,7 @@ load_table_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 {
     const uint8 *p = buf, *p_end = buf_end;
     uint32 table_count, i;
+    uint64 total_size;
     WASMTable *table;
 
     read_leb_uint32(p, p_end, table_count);
@@ -752,14 +765,16 @@ load_table_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
             return false;
         }
         module->table_count = table_count;
-        if (!(module->tables = wasm_malloc(sizeof(WASMTable) * table_count))) {
+        total_size = sizeof(WASMTable) * (uint64)table_count;
+        if (total_size >= UINT32_MAX
+            || !(module->tables = wasm_malloc((uint32)total_size))) {
             set_error_buf(error_buf, error_buf_size,
                           "Load table section failed: "
                           "allocate memory failed.");
             return false;
         }
 
-        memset(module->tables, 0, sizeof(WASMTable) * table_count);
+        memset(module->tables, 0, (uint32)total_size);
 
         /* load each table */
         table = module->tables;
@@ -784,6 +799,7 @@ load_memory_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 {
     const uint8 *p = buf, *p_end = buf_end;
     uint32 memory_count, i;
+    uint64 total_size;
     WASMMemory *memory;
 
     read_leb_uint32(p, p_end, memory_count);
@@ -795,14 +811,16 @@ load_memory_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
             return false;
         }
         module->memory_count = memory_count;
-        if (!(module->memories = wasm_malloc(sizeof(WASMMemory) * memory_count))) {
+        total_size = sizeof(WASMMemory) * (uint64)memory_count;
+        if (total_size >= UINT32_MAX
+            || !(module->memories = wasm_malloc((uint32)total_size))) {
             set_error_buf(error_buf, error_buf_size,
                          "Load memory section failed: "
                          "allocate memory failed.");
             return false;
         }
 
-        memset(module->memories, 0, sizeof(WASMMemory) * memory_count);
+        memset(module->memories, 0, (uint32)total_size);
 
         /* load each memory */
         memory = module->memories;
@@ -827,20 +845,23 @@ load_global_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 {
     const uint8 *p = buf, *p_end = buf_end;
     uint32 global_count, i;
+    uint64 total_size;
     WASMGlobal *global;
 
     read_leb_uint32(p, p_end, global_count);
 
     if (global_count) {
         module->global_count = global_count;
-        if (!(module->globals = wasm_malloc(sizeof(WASMGlobal) * global_count))) {
+        total_size = sizeof(WASMGlobal) * (uint64)global_count;
+        if (total_size >= UINT32_MAX
+            || !(module->globals = wasm_malloc((uint32)total_size))) {
             set_error_buf(error_buf, error_buf_size,
                           "Load global section failed: "
                           "allocate memory failed.");
             return false;
         }
 
-        memset(module->globals, 0, sizeof(WASMGlobal) * global_count);
+        memset(module->globals, 0, (uint32)total_size);
 
         global = module->globals;
 
@@ -872,21 +893,24 @@ load_export_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 {
     const uint8 *p = buf, *p_end = buf_end;
     uint32 export_count, i, index;
-    uint8 str_len;
+    uint64 total_size;
+    uint32 str_len;
     WASMExport *export;
 
     read_leb_uint32(p, p_end, export_count);
 
     if (export_count) {
         module->export_count = export_count;
-        if (!(module->exports = wasm_malloc(sizeof(WASMExport) * export_count))) {
+        total_size = sizeof(WASMExport) * (uint64)export_count;
+        if (total_size >= UINT32_MAX
+            || !(module->exports = wasm_malloc((uint32)total_size))) {
             set_error_buf(error_buf, error_buf_size,
                           "Load export section failed: "
                           "allocate memory failed.");
             return false;
         }
 
-        memset(module->exports, 0, sizeof(WASMExport) * export_count);
+        memset(module->exports, 0, (uint32)total_size);
 
         export = module->exports;
         for (i = 0; i < export_count; i++, export++) {
@@ -965,21 +989,23 @@ load_table_segment_section(const uint8 *buf, const uint8 *buf_end, WASMModule *m
 {
     const uint8 *p = buf, *p_end = buf_end;
     uint32 table_segment_count, i, j, table_index, function_count, function_index;
+    uint64 total_size;
     WASMTableSeg *table_segment;
 
     read_leb_uint32(p, p_end, table_segment_count);
 
     if (table_segment_count) {
         module->table_seg_count = table_segment_count;
-        if (!(module->table_segments = wasm_malloc
-                    (sizeof(WASMTableSeg) * table_segment_count))) {
+        total_size = sizeof(WASMTableSeg) * (uint64)table_segment_count;
+        if (total_size >= UINT32_MAX
+            || !(module->table_segments = wasm_malloc((uint32)total_size))) {
             set_error_buf(error_buf, error_buf_size,
                           "Load table segment section failed: "
                           "allocate memory failed.");
             return false;
         }
 
-        memset(module->table_segments, 0, sizeof(WASMTableSeg) * table_segment_count);
+        memset(module->table_segments, 0, (uint32)total_size);
 
         table_segment = module->table_segments;
         for (i = 0; i < table_segment_count; i++, table_segment++) {
@@ -993,8 +1019,10 @@ load_table_segment_section(const uint8 *buf, const uint8 *buf_end, WASMModule *m
 
             read_leb_uint32(p, p_end, function_count);
             table_segment->function_count = function_count;
-            if (!(table_segment->func_indexes = (uint32 *)
-                        wasm_malloc(sizeof(uint32) * function_count))) {
+            total_size = sizeof(uint32) * (uint64)function_count;
+            if (total_size >= UINT32_MAX
+                || !(table_segment->func_indexes = (uint32 *)
+                        wasm_malloc((uint32)total_size))) {
                 set_error_buf(error_buf, error_buf_size,
                               "Load table segment section failed: "
                               "allocate memory failed.");
@@ -1025,6 +1053,7 @@ load_data_segment_section(const uint8 *buf, const uint8 *buf_end,
 {
     const uint8 *p = buf, *p_end = buf_end;
     uint32 data_seg_count, i, mem_index, data_seg_len;
+    uint64 total_size;
     WASMDataSeg *dataseg;
     InitializerExpression init_expr;
 
@@ -1032,15 +1061,16 @@ load_data_segment_section(const uint8 *buf, const uint8 *buf_end,
 
     if (data_seg_count) {
         module->data_seg_count = data_seg_count;
-        if (!(module->data_segments =
-                    wasm_malloc(sizeof(WASMDataSeg*) * data_seg_count))) {
+        total_size = sizeof(WASMDataSeg*) * (uint64)data_seg_count;
+        if (total_size >= UINT32_MAX
+            || !(module->data_segments = wasm_malloc((uint32)total_size))) {
             set_error_buf(error_buf, error_buf_size,
                           "Load data segment section failed: "
                           "allocate memory failed.");
             return false;
         }
 
-        memset(module->data_segments, 0, sizeof(WASMDataSeg*) * data_seg_count);
+        memset(module->data_segments, 0, (uint32)total_size);
 
         for (i = 0; i < data_seg_count; i++) {
             read_leb_uint32(p, p_end, mem_index);
@@ -1051,14 +1081,14 @@ load_data_segment_section(const uint8 *buf, const uint8 *buf_end,
             read_leb_uint32(p, p_end, data_seg_len);
 
             if (!(dataseg = module->data_segments[i] =
-                        wasm_malloc(sizeof(WASMDataSeg)))) {
+                        wasm_malloc((uint32)sizeof(WASMDataSeg)))) {
                 set_error_buf(error_buf, error_buf_size,
                               "Load data segment section failed: "
                               "allocate memory failed.");
                 return false;
             }
 
-            memcpy(&dataseg->base_offset, &init_expr, sizeof(init_expr));
+            memcpy(&dataseg->base_offset, &init_expr, (uint32)sizeof(init_expr));
 
             dataseg->memory_index = mem_index;
             dataseg->data_length = data_seg_len;
@@ -1568,7 +1598,8 @@ wasm_loader_find_block_addr(WASMModule *module,
 {
     const uint8 *p = start_addr, *p_end = code_end_addr;
     uint8 *else_addr = NULL;
-    uint32 block_nested_depth = 1, count, i, u32, u64;
+    uint32 block_nested_depth = 1, count, i, u32;
+    uint64 u64;
     uint8 opcode, u8;
 
 #if WASM_ENABLE_HASH_BLOCK_ADDR != 0
@@ -1586,7 +1617,7 @@ wasm_loader_find_block_addr(WASMModule *module,
     BlockAddr block_stack[16] = { 0 }, *block;
     uint32 j, t;
 
-    i = ((uintptr_t)start_addr) ^ ((uintptr_t)start_addr >> 16);
+    i = (uint32)(((uintptr_t)start_addr) ^ ((uintptr_t)start_addr >> 16));
     i = i % BLOCK_ADDR_CACHE_SIZE;
     block = module->block_addr_cache[i];
     for (j = 0; j < BLOCK_ADDR_CONFLICT_SIZE; j++) {
@@ -1613,7 +1644,7 @@ wasm_loader_find_block_addr(WASMModule *module,
             case WASM_OP_BLOCK:
             case WASM_OP_LOOP:
             case WASM_OP_IF:
-                read_leb_uint32(p, p_end, u32); /* blocktype */
+                read_leb_uint8(p, p_end, u8); /* blocktype */
 #if WASM_ENABLE_HASH_BLOCK_ADDR == 0
                 if (block_nested_depth < sizeof(block_stack)/sizeof(BlockAddr)) {
                     block_stack[block_nested_depth].start_addr = p;
@@ -1658,7 +1689,7 @@ wasm_loader_find_block_addr(WASMModule *module,
                     for (t = 0; t < sizeof(block_stack)/sizeof(BlockAddr); t++) {
                         start_addr = block_stack[t].start_addr;
                         if (start_addr) {
-                            i = ((uintptr_t)start_addr) ^ ((uintptr_t)start_addr >> 16);
+                            i = (uint32)(((uintptr_t)start_addr) ^ ((uintptr_t)start_addr >> 16));
                             i = i % BLOCK_ADDR_CACHE_SIZE;
                             block = module->block_addr_cache[i];
                             for (j = 0; j < BLOCK_ADDR_CONFLICT_SIZE; j++)
@@ -2171,8 +2202,9 @@ pop_type(uint8 type, uint8 **p_frame_ref, uint32 *p_stack_cell_num,
 #define CHECK_CSP_PUSH() do {                               \
     if (frame_csp >= frame_csp_boundary) {                  \
       MEM_REALLOC(frame_csp_bottom, frame_csp_size,         \
-                  frame_csp_size + 8 * sizeof(BranchBlock));\
-      frame_csp_size += 8 * sizeof(BranchBlock);            \
+                  (uint32)(frame_csp_size                   \
+                           + 8 * sizeof(BranchBlock)));     \
+      frame_csp_size += (uint32)(8 * sizeof(BranchBlock));  \
       frame_csp_boundary = frame_csp_bottom +               \
                     frame_csp_size / sizeof(BranchBlock);   \
       frame_csp = frame_csp_bottom + csp_num;               \
@@ -2281,10 +2313,10 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
     uint32 stack_cell_num = 0, csp_num = 0;
     uint32 frame_ref_size, frame_csp_size;
     uint8 *param_types, ret_type, *local_types, local_type, global_type;
-    uint32 count, i, local_idx, global_idx, block_return_type, depth, u32;
+    uint32 count, i, local_idx, global_idx, depth, u32;
     int32 i32, i32_const = 0;
     int64 i64;
-    uint8 opcode, u8;
+    uint8 opcode, u8, block_return_type;
     bool return_value = false, is_i32_const = false;
 
     global_count = module->import_global_count + module->global_count;
@@ -2332,18 +2364,18 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
                 break;
 
             case WASM_OP_BLOCK:
-                read_leb_uint32(p, p_end, block_return_type);
+                read_leb_uint8(p, p_end, block_return_type);
                 PUSH_CSP(BLOCK_TYPE_BLOCK, block_return_type, p);
                 break;
 
             case WASM_OP_LOOP:
-                read_leb_uint32(p, p_end, block_return_type);
+                read_leb_uint8(p, p_end, block_return_type);
                 PUSH_CSP(BLOCK_TYPE_LOOP, block_return_type, p);
                 break;
 
             case WASM_OP_IF:
                 POP_I32();
-                read_leb_uint32(p, p_end, block_return_type);
+                read_leb_uint8(p, p_end, block_return_type);
                 PUSH_CSP(BLOCK_TYPE_IF, block_return_type, p);
                 if (!is_i32_const)
                     (frame_csp - 1)->jumped_by_br = true;
@@ -2535,8 +2567,10 @@ handle_op_br:
                     func_type =
                         module->functions[func_idx - module->import_function_count]->func_type;
 
-                for (idx = func_type->param_count - 1; idx >= 0; idx--)
-                    POP_TYPE(func_type->types[idx]);
+                if (func_type->param_count > 0) {
+                    for (idx = (int32)(func_type->param_count - 1); idx >= 0; idx--)
+                        POP_TYPE(func_type->types[idx]);
+                }
 
                 if (func_type->result_count)
                     PUSH_TYPE(func_type->types[func_type->param_count]);
@@ -2575,8 +2609,10 @@ handle_op_br:
 
                 func_type = module->types[type_idx];
 
-                for (idx = func_type->param_count - 1; idx >= 0; idx--)
-                    POP_TYPE(func_type->types[idx]);
+                if (func_type->param_count > 0) {
+                    for (idx = (int32)(func_type->param_count - 1); idx >= 0; idx--)
+                        POP_TYPE(func_type->types[idx]);
+                }
 
                 PUSH_TYPE(func_type->types[func_type->param_count]);
                 break;

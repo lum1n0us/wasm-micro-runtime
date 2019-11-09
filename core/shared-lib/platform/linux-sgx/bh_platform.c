@@ -16,8 +16,8 @@ static bh_print_function_t print_function = NULL;
 char *bh_strdup(const char *s)
 {
     char *s1 = NULL;
-    if (s && (s1 = bh_malloc(strlen(s) + 1)))
-        memcpy(s1, s, strlen(s) + 1);
+    if (s && (s1 = bh_malloc((uint32)(strlen(s) + 1))))
+        memcpy(s1, s, (uint32)(strlen(s) + 1));
     return s1;
 }
 

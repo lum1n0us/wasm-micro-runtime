@@ -95,7 +95,7 @@ void bh_memory_destroy()
     memory_mode = MEMORY_MODE_UNKNOWN;
 }
 
-int bh_memory_pool_size()
+unsigned bh_memory_pool_size()
 {
     if (memory_mode == MEMORY_MODE_POOL)
         return global_pool_size;

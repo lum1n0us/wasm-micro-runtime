@@ -271,7 +271,7 @@ wasm_runtime_get_exception(WASMModuleInstance *module);
  * @return return true if enlarge successfully, false otherwise
  */
 bool
-wasm_runtime_enlarge_memory(WASMModuleInstance *module, int inc_page_count);
+wasm_runtime_enlarge_memory(WASMModuleInstance *module, uint32 inc_page_count);
 
 /* See wasm_export.h for description */
 WASMModuleInstance *

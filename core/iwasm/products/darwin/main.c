@@ -49,7 +49,7 @@ app_instance_main(wasm_module_inst_t module_inst)
 }
 
 static void*
-app_instance_func(wasm_module_inst_t module_inst, const char *func_name)
+app_instance_func(wasm_module_inst_t module_inst, char *func_name)
 {
     const char *exception;
 
@@ -77,7 +77,7 @@ split_string(char *str, int *count)
     do {
         p = strtok(str, " ");
         str = NULL;
-        res = (char**) realloc(res, sizeof(char*) * (idx + 1));
+        res = (char**) realloc(res, sizeof(char*) * (uint32)(idx + 1));
         if (res == NULL) {
             return NULL;
         }
@@ -129,9 +129,9 @@ static char global_heap_buf[10 * 1024 * 1024] = { 0 };
 int main(int argc, char *argv[])
 {
     char *wasm_file = NULL;
-    const char *func_name = NULL;
+    char *func_name = NULL;
     uint8 *wasm_file_buf = NULL;
-    int wasm_file_size;
+    uint32 wasm_file_size;
     wasm_module_t wasm_module = NULL;
     wasm_module_inst_t wasm_module_inst = NULL;
     char error_buf[128];

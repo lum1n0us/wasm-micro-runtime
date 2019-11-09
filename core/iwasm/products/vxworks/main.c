@@ -104,7 +104,7 @@ split_string(char *str, int *count)
     do {
         p = strtok(str, " ");
         str = NULL;
-        res = (char**) realloc(res, sizeof(char*) * (idx + 1));
+        res = (char**) realloc(res, sizeof(char*) * (uint32)(idx + 1));
         if (res == NULL) {
             return NULL;
         }
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
     char *wasm_file = NULL;
     const char *func_name = NULL;
     uint8 *wasm_file_buf = NULL;
-    int wasm_file_size;
+    uint32 wasm_file_size;
     wasm_module_t wasm_module = NULL;
     wasm_module_inst_t wasm_module_inst = NULL;
     char error_buf[128];

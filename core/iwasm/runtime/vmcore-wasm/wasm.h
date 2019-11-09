@@ -299,7 +299,7 @@ align_uint (unsigned v, unsigned b)
 inline static uint32
 wasm_string_hash(const char *str)
 {
-    unsigned h = strlen(str);
+    unsigned h = (unsigned)strlen(str);
     const uint8 *p = (uint8*)str;
     const uint8 *end = p + h;
 
@@ -356,11 +356,11 @@ wasm_value_type_cell_num(uint8 value_type)
 inline static uint16
 wasm_get_cell_num(const uint8 *types, uint32 type_count)
 {
-    uint16 cell_num = 0;
+    uint32 cell_num = 0;
     uint32 i;
     for (i = 0; i < type_count; i++)
         cell_num += wasm_value_type_cell_num(types[i]);
-    return cell_num;
+    return (uint16)cell_num;
 }
 
 inline static uint16

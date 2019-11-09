@@ -52,7 +52,7 @@ enum pad_type {
 
 typedef char *_va_list;
 #define _INTSIZEOF(n)       \
-    ((sizeof(n) +  3) & ~3)
+    (((uint32)sizeof(n) +  3) & (uint32)~3)
 #define _va_arg(ap, t)      \
     (*(t*)((ap += _INTSIZEOF(t)) - _INTSIZEOF(t)))
 
@@ -86,7 +86,7 @@ _printf_hex_uint(out_func_t out, void *ctx,
 
         if (nibble || found_largest_digit || size == 1) {
             found_largest_digit = 1;
-            nibble += nibble > 9 ? 87 : 48;
+            nibble = (char)(nibble + (nibble > 9 ? 87 : 48));
             out((int) nibble, ctx);
             digits++;
             continue;
@@ -250,7 +250,7 @@ _vprintf_wa(out_func_t out, void *ctx, const char *fmt, _va_list ap,
                     d = -d;
                     min_width--;
                 }
-                _printf_dec_uint(out, ctx, d, padding, min_width);
+                _printf_dec_uint(out, ctx, (uint32)d, padding, min_width);
                 break;
             }
             case 'u': {
@@ -301,8 +301,8 @@ _vprintf_wa(out_func_t out, void *ctx, const char *fmt, _va_list ap,
                 char *start;
                 int32 s_offset;
 
-                CHECK_VA_ARG(ap, uint32);
-                s_offset = _va_arg(ap, uint32);
+                CHECK_VA_ARG(ap, int32);
+                s_offset = _va_arg(ap, int32);
 
                 if (!validate_app_str_addr(s_offset)) {
                     return false;
@@ -314,7 +314,7 @@ _vprintf_wa(out_func_t out, void *ctx, const char *fmt, _va_list ap,
                     out((int) (*s++), ctx);
 
                 if (padding == PAD_SPACE_AFTER) {
-                    int remaining = min_width - (s - start);
+                    int remaining = min_width - (int32)(s - start);
                     while (remaining-- > 0) {
                         out(' ', ctx);
                     }
@@ -356,8 +356,8 @@ fail:
 
 struct str_context {
     char *str;
-    int max;
-    int count;
+    uint32 max;
+    uint32 count;
 };
 
 static int
@@ -371,7 +371,7 @@ sprintf_out(int c, struct str_context *ctx)
     if (ctx->count == ctx->max - 1) {
         ctx->str[ctx->count++] = '\0';
     } else {
-        ctx->str[ctx->count++] = c;
+        ctx->str[ctx->count++] = (char)c;
     }
 
     return c;
@@ -432,7 +432,7 @@ _printf_wrapper(wasm_module_inst_t module_inst,
 
     if (!_vprintf_wa((out_func_t)printf_out, &ctx, fmt, va_args, module_inst))
         return 0;
-    return ctx.count;
+    return (int)ctx.count;
 }
 
 static int
@@ -457,7 +457,7 @@ _sprintf_wrapper(wasm_module_inst_t module_inst,
         return 0;
 
     ctx.str = str;
-    ctx.max = app_end_offset - str_offset;
+    ctx.max = (uint32)(app_end_offset - str_offset);
     ctx.count = 0;
 
     if (!_vprintf_wa((out_func_t)sprintf_out, &ctx, fmt, va_args, module_inst))
@@ -467,12 +467,12 @@ _sprintf_wrapper(wasm_module_inst_t module_inst,
         str[ctx.count] = '\0';
     }
 
-    return ctx.count;
+    return (int)ctx.count;
 }
 
 static int
 _snprintf_wrapper(wasm_module_inst_t module_inst,
-                  int32 str_offset, int32 size, int32 fmt_offset,
+                  int32 str_offset, uint32 size, int32 fmt_offset,
                   int32 va_list_offset)
 {
     struct str_context ctx;
@@ -499,7 +499,7 @@ _snprintf_wrapper(wasm_module_inst_t module_inst,
         str[ctx.count] = '\0';
     }
 
-    return ctx.count;
+    return (int)ctx.count;
 }
 
 static int
@@ -536,7 +536,7 @@ _strdup_wrapper(wasm_module_inst_t module_inst,
     str = addr_app_to_native(str_offset);
 
     if (str) {
-        len = strlen(str) + 1;
+        len = (uint32)strlen(str) + 1;
 
         str_ret_offset = module_malloc(len);
         if (str_ret_offset) {
@@ -550,7 +550,7 @@ _strdup_wrapper(wasm_module_inst_t module_inst,
 
 static int32
 _memcmp_wrapper(wasm_module_inst_t module_inst,
-                int32 s1_offset, int32 s2_offset, int32 size)
+                int32 s1_offset, int32 s2_offset, uint32 size)
 {
     void *s1, *s2;
 
@@ -565,7 +565,7 @@ _memcmp_wrapper(wasm_module_inst_t module_inst,
 
 static int32
 _memcpy_wrapper(wasm_module_inst_t module_inst,
-                int32 dst_offset, int32 src_offset, int32 size)
+                int32 dst_offset, int32 src_offset, uint32 size)
 {
     void *dst, *src;
 
@@ -584,7 +584,7 @@ _memcpy_wrapper(wasm_module_inst_t module_inst,
 
 static int32
 _memmove_wrapper(wasm_module_inst_t module_inst,
-                 int32 dst_offset, int32 src_offset, int32 size)
+                 int32 dst_offset, int32 src_offset, uint32 size)
 {
     void *dst, *src;
 
@@ -600,7 +600,7 @@ _memmove_wrapper(wasm_module_inst_t module_inst,
 
 static int32
 _memset_wrapper(wasm_module_inst_t module_inst,
-                int32 s_offset, int32 c, int32 size)
+                int32 s_offset, int32 c, uint32 size)
 {
     void *s;
 
@@ -668,7 +668,7 @@ _strcpy_wrapper(wasm_module_inst_t module_inst,
         return 0;
 
     src = addr_app_to_native(src_offset);
-    len = strlen(src);
+    len = (uint32)strlen(src);
 
     if (!validate_app_addr(dst_offset, len + 1))
         return 0;
@@ -704,7 +704,7 @@ _strlen_wrapper(wasm_module_inst_t module_inst,
         return 0;
 
     s = addr_app_to_native(s_offset);
-    return strlen(s);
+    return (uint32)strlen(s);
 }
 
 static int32
@@ -719,13 +719,13 @@ _calloc_wrapper(wasm_module_inst_t module_inst,
                 uint32 nmemb, uint32 size)
 {
     uint64 total_size = (uint64) nmemb * (uint64) size;
-    uint32 ret_offset = 0;
+    int32 ret_offset = 0;
     uint8 *ret_ptr;
 
-    if (total_size > UINT32_MAX)
-        total_size = UINT32_MAX;
+    if (total_size >= UINT32_MAX)
+        return 0;
 
-    ret_offset = module_malloc((uint32 )total_size);
+    ret_offset = module_malloc((uint32)total_size);
     if (ret_offset) {
         ret_ptr = addr_app_to_native(ret_offset);
         memset(ret_ptr, 0, (uint32) total_size);

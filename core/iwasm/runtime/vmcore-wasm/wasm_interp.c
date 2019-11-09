@@ -33,7 +33,7 @@ typedef float64 CellType_F64;
 #else  /* WASM_CPU_SUPPORTS_UNALIGNED_64BIT_ACCESS != 0 */
 #define PUT_I64_TO_ADDR(addr, value) do {       \
     union { int64 val; uint32 parts[2]; } u;    \
-    u.val = (value);                            \
+    u.val = (int64)(value);                     \
     (addr)[0] = u.parts[0];                     \
     (addr)[1] = u.parts[1];                     \
   } while (0)
@@ -110,36 +110,36 @@ GET_F64_FROM_ADDR (uint32 *addr)
   } while (0)
 
 static inline uint32
-rotl32(uint32 n, unsigned int c)
+rotl32(uint32 n, uint32 c)
 {
-    const unsigned int mask = (31);
+    const uint32 mask = (31);
     c = c % 32;
     c &= mask;
     return (n<<c) | (n>>( (-c)&mask ));
 }
 
 static inline uint32
-rotr32(uint32 n, unsigned int c)
+rotr32(uint32 n, uint32 c)
 {
-    const unsigned int mask = (31);
+    const uint32 mask = (31);
     c = c % 32;
     c &= mask;
     return (n>>c) | (n<<( (-c)&mask ));
 }
 
 static inline uint64
-rotl64(uint64 n, unsigned int c)
+rotl64(uint64 n, uint64 c)
 {
-    const unsigned int mask = (63);
+    const uint64 mask = (63);
     c = c % 64;
     c &= mask;
     return (n<<c) | (n>>( (-c)&mask ));
 }
 
 static inline uint64
-rotr64(uint64 n, unsigned int c)
+rotr64(uint64 n, uint64 c)
 {
-    const unsigned int mask = (63);
+    const uint64 mask = (63);
     c = c % 64;
     c &= mask;
     return (n>>c) | (n<<( (-c)&mask ));
@@ -355,28 +355,28 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
 #define LOCAL_I32(n) (*(int32*)(local_off(n)))
 
 #define SET_LOCAL_I32(N, val) do {              \
-    int n = (N);                                \
+    uint32 n = (N);                             \
     *(int32*)(local_off(n)) = (int32)(val);     \
   } while (0)
 
 #define LOCAL_F32(n) (*(float32*)(local_off(n)))
 
 #define SET_LOCAL_F32(N, val) do {              \
-    int n = (N);                                \
+    uint32 n = (N);                             \
     *(float32*)(local_off(n)) = (float32)(val); \
   } while (0)
 
 #define LOCAL_I64(n) (GET_I64_FROM_ADDR(local_off(n)))
 
 #define SET_LOCAL_I64(N, val) do {              \
-    int n = (N);                                \
+    uint32 n = (N);                             \
     PUT_I64_TO_ADDR(local_off(n), val);         \
   } while (0)
 
 #define LOCAL_F64(n) (GET_F64_FROM_ADDR(local_off(n)))
 
 #define SET_LOCAL_F64(N, val) do {              \
-    int n = (N);                                \
+    uint32 n = (N);                             \
     PUT_F64_TO_ADDR(local_off(n), val);         \
   } while (0)
 
@@ -476,7 +476,7 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
   } while (0)
 
 #define DEF_OP_EQZ(src_op_type) do {                                 \
-    uint32 val;                                                      \
+    int32 val;                                                       \
     val = POP_##src_op_type() == 0;                                  \
     PUSH_I32(val);                                                   \
   } while (0)
@@ -484,16 +484,16 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
 #define DEF_OP_CMP(src_type, src_op_type, cond) do {                 \
     uint32 res;                                                      \
     src_type val1, val2;                                             \
-    val2 = POP_##src_op_type();                                      \
-    val1 = POP_##src_op_type();                                      \
+    val2 = (src_type)POP_##src_op_type();                            \
+    val1 = (src_type)POP_##src_op_type();                            \
     res = val1 cond val2;                                            \
     PUSH_I32(res);                                                   \
   } while (0)
 
 #define DEF_OP_BIT_COUNT(src_type, src_op_type, operation) do {      \
     src_type val1, val2;                                             \
-    val1 = POP_##src_op_type();                                      \
-    val2 = operation(val1);                                          \
+    val1 = (src_type)POP_##src_op_type();                            \
+    val2 = (src_type)operation(val1);                                \
     PUSH_##src_op_type(val2);                                        \
   } while (0)
 
@@ -546,7 +546,7 @@ static inline int32
 sign_ext_8_32(int8 val)
 {
     if (val & 0x80)
-        return val | 0xffffff00;
+        return (int32)val | (int32)0xffffff00;
     return val;
 }
 
@@ -554,7 +554,7 @@ static inline int32
 sign_ext_16_32(int16 val)
 {
     if (val & 0x8000)
-        return val | 0xffff0000;
+        return (int32)val | (int32)0xffff0000;
     return val;
 }
 
@@ -562,7 +562,7 @@ static inline int64
 sign_ext_8_64(int8 val)
 {
     if (val & 0x80)
-        return val | 0xffffffffffffff00;
+        return (int64)val | (int64)0xffffffffffffff00;
     return val;
 }
 
@@ -570,15 +570,15 @@ static inline int64
 sign_ext_16_64(int16 val)
 {
     if (val & 0x8000)
-        return val | 0xffffffffffff0000;
+        return (int64)val | (int64)0xffffffffffff0000;
     return val;
 }
 
 static inline int64
 sign_ext_32_64(int32 val)
 {
-    if (val & 0x80000000)
-        return val | 0xffffffff00000000;
+    if (val & (int32)0x80000000)
+        return (int64)val | (int64)0xffffffff00000000;
     return val;
 }
 
@@ -674,9 +674,9 @@ wasm_interp_call_func_bytecode(WASMThread *self,
   WASMMemoryInstance *memory = module->default_memory;
   uint32 memory_data_size = memory
                             ? NumBytesPerPage * memory->cur_page_count : 0;
-  uint32 heap_base_offset = memory ? memory->heap_base_offset : 0;
+  uint32 heap_base_offset = memory ? (uint32)memory->heap_base_offset : 0;
   uint32 heap_data_size = memory
-                          ? memory->heap_data_end - memory->heap_data : 0;
+                          ? (uint32)(memory->heap_data_end - memory->heap_data) : 0;
   WASMTableInstance *table = module->default_table;
   uint8 opcode_IMPDEP2 = WASM_OP_IMPDEP2;
   WASMInterpFrame *frame = NULL;
@@ -690,7 +690,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
   uint8 opcode, block_ret_type;
   uint32 *depths = NULL;
   uint32 depth_buf[BR_TABLE_TMP_BUF_LEN];
-  uint32 i, depth, cond, count, fidx, tidx, frame_size = 0, all_cell_num = 0;
+  uint32 i, depth, cond, count, fidx, tidx, frame_size = 0;
+  uint64 all_cell_num = 0;
   int32 didx, val;
   uint8 *else_addr, *end_addr;
   uint8 *maddr = NULL;
@@ -723,7 +724,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_BLOCK):
-        read_leb_uint32(frame_ip, frame_ip_end, block_ret_type);
+        read_leb_uint8(frame_ip, frame_ip_end, block_ret_type);
 
         if (!wasm_loader_find_block_addr(module->module,
                                          frame_ip, frame_ip_end,
@@ -738,7 +739,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_LOOP):
-        read_leb_uint32(frame_ip, frame_ip_end, block_ret_type);
+        read_leb_uint8(frame_ip, frame_ip_end, block_ret_type);
 
         if (!wasm_loader_find_block_addr(module->module,
                                          frame_ip, frame_ip_end,
@@ -753,7 +754,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_IF):
-        read_leb_uint32(frame_ip, frame_ip_end, block_ret_type);
+        read_leb_uint8(frame_ip, frame_ip_end, block_ret_type);
 
         if (!wasm_loader_find_block_addr(module->module,
                                          frame_ip, frame_ip_end,
@@ -764,7 +765,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
           goto got_exception;
         }
 
-        cond = POP_I32();
+        cond = (uint32)POP_I32();
 
         PUSH_CSP(BLOCK_TYPE_IF, block_ret_type, frame_ip, else_addr, end_addr);
 
@@ -806,7 +807,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
 
       HANDLE_OP (WASM_OP_BR_IF):
         read_leb_uint32(frame_ip, frame_ip_end, depth);
-        cond = POP_I32();
+        cond = (uint32)POP_I32();
         if (cond)
           POP_CSP_N(depth);
         HANDLE_OP_END ();
@@ -816,7 +817,9 @@ wasm_interp_call_func_bytecode(WASMThread *self,
         if (count <= BR_TABLE_TMP_BUF_LEN)
           depths = depth_buf;
         else {
-          if (!(depths = wasm_malloc(sizeof(uint32) * count))) {
+          uint64 total_size = sizeof(uint32) * (uint64)count;
+          if (total_size >= UINT32_MAX
+              || !(depths = wasm_malloc((uint32)total_size))) {
             wasm_runtime_set_exception(module,
                                        "WASM interp failed: "
                                        "allocate memory failed.");
@@ -916,7 +919,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
 
       HANDLE_OP (WASM_OP_SELECT_32):
         {
-          cond = POP_I32();
+          cond = (uint32)POP_I32();
           frame_sp--;
           if (!cond)
             *(frame_sp - 1) = *frame_sp;
@@ -925,7 +928,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
 
       HANDLE_OP (WASM_OP_SELECT_64):
         {
-          cond = POP_I32();
+          cond = (uint32)POP_I32();
           frame_sp -= 2;
           if (!cond) {
             *(frame_sp - 2) = *frame_sp;
@@ -1065,7 +1068,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
           global_addr = get_global_addr(memory, global);
           switch (global->type) {
             case VALUE_TYPE_I32:
-              *(uint32*)global_addr = POP_I32();
+              *(int32*)global_addr = POP_I32();
               break;
             case VALUE_TYPE_F32:
               *(float32*)global_addr = POP_F32();
@@ -1103,7 +1106,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
           GET_OPCODE();
           read_leb_uint32(frame_ip, frame_ip_end, flags);
           read_leb_uint32(frame_ip, frame_ip_end, offset);
-          addr = POP_I32();
+          addr = (uint32)POP_I32();
           CHECK_MEMORY_OVERFLOW();
 #if WASM_ENABLE_LABELS_AS_VALUES != 0
           static const void *handle_load_table[] = {
@@ -1184,7 +1187,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
           read_leb_uint32(frame_ip, frame_ip_end, flags);
           read_leb_uint32(frame_ip, frame_ip_end, offset);
           frame_sp--;
-          addr = POP_I32();
+          addr = (uint32)POP_I32();
           CHECK_MEMORY_OVERFLOW();
           *(uint32*)maddr = frame_sp[1];
           (void)flags;
@@ -1198,7 +1201,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
           read_leb_uint32(frame_ip, frame_ip_end, flags);
           read_leb_uint32(frame_ip, frame_ip_end, offset);
           frame_sp -= 2;
-          addr = POP_I32();
+          addr = (uint32)POP_I32();
           CHECK_MEMORY_OVERFLOW();
           *(uint32*)maddr = frame_sp[1];
           *((uint32*)maddr + 1) = frame_sp[2];
@@ -1215,12 +1218,12 @@ wasm_interp_call_func_bytecode(WASMThread *self,
           GET_OPCODE();
           read_leb_uint32(frame_ip, frame_ip_end, flags);
           read_leb_uint32(frame_ip, frame_ip_end, offset);
-          sval = POP_I32();
-          addr = POP_I32();
+          sval = (uint32)POP_I32();
+          addr = (uint32)POP_I32();
           CHECK_MEMORY_OVERFLOW();
           switch (opcode) {
             case WASM_OP_I32_STORE:
-              *(int32*)maddr = sval;
+              *(uint32*)maddr = sval;
               break;
             case WASM_OP_I32_STORE8:
               *(uint8*)maddr = (uint8)sval;
@@ -1243,8 +1246,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
           GET_OPCODE();
           read_leb_uint32(frame_ip, frame_ip_end, flags);
           read_leb_uint32(frame_ip, frame_ip_end, offset);
-          sval = POP_I64();
-          addr = POP_I32();
+          sval = (uint64)POP_I64();
+          addr = (uint32)POP_I32();
           CHECK_MEMORY_OVERFLOW();
           switch (opcode) {
             case WASM_OP_I64_STORE:
@@ -1279,7 +1282,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
         uint32 reserved, delta, prev_page_count = memory->cur_page_count;
 
         read_leb_uint32(frame_ip, frame_ip_end, reserved);
-        delta = POP_I32();
+        delta = (uint32)POP_I32();
 
         if (!wasm_runtime_enlarge_memory(module, delta)) {
           /* fail to memory.grow, return -1 */
@@ -1514,8 +1517,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
       {
         uint32 a, b;
 
-        b = POP_I32();
-        a = POP_I32();
+        b = (uint32)POP_I32();
+        a = (uint32)POP_I32();
         if (b == 0) {
           wasm_runtime_set_exception(module, "integer divide by zero");
           goto got_exception;
@@ -1546,8 +1549,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
       {
         uint32 a, b;
 
-        b = POP_I32();
-        a = POP_I32();
+        b = (uint32)POP_I32();
+        a = (uint32)POP_I32();
         if (b == 0) {
           wasm_runtime_set_exception(module, "integer divide by zero");
           goto got_exception;
@@ -1584,8 +1587,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
       {
         uint32 a, b;
 
-        b = POP_I32();
-        a = POP_I32();
+        b = (uint32)POP_I32();
+        a = (uint32)POP_I32();
         PUSH_I32(rotl32(a, b));
         HANDLE_OP_END ();
       }
@@ -1594,8 +1597,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
       {
         uint32 a, b;
 
-        b = POP_I32();
-        a = POP_I32();
+        b = (uint32)POP_I32();
+        a = (uint32)POP_I32();
         PUSH_I32(rotr32(a, b));
         HANDLE_OP_END ();
       }
@@ -1647,8 +1650,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
       {
         uint64 a, b;
 
-        b = POP_I64();
-        a = POP_I64();
+        b = (uint64)POP_I64();
+        a = (uint64)POP_I64();
         if (b == 0) {
           wasm_runtime_set_exception(module, "integer divide by zero");
           goto got_exception;
@@ -1679,8 +1682,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
       {
         uint64 a, b;
 
-        b = POP_I64();
-        a = POP_I64();
+        b = (uint64)POP_I64();
+        a = (uint64)POP_I64();
         if (b == 0) {
           wasm_runtime_set_exception(module, "integer divide by zero");
           goto got_exception;
@@ -1717,8 +1720,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
       {
         uint64 a, b;
 
-        b = POP_I64();
-        a = POP_I64();
+        b = (uint64)POP_I64();
+        a = (uint64)POP_I64();
         PUSH_I64(rotl64(a, b));
         HANDLE_OP_END ();
       }
@@ -1727,8 +1730,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
       {
         uint64 a, b;
 
-        b = POP_I64();
-        a = POP_I64();
+        b = (uint64)POP_I64();
+        a = (uint64)POP_I64();
         PUSH_I64(rotr64(a, b));
         HANDLE_OP_END ();
       }
@@ -2095,11 +2098,17 @@ wasm_interp_call_func_bytecode(WASMThread *self,
         WASMType *func_type;
         uint8 ret_type;
 
-        all_cell_num = cur_func->param_cell_num + cur_func->local_cell_num
-                       + cur_func->u.func->max_stack_cell_num
-                       + cur_func->u.func->max_block_num * sizeof(WASMBranchBlock) / 4;
-        frame_size = wasm_interp_interp_frame_size(all_cell_num);
+        all_cell_num = (uint64)cur_func->param_cell_num
+                       + (uint64)cur_func->local_cell_num
+                       + (uint64)cur_func->u.func->max_stack_cell_num
+                       + ((uint64)cur_func->u.func->max_block_num) * sizeof(WASMBranchBlock) / 4;
+        if (all_cell_num >= UINT32_MAX) {
+            wasm_runtime_set_exception(self->module_inst,
+                                       "WASM interp failed: stack overflow.");
+            goto got_exception;
+        }
 
+        frame_size = wasm_interp_interp_frame_size((uint32)all_cell_num);
         if (!(frame = ALLOC_FRAME(self, frame_size, prev_frame))) {
           frame = prev_frame;
           goto got_exception;
@@ -2120,7 +2129,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
 
         /* Initialize the local varialbes */
         memset(frame_lp + cur_func->param_cell_num, 0,
-               cur_func->local_cell_num * 4);
+               (uint32)(cur_func->local_cell_num * 4));
 
         /* Push function block as first block */
         func_type = cur_func->u.func->func_type;
