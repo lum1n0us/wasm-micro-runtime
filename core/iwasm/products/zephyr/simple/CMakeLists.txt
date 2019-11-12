@@ -1,5 +1,6 @@
-# Copyright (C) 2019 Intel Corporation.
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 cmake_minimum_required(VERSION 3.8.2)
 
 include($ENV{ZEPHYR_BASE}/cmake/app/boilerplate.cmake NO_POLICY_SCOPE)

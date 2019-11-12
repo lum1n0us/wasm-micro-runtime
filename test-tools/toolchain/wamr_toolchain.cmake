@@ -1,5 +1,6 @@
-# Copyright (C) 2019 Intel Corporation.
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 SET(CMAKE_SYSTEM_NAME Linux)
 SET(CMAKE_SYSTEM_PROCESSOR wasm32)
 SET (CMAKE_SYSROOT                ${CMAKE_CURRENT_LIST_DIR}/sysroot)

@@ -1,5 +1,6 @@
-# Copyright (C) 2019 Intel Corporation.
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 include_directories (. ../include ../platform/include ../platform/${PLATFORM} coap/er-coap coap/extension)
 
 
