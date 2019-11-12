@@ -12,6 +12,7 @@
 #include "wasm_log.h"
 #include "wasm_memory.h"
 #include "wasm_platform_log.h"
+#include "bh_common.h"
 
 #include <sys/ioctl.h>
 #include <sys/uio.h>
@@ -123,7 +124,7 @@ __syscall3_wrapper(WASMModuleInstance *module_inst,
 
                     str = addr_app_to_native(str_offset);
 
-                    memcpy(str, iov_base, vec->iov_len);
+                    bh_memcpy_s(str, vec->iov_len + 1, iov_base, vec->iov_len);
                     str[vec->iov_len] = '\0';
                     count += wasm_printf("%s", str);
 

@@ -4,6 +4,7 @@
  */
 
 #include "bh_platform.h"
+#include "bh_common.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -11,9 +12,14 @@
 
 char *bh_strdup(const char *s)
 {
+    uint32 size;
     char *s1 = NULL;
-    if (s && (s1 = bh_malloc((uint32)(strlen(s) + 1))))
-        memcpy(s1, s, (uint32)(strlen(s) + 1));
+
+    if (s) {
+        size = (uint32)(strlen(s) + 1);
+        if ((s1 = bh_malloc(size)))
+            bh_memcpy_s(s1, size, s, size);
+    }
     return s1;
 }
 

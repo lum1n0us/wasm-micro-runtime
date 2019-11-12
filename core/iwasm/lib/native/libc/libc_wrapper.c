@@ -7,6 +7,7 @@
 #include "wasm_export.h"
 #include "wasm_log.h"
 #include "wasm_platform_log.h"
+#include "bh_common.h"
 #if WASM_ENABLE_WASI != 0
 #include "wasi_wrapper.h"
 #endif
@@ -544,7 +545,7 @@ _strdup_wrapper(wasm_module_inst_t module_inst,
         str_ret_offset = module_malloc(len);
         if (str_ret_offset) {
             str_ret = addr_app_to_native(str_ret_offset);
-            memcpy(str_ret, str, len);
+            bh_memcpy_s(str_ret, len, str, len);
         }
     }
 
@@ -581,7 +582,7 @@ _memcpy_wrapper(wasm_module_inst_t module_inst,
 
     dst = addr_app_to_native(dst_offset);
     src = addr_app_to_native(src_offset);
-    memcpy(dst, src, size);
+    bh_memcpy_s(dst, size, src, size);
     return dst_offset;
 }
 
@@ -845,7 +846,7 @@ _emscripten_memcpy_big_wrapper(wasm_module_inst_t module_inst,
     dst = addr_app_to_native(dst_offset);
     src = addr_app_to_native(src_offset);
 
-    memcpy(dst, src, size);
+    bh_memcpy_s(dst, size, src, size);
     return dst_offset;
 }
 

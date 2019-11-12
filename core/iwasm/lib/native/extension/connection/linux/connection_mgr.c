@@ -17,6 +17,7 @@
 #include "conn_tcp.h"
 #include "conn_udp.h"
 #include "conn_uart.h"
+#include "bh_common.h"
 
 #include <unistd.h>
 #include <sys/epoll.h>
@@ -409,7 +410,7 @@ static void post_msg_to_module(sys_connection_t *conn,
             bh_free(conn_data_event);
             return;
         }
-        memcpy(data_copy, data, len);
+        bh_memcpy_s(data_copy, len, data, len);
     }
 
     memset(conn_data_event, 0, sizeof(*conn_data_event));

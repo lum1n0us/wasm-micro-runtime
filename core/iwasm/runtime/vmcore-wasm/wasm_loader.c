@@ -11,6 +11,7 @@
 #include "wasm_log.h"
 #include "wasm_memory.h"
 #include "wasm_dlfcn.h"
+#include "bh_common.h"
 
 /* Read a value of given type from the address pointed to by the given
    pointer and increase the pointer to the position just after the
@@ -135,7 +136,7 @@ const_str_set_insert(const uint8 *str, uint32 len, WASMModule *module,
         return NULL;
     }
 
-    memcpy(c_str, str, len);
+    bh_memcpy_s(c_str, len + 1, str, len);
     c_str[len] = '\0';
 
     if ((value = wasm_hash_map_find(set, c_str))) {
@@ -1098,7 +1099,8 @@ load_data_segment_section(const uint8 *buf, const uint8 *buf_end,
                 return false;
             }
 
-            memcpy(&dataseg->base_offset, &init_expr, (uint32)sizeof(init_expr));
+            bh_memcpy_s(&dataseg->base_offset, sizeof(InitializerExpression),
+                        &init_expr, sizeof(InitializerExpression));
 
             dataseg->memory_index = mem_index;
             dataseg->data_length = data_seg_len;
@@ -1997,7 +1999,7 @@ memory_realloc(void *mem_old, uint32 size_old, uint32 size_new)
     uint8 *mem_new;
     wasm_assert(size_new > size_old);
     if ((mem_new = wasm_malloc(size_new))) {
-        memcpy(mem_new, mem_old, size_old);
+        bh_memcpy_s(mem_new, size_new, mem_old, size_old);
         memset(mem_new + size_old, 0, size_new - size_old);
         wasm_free(mem_old);
     }

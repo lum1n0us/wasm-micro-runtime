@@ -15,6 +15,7 @@
 #include "wasm_log.h"
 #include "wasm_memory.h"
 #include "wasm_platform_log.h"
+#include "bh_common.h"
 
 
 static WASMFunctionInstance*
@@ -86,7 +87,7 @@ wasm_application_execute_main(WASMModuleInstance *module_inst,
     uint32 total_argv_size = 0;
     uint64 total_size;
     int32 argv_buf_offset, i;
-    char *argv_buf, *p;
+    char *argv_buf, *p, *p_end;
     int32 *argv_offsets;
 
 #if WASM_ENABLE_WASI != 0
@@ -124,9 +125,10 @@ wasm_application_execute_main(WASMModuleInstance *module_inst,
 
         argv_buf = p = wasm_runtime_addr_app_to_native(module_inst, argv_buf_offset);
         argv_offsets = (int32*)(p + total_argv_size);
+        p_end = p + total_size;
 
         for (i = 0; i < argc; i++) {
-            memcpy(p, argv[i], strlen(argv[i]) + 1);
+            bh_memcpy_s(p, (uint32)(p_end - p), argv[i], (uint32)(strlen(argv[i]) + 1));
             argv_offsets[i] = argv_buf_offset + (int32)(p - argv_buf);
             p += strlen(argv[i]) + 1;
         }

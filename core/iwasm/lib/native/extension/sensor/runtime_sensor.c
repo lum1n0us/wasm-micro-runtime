@@ -8,6 +8,7 @@
 #include "module_wasm_app.h"
 #include "bh_thread.h"
 #include "bh_time.h"
+#include "bh_common.h"
 
 static sys_sensor_t * g_sys_sensors = NULL;
 static int g_sensor_id_max = 0;
@@ -59,7 +60,8 @@ wasm_sensor_callback(void *client, uint32 sensor_id, void *user_data)
         return;
 
     /* multiple sensor clients may use/free the sensor data, so make a copy */
-    memcpy(sensor_data_clone, sensor_data, sensor_data_len);
+    bh_memcpy_s(sensor_data_clone, sensor_data_len,
+                sensor_data, sensor_data_len);
 
     sensor_event = (sensor_event_data_t *)bh_malloc(sizeof(*sensor_event));
     if (sensor_event == NULL) {

@@ -7,23 +7,30 @@
 
 char * coap_get_full_url_alloc(coap_packet_t * request)
 {
+    char *url_alloc, *p;
     const char *url = NULL;
     const char * query = NULL;
-    int url_len = coap_get_header_uri_path(request, &url);
-    int query_len = coap_get_header_uri_query(request, &query);
+    uint32 url_len = (uint32)coap_get_header_uri_path(request, &url);
+    uint32 query_len = (uint32)coap_get_header_uri_query(request, &query);
+    uint64 total_size = (uint64)url_len + 1 + (uint64)query_len + 1;
 
     if (url_len == 0)
         return NULL;
 
-    char * url_alloc = (char*) bh_malloc(url_len + 1 + query_len + 1);
-    memcpy(url_alloc, url, url_len);
-    url_alloc[url_len] = 0;
+    if (total_size >= UINT32_MAX
+        || !(url_alloc = p = (char*)bh_malloc((uint32)total_size)))
+        return NULL;
 
-    // make the url looks like /abc?e=f
+    bh_memcpy_s(p, (uint32)total_size, url, url_len);
+    p += url_len;
+    *p = '\0';
+
+    /* make the url looks like /abc?e=f */
     if (query_len != 0) {
-        strcat(url_alloc, "&");
-        memcpy(url_alloc + strlen(url_alloc), query, query_len);
-        url_alloc[url_len + 1 + query_len] = 0;
+        *p++ = '&';
+        bh_memcpy_s(p, query_len + 1, query, query_len);
+        p += query_len;
+        *p = '\0';
     }
 
     return url_alloc;

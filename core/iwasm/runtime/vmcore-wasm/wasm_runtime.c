@@ -12,6 +12,7 @@
 #include "wasm_platform_log.h"
 #include "wasm_memory.h"
 #include "mem_alloc.h"
+#include "bh_common.h"
 
 
 static void
@@ -612,7 +613,8 @@ globals_instantiate_fix(WASMGlobalInstance *globals,
             global->initial_value = globals[init_expr->u.global_index].initial_value;
         }
         else {
-            memcpy(&global->initial_value, &init_expr->u, sizeof(int64));
+            bh_memcpy_s(&global->initial_value, sizeof(WASMValue),
+                        &init_expr->u, sizeof(init_expr->u));
         }
         global++;
     }
@@ -1005,7 +1007,8 @@ wasm_runtime_instantiate(WASMModule *module,
                 case VALUE_TYPE_I64:
                 case VALUE_TYPE_F64:
                     wasm_assert(!global->is_addr);
-                    memcpy(global_data, &global->initial_value.i64, sizeof(int64));
+                    bh_memcpy_s(global_data, (uint32)(global_data_end - global_data),
+                                &global->initial_value.i64, sizeof(int64));
                     global_data += sizeof(int64);
                     break;
                 default:
@@ -1059,7 +1062,8 @@ wasm_runtime_instantiate(WASMModule *module,
                     return NULL;
                 }
 
-                memcpy(memory_data + base_offset, data_seg->data, length);
+                bh_memcpy_s(memory_data + base_offset, memory_size - base_offset,
+                            data_seg->data, length);
             }
         }
     }
@@ -1101,8 +1105,11 @@ wasm_runtime_instantiate(WASMModule *module,
                         return NULL;
                     }
                 }
-                memcpy(table_data + table_seg->base_offset.u.i32,
-                       table_seg->func_indexes, length * sizeof(uint32));
+                bh_memcpy_s(table_data + table_seg->base_offset.u.i32,
+                            (uint32)((module_inst->default_table->cur_size
+                                      - (uint32)table_seg->base_offset.u.i32)
+                                     * sizeof(uint32)),
+                            table_seg->func_indexes, (uint32)(length * sizeof(uint32)));
             }
         }
     }
@@ -1255,11 +1262,11 @@ wasm_runtime_enlarge_memory(WASMModuleInstance *module, uint32 inc_page_count)
     new_memory->end_addr = new_memory->global_data + memory->global_data_size;
 
     /* Copy addr data and memory data */
-    memcpy(new_memory->addr_data, memory->addr_data,
-           (uint32)(memory->global_data - memory->addr_data));
+    bh_memcpy_s(new_memory->addr_data, new_memory->addr_data_size,
+                memory->addr_data, (uint32)(memory->global_data - memory->addr_data));
     /* Copy global data */
-    memcpy(new_memory->global_data, memory->global_data,
-           memory->global_data_size);
+    bh_memcpy_s(new_memory->global_data, new_memory->global_data_size,
+                memory->global_data, memory->global_data_size);
     /* Init free space of new memory */
     memset(new_memory->memory_data + NumBytesPerPage * memory->cur_page_count,
            0, NumBytesPerPage * (total_page_count - memory->cur_page_count));
@@ -1357,7 +1364,7 @@ wasm_runtime_module_dup_data(WASMModuleInstance *module_inst,
     if (buffer_offset != 0) {
         char *buffer;
         buffer = wasm_runtime_addr_app_to_native(module_inst, buffer_offset);
-        memcpy(buffer, src, size);
+        bh_memcpy_s(buffer, size, src, size);
     }
     return buffer_offset;
 }

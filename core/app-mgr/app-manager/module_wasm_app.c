@@ -915,13 +915,14 @@ static bool module_wasm_app_handle_install_msg(install_wasm_app_msg_t *message)
 
     /* Request payload is set to wasm_app_file_t struct,
      * but not whole app buffer */
-    memcpy(request->payload, &message->wasm_app_binary, request->payload_len);
+    bh_memcpy_s(request->payload, request->payload_len,
+                &message->wasm_app_binary, request->payload_len);
 
     /* Since it's a wasm app install request, so directly post to app-mgr's
      * queue. The benefit is that section list can be freed when the msg
      * failed to post to app-mgr's queue. The defect is missing url check. */
     if (!(msg = bh_new_msg(RESTFUL_REQUEST, request, sizeof(*request),
-            request_cleaner))) {
+                           request_cleaner))) {
         request_cleaner(request);
         return false;
     }
