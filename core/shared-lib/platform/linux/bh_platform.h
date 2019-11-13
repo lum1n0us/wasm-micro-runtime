@@ -20,8 +20,9 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <pthread.h>
-#include <limits.h>
 #include <semaphore.h>
+#include <limits.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>

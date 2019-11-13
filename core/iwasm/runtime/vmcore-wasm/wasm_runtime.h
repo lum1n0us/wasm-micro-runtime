@@ -9,6 +9,10 @@
 #include "wasm.h"
 #include "wasm_thread.h"
 #include "wasm_hashmap.h"
+#if WASM_ENABLE_WASI != 0
+#include "wasmtime_ssp.h"
+#include "posix.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -106,6 +110,14 @@ typedef enum {
     Package_Type_Unknown = 0xFFFF
 } PackageType;
 
+#if WASM_ENABLE_WASI != 0
+typedef struct WASIContext {
+    struct fd_table *curfds;
+    struct fd_prestats *prestats;
+    struct argv_environ_values *argv_environ;
+} WASIContext;
+#endif
+
 typedef struct WASMModuleInstance {
     /* Module instance type, for module instance loaded from
        WASM bytecode binary, this field is Wasm_Module_Bytecode;
@@ -132,6 +144,10 @@ typedef struct WASMModuleInstance {
     WASMFunctionInstance *start_function;
 
     WASMModule *module;
+
+#if WASM_ENABLE_WASI != 0
+    WASIContext wasi_ctx;
+#endif
 
     uint32 DYNAMICTOP_PTR_offset;
     uint32 temp_ret;

@@ -21,6 +21,7 @@
 #include <ctype.h>
 #include <pthread.h>
 #include <limits.h>
+#include <fcntl.h>
 #include <semaphore.h>
 #include <errno.h>
 #include <sys/socket.h>

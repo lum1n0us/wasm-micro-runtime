@@ -1288,7 +1288,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
           /* fail to memory.grow, return -1 */
           PUSH_I32(-1);
           if (wasm_runtime_get_exception(module)) {
-            printf("%s\n", wasm_runtime_get_exception(module));
+            bh_printf("%s\n", wasm_runtime_get_exception(module));
             wasm_runtime_set_exception(module, NULL);
           }
         }

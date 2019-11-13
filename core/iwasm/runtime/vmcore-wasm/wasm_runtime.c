@@ -720,10 +720,179 @@ execute_start_function(WASMModuleInstance *module_inst)
         return true;
 
     wasm_assert(!func->is_import_func && func->param_cell_num == 0
-            && func->ret_cell_num == 0);
+                && func->ret_cell_num == 0);
 
     return wasm_runtime_call_wasm(module_inst, NULL, func, 0, NULL);
 }
+
+#if WASM_ENABLE_WASI != 0
+static bool
+wasm_runtime_init_wasi(WASMModuleInstance *module_inst,
+                       const char *dir_list[], uint32 dir_count,
+                       const char *map_dir_list[], uint32 map_dir_count,
+                       const char *env[], uint32 env_count,
+                       const char *argv[], uint32 argc,
+                       char *error_buf, uint32 error_buf_size)
+{
+    size_t *argv_offsets = NULL;
+    char *argv_buf = NULL;
+    size_t *env_offsets = NULL;
+    char *env_buf = NULL;
+    uint64 argv_buf_len = 0, env_buf_len = 0;
+    uint32 argv_buf_offset = 0, env_buf_offset = 0;
+    struct fd_table *curfds;
+    struct fd_prestats *prestats;
+    struct argv_environ_values *argv_environ;
+    int32 offset_argv_offsets = 0, offset_env_offsets = 0;
+    int32 offset_argv_buf = 0, offset_env_buf = 0;
+    int32 offset_curfds = 0;
+    int32 offset_prestats = 0;
+    int32 offset_argv_environ = 0;
+    __wasi_fd_t wasm_fd = 3;
+    int32 raw_fd;
+    char *path, resolved_path[PATH_MAX];
+    uint64 total_size;
+    uint32 i;
+
+    /* process argv[0], trip the path and suffix, only keep the program name */
+    for (i = 0; i < argc; i++)
+        argv_buf_len += strlen(argv[i]) + 1;
+
+    total_size = sizeof(size_t) * (uint64)argc;
+    if (total_size >= UINT32_MAX
+        || !(offset_argv_offsets = wasm_runtime_module_malloc
+                                    (module_inst, (uint32)total_size))
+        || argv_buf_len >= UINT32_MAX
+        || !(offset_argv_buf = wasm_runtime_module_malloc
+                                    (module_inst, (uint32)argv_buf_len))) {
+        set_error_buf(error_buf, error_buf_size,
+                      "Init wasi environment failed: allocate memory failed.");
+        goto fail;
+    }
+
+    argv_offsets = (size_t*)
+        wasm_runtime_addr_app_to_native(module_inst, offset_argv_offsets);
+    argv_buf = (char*)
+        wasm_runtime_addr_app_to_native(module_inst, offset_argv_buf);
+
+    for (i = 0; i < argc; i++) {
+        argv_offsets[i] = argv_buf_offset;
+        strcpy(argv_buf + argv_buf_offset, argv[i]);
+        argv_buf_offset += (uint32)(strlen(argv[i]) + 1);
+    }
+
+    for (i = 0; i < env_count; i++)
+        env_buf_len += strlen(env[i]) + 1;
+
+    total_size = sizeof(size_t) * (uint64)argc;
+    if (total_size >= UINT32_MAX
+        || !(offset_env_offsets = wasm_runtime_module_malloc
+                                    (module_inst, (uint32)total_size))
+        || env_buf_len >= UINT32_MAX
+        || !(offset_env_buf = wasm_runtime_module_malloc
+                                    (module_inst, (uint32)env_buf_len))) {
+        set_error_buf(error_buf, error_buf_size,
+                      "Init wasi environment failed: allocate memory failed.");
+        goto fail;
+    }
+
+    env_offsets = (size_t*)
+        wasm_runtime_addr_app_to_native(module_inst, offset_env_offsets);
+    env_buf = (char*)
+        wasm_runtime_addr_app_to_native(module_inst, offset_env_buf);
+
+    for (i = 0; i < env_count; i++) {
+        env_offsets[i] = env_buf_offset;
+        strcpy(env_buf + env_buf_offset, env[i]);
+        env_buf_offset += (uint32)(strlen(env[i]) + 1);
+    }
+
+    if (!(offset_curfds = wasm_runtime_module_malloc
+                (module_inst, sizeof(struct fd_table)))
+        || !(offset_prestats = wasm_runtime_module_malloc
+                (module_inst, sizeof(struct fd_prestats)))
+        || !(offset_argv_environ = wasm_runtime_module_malloc
+                (module_inst, sizeof(struct argv_environ_values)))) {
+        set_error_buf(error_buf, error_buf_size,
+                      "Init wasi environment failed: allocate memory failed.");
+        goto fail;
+    }
+
+    curfds = module_inst->wasi_ctx.curfds = (struct fd_table*)
+        wasm_runtime_addr_app_to_native(module_inst, offset_curfds);
+    prestats = module_inst->wasi_ctx.prestats = (struct fd_prestats*)
+        wasm_runtime_addr_app_to_native(module_inst, offset_prestats);
+    argv_environ = module_inst->wasi_ctx.argv_environ =
+        (struct argv_environ_values*)wasm_runtime_addr_app_to_native
+        (module_inst, offset_argv_environ);
+
+    fd_table_init(curfds);
+    fd_prestats_init(prestats);
+    argv_environ_init(argv_environ,
+                      argv_offsets, argc,
+                      argv_buf, argv_buf_len,
+                      env_offsets, env_count,
+                      env_buf, env_buf_len);
+
+    /* Prepopulate curfds with stdin, stdout, and stderr file descriptors. */
+    if (!fd_table_insert_existing(curfds, 0, 0)
+        || !fd_table_insert_existing(curfds, 1, 1)
+        || !fd_table_insert_existing(curfds, 2, 2)) {
+        set_error_buf(error_buf, error_buf_size,
+                      "Init wasi environment failed: init fd table failed.");
+        goto fail;
+    }
+
+    wasm_fd = 3;
+    for (i = 0; i < dir_count; i++, wasm_fd++) {
+        path = realpath(dir_list[i], resolved_path);
+        if (!path) {
+            if (error_buf)
+                snprintf(error_buf, error_buf_size,
+                         "error while pre-opening directory %s: %d\n",
+                         dir_list[i], errno);
+            goto fail;
+        }
+
+        raw_fd = open(path, O_RDONLY | O_DIRECTORY, 0);
+        if (raw_fd == -1) {
+            if (error_buf)
+                snprintf(error_buf, error_buf_size,
+                         "error while pre-opening directory %s: %d\n",
+                         dir_list[i], errno);
+            goto fail;
+        }
+
+        fd_table_insert_existing(curfds, wasm_fd, raw_fd);
+        fd_prestats_insert(prestats, dir_list[i], wasm_fd);
+    }
+
+    return true;
+
+fail:
+    if (offset_curfds != 0)
+        wasm_runtime_module_free(module_inst, offset_curfds);
+    if (offset_prestats != 0)
+        wasm_runtime_module_free(module_inst, offset_prestats);
+    if (offset_argv_environ != 0)
+        wasm_runtime_module_free(module_inst, offset_argv_environ);
+    if (offset_argv_buf)
+        wasm_runtime_module_free(module_inst, offset_argv_buf);
+    if (offset_argv_offsets)
+        wasm_runtime_module_free(module_inst, offset_argv_offsets);
+    if (offset_env_buf)
+        wasm_runtime_module_free(module_inst, offset_env_buf);
+    if (offset_env_offsets)
+        wasm_runtime_module_free(module_inst, offset_env_offsets);
+    return false;
+}
+
+WASIContext *
+wasm_runtime_get_wasi_ctx(WASMModuleInstance *module_inst)
+{
+    return &module_inst->wasi_ctx;
+}
+#endif
 
 /**
  * Instantiate module
@@ -937,6 +1106,22 @@ wasm_runtime_instantiate(WASMModule *module,
             }
         }
     }
+
+#if WASM_ENABLE_WASI != 0
+    if (!wasm_runtime_init_wasi(module_inst,
+                                module->wasi_args.dir_list,
+                                module->wasi_args.dir_count,
+                                module->wasi_args.map_dir_list,
+                                module->wasi_args.map_dir_count,
+                                module->wasi_args.env,
+                                module->wasi_args.env_count,
+                                module->wasi_args.argv,
+                                module->wasi_args.argc,
+                                error_buf, error_buf_size)) {
+        wasm_runtime_deinstantiate(module_inst);
+        return NULL;
+    }
+#endif
 
     if (module->start_function != (uint32)-1) {
         wasm_assert(module->start_function >= module->import_function_count);

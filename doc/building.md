@@ -12,7 +12,7 @@ sudo apt install lib32gcc-5-dev g++-multilib
 ```
 Or in Fedora:
 ``` Bash
-sudo dnf install glibc-devel.i686 
+sudo dnf install glibc-devel.i686
 ```
 
 After installing dependencies, build the source code:
@@ -68,6 +68,14 @@ Create a VIP based on the VSB. Make sure the following components are added:
 Copy the generated iwasm executable, the test WASM binary as well as the needed
 shared libraries (libc.so.1, libllvm.so.1 or libgnu.so.1 depending on the VSB,
 libunix.so.1) to a supported file system (eg: romfs).
+
+WASI
+-------------------------
+On Linux / Mac / VxWorks platforms, WASI is enabled by default. To build iwasm without wasi support, pass an option when you run cmake:
+```
+cmake .. -DWASM_ENABLE_WASI=0
+make
+```
 
 Zephyr
 -------------------------
@@ -174,31 +182,11 @@ int main(int argc, char **argv)
 }
 ```
 
-There are three methods to build a WASM binary. They are Emscripten, the clang compiler and Docker.
-
-##  Use Emscripten tool
-
-A method to build a WASM binary is to use Emscripten tool ```emcc```.
-Assuming you are using Linux, you may install emcc from Emscripten EMSDK following the steps below:
-
-```
-git clone https://github.com/emscripten-core/emsdk.git
-emsdk install latest
-emsdk activate latest
-```
-source ```./emsdk_env.sh```.
-The Emscripten website provides other installation methods beyond Linux.
-
-Use the emcc command below to build the WASM C source code into the WASM binary.
-``` Bash
-emcc -g -O3 *.c -s WASM=1 -s SIDE_MODULE=1 -s ASSERTIONS=1 -s STACK_OVERFLOW_CHECK=2 \
-                -s TOTAL_MEMORY=65536 -s TOTAL_STACK=4096 -o test.wasm
-```
-You will get ```test.wasm``` which is the WASM app binary.
+There are several methods to build a WASM binary. They are the clang compiler, Docker, Emscripten and so on.
 
 ## Use clang compiler
 
-Another method to build a WASM binary is to use clang compiler```clang-8```.
+The recommended method to build a WASM binary is to use clang compiler```clang-8```.
 
 Add source to your system source list from llvm website, for ubuntu16.04, add following lines to /etc/apt/sources.list:
 
@@ -229,8 +217,11 @@ sudo ln -s wasm-ld-8 wasm-ld
 Use the clang-8 command below to build the WASM C source code into the WASM binary.
 
 ```Bash
-clang-8 --target=wasm32 -O3 -Wl,--initial-memory=131072,--allow-undefined,--export=main,
---no-threads,--strip-all,--no-entry -nostdlib -o test.wasm test.c
+clang-8 --target=wasm32 -O3 \
+        -z stack-size=4096 -Wl,--initial-memory=65536 \
+        -Wl,--allow-undefined,--export=main \
+        -Wl,--strip-all,--no-entry -nostdlib \
+        -o test.wasm test.c
 ```
 
 You will get ```test.wasm``` which is the WASM app binary.
@@ -255,17 +246,54 @@ You will get ```hello_world``` which is the WASM app binary.
 
 For more details about wamr toolchain, please refer to [test-tools/toolchain](../test-tools/toolchain/README.md).
 
+## Use wasi-sdk
+
+To build a wasm application with wasi support, wasi-sdk is required. Download the [wasi-sdk](https://github.com/CraneStation/wasi-sdk/releases) and extract the archive, then you can use it to build your application:
+```Bash
+/path/to/wasi-sdk/bin/clang test.c -o test.wasm
+```
+
+You will get ```test.wasm``` which is the WASM app binary.
+
 ## Using Docker
 
-The last method availble is using [Docker](https://www.docker.com/). We assume you've already configured Docker (see Platform section above) and have a running interactive shell. Currently the Dockerfile only supports compiling apps with clang, with Emscripten planned for the future.
+Another method availble is using [Docker](https://www.docker.com/). We assume you've already configured Docker (see Platform section above) and have a running interactive shell. Currently the Dockerfile only supports compiling apps with clang, with Emscripten planned for the future.
 
 Use the clang-8 command below to build the WASM C source code into the WASM binary.
 
 ```Bash
-clang-8 --target=wasm32 -O3 -Wl,--initial-memory=131072,--allow-undefined,--export=main,
---no-threads,--strip-all,--no-entry -nostdlib -o test.wasm test.c
+clang-8 --target=wasm32 -O3 \
+        -z stack-size=4096 -Wl,--initial-memory=65536 \
+        -Wl,--allow-undefined,--export=main \
+        -Wl,--strip-all,--no-entry -nostdlib \
+        -o test.wasm test.c
 ```
 
+You will get ```test.wasm``` which is the WASM app binary.
+
+##  Use Emscripten tool
+
+The last method to build a WASM binary is to use Emscripten tool ```emcc```.
+Assuming you are using Linux, you may install emcc from Emscripten EMSDK following the steps below:
+
+```
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+./emsdk install latest-fastcomp
+./emsdk activate latest-fastcomp
+```
+The Emscripten website provides other installation methods beyond Linux.
+
+Use the emcc command below to build the WASM C source code into the WASM binary.
+``` Bash
+cd emsdk
+source emsdk_env.sh     (or add it to ~/.bashrc if you don't want to run it each time)
+cd <dir of test.c>
+EMCC_ONLY_FORCED_STDLIBS=1 emcc -g -O3 -s WASM=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 \
+          -s TOTAL_MEMORY=65536 -s TOTAL_STACK=4096 \
+          -s ASSERTIONS=1 -s STACK_OVERFLOW_CHECK=2 \
+          -s "EXPORTED_FUNCTIONS=['_main']" -o test.wasm test.c
+```
 You will get ```test.wasm``` which is the WASM app binary.
 
 Run WASM app

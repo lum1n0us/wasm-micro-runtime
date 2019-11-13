@@ -7,6 +7,9 @@
 #include "wasm_export.h"
 #include "wasm_log.h"
 #include "wasm_platform_log.h"
+#if WASM_ENABLE_WASI != 0
+#include "wasi_wrapper.h"
+#endif
 
 void
 wasm_runtime_set_exception(wasm_module_inst_t module, const char *exception);
@@ -873,6 +876,36 @@ nullFunc_X_wrapper(wasm_module_inst_t module_inst,
     wasm_runtime_set_exception(module_inst, buf);
 }
 
+static int32
+__cxa_allocate_exception_wrapper(wasm_module_inst_t module_inst,
+                                 uint32 thrown_size)
+{
+    int32 exception = module_malloc(thrown_size);
+    if (!exception)
+        return 0;
+
+    return exception;
+}
+
+static void
+__cxa_begin_catch_wrapper(wasm_module_inst_t module_inst,
+                          int32 exception_object_offset)
+{
+
+}
+
+static void
+__cxa_throw_wrapper(wasm_module_inst_t module_inst,
+                    int32 thrown_exception_offset,
+                    int32 tinfo_offset,
+                    uint32 table_elem_idx)
+{
+    char buf[32];
+
+    snprintf(buf, sizeof(buf), "%s", "exception thrown by stdc++");
+    wasm_runtime_set_exception(module_inst, buf);
+}
+
 /*#define ENABLE_SPEC_TEST 1*/
 
 #ifdef ENABLE_SPEC_TEST
@@ -934,7 +967,10 @@ static WASMNativeFuncDef native_func_defs[] = {
     REG_NATIVE_FUNC(env, _emscripten_memcpy_big),
     REG_NATIVE_FUNC(env, abort),
     REG_NATIVE_FUNC(env, abortStackOverflow),
-    REG_NATIVE_FUNC(env, nullFunc_X)
+    REG_NATIVE_FUNC(env, nullFunc_X),
+    REG_NATIVE_FUNC(env, __cxa_allocate_exception),
+    REG_NATIVE_FUNC(env, __cxa_begin_catch),
+    REG_NATIVE_FUNC(env, __cxa_throw)
 };
 
 void*
@@ -959,6 +995,11 @@ wasm_native_func_lookup(const char *module_name, const char *func_name)
 
     if ((ret = wasm_platform_native_func_lookup(module_name, func_name)))
         return ret;
+
+#if WASM_ENABLE_WASI != 0
+    if ((ret = wasi_native_func_lookup(module_name, func_name)))
+        return ret;
+#endif
 
     return NULL;
 }

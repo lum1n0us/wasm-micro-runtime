@@ -55,11 +55,33 @@ check_main_func_type(const WASMType *type)
     return true;
 }
 
+#if WASM_ENABLE_WASI != 0
+static WASMFunctionInstance *
+lookup_wasi_start_function(WASMModuleInstance *module_inst)
+{
+    WASMFunctionInstance *func = NULL;
+    uint32 i;
+    for (i = 0; i < module_inst->export_func_count; i++) {
+        if (!strcmp(module_inst->export_functions[i].name, "_start")) {
+            func = module_inst->export_functions[i].function;
+            if (func->u.func->func_type->param_count != 0
+                || func->u.func->func_type->result_count != 0) {
+                LOG_ERROR("Lookup wasi _start function failed: "
+                          "invalid function type.\n");
+                return NULL;
+            }
+            return func;
+        }
+    }
+    return NULL;
+}
+#endif
+
 bool
 wasm_application_execute_main(WASMModuleInstance *module_inst,
                               int argc, char *argv[])
 {
-    WASMFunctionInstance *func = resolve_main_function(module_inst);
+    WASMFunctionInstance *func;
     uint32 argc1 = 0, argv1[2] = { 0 };
     uint32 total_argv_size = 0;
     uint64 total_size;
@@ -67,6 +89,21 @@ wasm_application_execute_main(WASMModuleInstance *module_inst,
     char *argv_buf, *p;
     int32 *argv_offsets;
 
+#if WASM_ENABLE_WASI != 0
+    if (module_inst->module->is_wasi_module) {
+        /* In wasi mode, we should call function named "_start"
+           which initializes the wasi envrionment and then calls
+           the actual main function. Directly call main function
+           may cause exception thrown. */
+        if ((func = lookup_wasi_start_function(module_inst)))
+            return wasm_runtime_call_wasm(module_inst, NULL,
+                                          func, 0, NULL);
+        /* if no start function is found, we execute
+           the main function as normal */
+    }
+#endif
+
+    func = resolve_main_function(module_inst);
     if (!func || func->is_import_func)
         return false;
 

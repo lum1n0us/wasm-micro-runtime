@@ -217,6 +217,19 @@ typedef struct BlockAddr {
 #define BLOCK_ADDR_CACHE_SIZE 64
 #define BLOCK_ADDR_CONFLICT_SIZE 4
 
+#if WASM_ENABLE_WASI != 0
+typedef struct WASIArguments {
+    const char **dir_list;
+    uint32 dir_count;
+    const char **map_dir_list;
+    uint32 map_dir_count;
+    const char **env;
+    uint32 env_count;
+    const char **argv;
+    uint32 argc;
+} WASIArguments;
+#endif
+
 typedef struct WASMModule {
     uint32 type_count;
     uint32 import_count;
@@ -254,6 +267,11 @@ typedef struct WASMModule {
     HashMap *branch_set;
 #else
     BlockAddr block_addr_cache[BLOCK_ADDR_CACHE_SIZE][BLOCK_ADDR_CONFLICT_SIZE];
+#endif
+
+#if WASM_ENABLE_WASI != 0
+    WASIArguments wasi_args;
+    bool is_wasi_module;
 #endif
 } WASMModule;
 

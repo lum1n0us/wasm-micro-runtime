@@ -598,6 +598,16 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
             import->u.names.module_name = module_name;
             import->u.names.field_name = field_name;
         }
+
+#if WASM_ENABLE_WASI != 0
+        import = module->import_functions;
+        for (i = 0; i < module->import_function_count; i++, import++) {
+            if (!strcmp(import->u.names.module_name, "wasi_unstable")) {
+                module->is_wasi_module = true;
+                break;
+            }
+        }
+#endif
     }
 
     if (p != p_end) {
@@ -1577,6 +1587,25 @@ wasm_loader_unload(WASMModule *module)
 
     wasm_free(module);
 }
+
+#if WASM_ENABLE_WASI != 0
+void
+wasm_runtime_set_wasi_args(WASMModule *module,
+                           const char *dir_list[], uint32 dir_count,
+                           const char *map_dir_list[], uint32 map_dir_count,
+                           const char *env_list[], uint32 env_count,
+                           const char *argv[], uint32 argc)
+{
+    module->wasi_args.dir_list = dir_list;
+    module->wasi_args.dir_count = dir_count;
+    module->wasi_args.map_dir_list = map_dir_list;
+    module->wasi_args.map_dir_count = map_dir_count;
+    module->wasi_args.env = env_list;
+    module->wasi_args.env_count = env_count;
+    module->wasi_args.argv = argv;
+    module->wasi_args.argc = argc;
+}
+#endif
 
 #if WASM_ENABLE_HASH_BLOCK_ADDR != 0
 typedef struct block_addr {
