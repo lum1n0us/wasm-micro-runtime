@@ -46,6 +46,9 @@
 #include "rights.h"
 #include "str.h"
 
+#include "bh_common.h"
+#include "bh_memory.h"
+
 // struct iovec must have the same layout as __wasi_iovec_t.
 static_assert(offsetof(struct iovec, iov_base) ==
                   offsetof(__wasi_iovec_t, buf),
@@ -2749,33 +2752,78 @@ __wasi_errno_t wasmtime_ssp_environ_sizes_get(
   return __WASI_ESUCCESS;
 }
 
-void argv_environ_init(struct argv_environ_values *argv_environ,
+bool argv_environ_init(struct argv_environ_values *argv_environ,
                        const size_t *argv_offsets, size_t argv_offsets_len,
                        const char *argv_buf, size_t argv_buf_len,
                        const size_t *environ_offsets, size_t environ_offsets_len,
                        const char *environ_buf, size_t environ_buf_len)
 {
-  argv_environ->argc = argv_offsets_len;
-  argv_environ->argv_buf_size = argv_buf_len;
-  argv_environ->argv = malloc(argv_offsets_len * sizeof(char *));
-  argv_environ->argv_buf = malloc(argv_buf_len);
-  if (argv_environ->argv == NULL || argv_environ->argv_buf == NULL) {
-    abort();
-  }
-  for (size_t i = 0; i < argv_offsets_len; ++i) {
-    argv_environ->argv[i] = argv_environ->argv_buf + argv_offsets[i];
-  }
-  memcpy(argv_environ->argv_buf, argv_buf, argv_buf_len);
+    uint64 total_size;
+    size_t i;
 
-  argv_environ->environ_count = environ_offsets_len;
-  argv_environ->environ_buf_size = environ_buf_len;
-  argv_environ->environ = malloc(environ_offsets_len * sizeof(char *));
-  argv_environ->environ_buf = malloc(environ_buf_len);
-  if (argv_environ->environ == NULL || argv_environ->environ_buf == NULL) {
-    abort();
-  }
-  for (size_t i = 0; i < environ_offsets_len; ++i) {
-    argv_environ->environ[i] = argv_environ->environ_buf + environ_offsets[i];
-  }
-  memcpy(argv_environ->environ_buf, environ_buf, environ_buf_len);
+    memset(argv_environ, 0, sizeof(struct argv_environ_values));
+
+    argv_environ->argc = argv_offsets_len;
+    argv_environ->argv_buf_size = argv_buf_len;
+
+    total_size = sizeof(char *) * (uint64)argv_offsets_len;
+    if (total_size >= UINT32_MAX
+        || !(argv_environ->argv = bh_malloc((uint32)total_size)))
+        return false;
+
+
+    if (argv_buf_len >= UINT32_MAX
+        || !(argv_environ->argv_buf = bh_malloc((uint32)argv_buf_len)))
+        goto fail1;
+
+    for (i = 0; i < argv_offsets_len; ++i) {
+        argv_environ->argv[i] = argv_environ->argv_buf + argv_offsets[i];
+    }
+    bh_memcpy_s(argv_environ->argv_buf, (uint32)argv_buf_len,
+                argv_buf, (uint32)argv_buf_len);
+
+    argv_environ->environ_count = environ_offsets_len;
+    argv_environ->environ_buf_size = environ_buf_len;
+
+    total_size = sizeof(char *) * (uint64)environ_offsets_len;
+    if (total_size >= UINT32_MAX
+        || !(argv_environ->environ = bh_malloc((uint32)total_size)))
+        goto fail2;
+
+    if (environ_buf_len >= UINT32_MAX
+        || !(argv_environ->environ_buf = malloc((uint32)environ_buf_len)))
+        goto fail3;
+
+    for (i = 0; i < environ_offsets_len; ++i) {
+        argv_environ->environ[i] = argv_environ->environ_buf + environ_offsets[i];
+    }
+    bh_memcpy_s(argv_environ->environ_buf, (uint32)environ_buf_len,
+                environ_buf, (uint32)environ_buf_len);
+
+    return true;
+
+fail3:
+    bh_free(argv_environ->environ);
+fail2:
+    bh_free(argv_environ->argv_buf);
+fail1:
+    bh_free(argv_environ->argv);
+
+    memset(argv_environ, 0, sizeof(struct argv_environ_values));
+    return false;
+}
+
+void argv_environ_destroy(struct argv_environ_values *argv_environ)
+{
+    /* TODO */
+}
+
+void fd_table_destroy(struct fd_table *ft)
+{
+    /* TODO */
+}
+
+void fd_prestats_destroy(struct fd_prestats *pt)
+{
+    /* TODO */
 }

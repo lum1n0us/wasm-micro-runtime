@@ -756,6 +756,10 @@ wasm_runtime_init_wasi(WASMModuleInstance *module_inst,
     uint64 total_size;
     uint32 i;
 
+    if (!module_inst->default_memory)
+        /* TODO: init wasi with empty data */
+        return true;
+
     /* process argv[0], trip the path and suffix, only keep the program name */
     for (i = 0; i < argc; i++)
         argv_buf_len += strlen(argv[i]) + 1;
@@ -830,11 +834,17 @@ wasm_runtime_init_wasi(WASMModuleInstance *module_inst,
 
     fd_table_init(curfds);
     fd_prestats_init(prestats);
-    argv_environ_init(argv_environ,
-                      argv_offsets, argc,
-                      argv_buf, argv_buf_len,
-                      env_offsets, env_count,
-                      env_buf, env_buf_len);
+
+    if (!argv_environ_init(argv_environ,
+                           argv_offsets, argc,
+                           argv_buf, argv_buf_len,
+                           env_offsets, env_count,
+                           env_buf, env_buf_len)) {
+        set_error_buf(error_buf, error_buf_size,
+                      "Init wasi environment failed: "
+                      "init argument environment failed.");
+        goto fail;
+    }
 
     /* Prepopulate curfds with stdin, stdout, and stderr file descriptors. */
     if (!fd_table_insert_existing(curfds, 0, 0)
@@ -887,6 +897,19 @@ fail:
     if (offset_env_offsets)
         wasm_runtime_module_free(module_inst, offset_env_offsets);
     return false;
+}
+
+static void
+wasm_runtime_destroy_wasi(WASMModuleInstance *module_inst)
+{
+    WASIContext *wasi_ctx = &module_inst->wasi_ctx;
+
+    if (wasi_ctx->argv_environ)
+        argv_environ_destroy(wasi_ctx->argv_environ);
+    if (wasi_ctx->curfds)
+        fd_table_destroy(wasi_ctx->curfds);
+    if (wasi_ctx->prestats)
+        fd_prestats_destroy(wasi_ctx->prestats);
 }
 
 WASIContext *
@@ -1184,6 +1207,10 @@ wasm_runtime_deinstantiate(WASMModuleInstance *module_inst)
 
     if (module_inst->wasm_stack)
         wasm_free(module_inst->wasm_stack);
+
+#if WASM_ENABLE_WASI != 0
+    wasm_runtime_destroy_wasi(module_inst);
+#endif
 
     wasm_free(module_inst);
 }

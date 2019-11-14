@@ -9,8 +9,8 @@ WebAssembly Micro Runtime (WAMR) is a standalone WebAssembly (WASM) runtime with
 Current Features of WAMR
 =========================
 - WASM interpreter (AOT is planned)
-- Supports for a subset of Libc.
-- Supports "SIDE_MODULE=1" EMCC compilation option
+- Supports for a subset of Libc API.
+- Supports for [WASI API](https://github.com/WebAssembly/WASI)
 - Provides embedding C API
 - Provides a mechanism for exporting native API's to WASM applications
 - Supports the programming of firmware apps in a large range of languages (C/C++/Java/Rust/Go/TypeScript etc.)
