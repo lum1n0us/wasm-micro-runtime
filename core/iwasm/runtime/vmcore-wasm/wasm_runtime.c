@@ -1289,8 +1289,10 @@ wasm_runtime_enlarge_memory(WASMModuleInstance *module, uint32 inc_page_count)
     new_memory->end_addr = new_memory->global_data + memory->global_data_size;
 
     /* Copy addr data and memory data */
-    bh_memcpy_s(new_memory->addr_data, new_memory->addr_data_size,
-                memory->addr_data, (uint32)(memory->global_data - memory->addr_data));
+    bh_memcpy_s(new_memory->addr_data,
+                (uint32)(memory->global_data - memory->addr_data),
+                memory->addr_data,
+                (uint32)(memory->global_data - memory->addr_data));
     /* Copy global data */
     bh_memcpy_s(new_memory->global_data, new_memory->global_data_size,
                 memory->global_data, memory->global_data_size);
