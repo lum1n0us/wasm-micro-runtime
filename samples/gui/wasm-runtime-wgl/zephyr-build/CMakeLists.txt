@@ -121,9 +121,6 @@ set (IWASM_SRCS
     ${SHARED_LIB_ROOT}/utils/bh_log.c
     ${SHARED_LIB_ROOT}/utils/bh_queue.c
     ${SHARED_LIB_ROOT}/utils/runtime_timer.c
-    ${SHARED_LIB_ROOT}/coap/er-coap/er-coap.c
-    ${SHARED_LIB_ROOT}/coap/extension/coap_conversion.c
-    ${SHARED_LIB_ROOT}/coap/extension/coap_over_tcp.c
     )
 
     set (LVGL_DRV_SRCS
