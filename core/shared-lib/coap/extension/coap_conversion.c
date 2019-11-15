@@ -4,6 +4,7 @@
  */
 
 #include "coap_ext.h"
+#include "bh_common.h"
 
 char * coap_get_full_url_alloc(coap_packet_t * request)
 {
