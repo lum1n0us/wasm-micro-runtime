@@ -12,7 +12,7 @@ add_definitions (-DNVALGRIND)
 
 # Build as X86_32 by default, change to "ARM_32", "MIPS_32" or "XTENSA_32"
 # if we want to support arm, mips or xtensa
-if (NOT BUILD_TARGET)
+if (NOT DEFINED BUILD_TARGET)
   set (BUILD_TARGET "X86_32")
 endif ()
 

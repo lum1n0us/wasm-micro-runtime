@@ -22,7 +22,7 @@ if (NOT ("$ENV{VALGRIND}" STREQUAL "YES"))
 endif ()
 
 # Set BUILD_TARGET, currently values supported:
-if (NOT BUILD_TARGET)
+if (NOT DEFINED BUILD_TARGET)
   if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     # Build as X86_64 by default in 64-bit platform
     set (BUILD_TARGET "X86_64")
@@ -62,7 +62,7 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   endif ()
 endif ()
 
-if (NOT WASM_ENABLE_WASI)
+if (NOT DEFINED WASM_ENABLE_WASI)
   # Disable wasi support by default
   set (WASM_ENABLE_WASI 0)
 endif ()

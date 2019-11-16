@@ -17,7 +17,7 @@ zephyr_compile_definitions (-DNVALGRIND
 
 # Build as ARM_32 by default, change to "X86_32", "MIPS_32" or "XTENSA_32"
 # if we want to support x86, mips or xtensa
-if (NOT BUILD_TARGET)
+if (NOT DEFINED BUILD_TARGET)
   set (BUILD_TARGET "ARM_32")
 endif ()
 

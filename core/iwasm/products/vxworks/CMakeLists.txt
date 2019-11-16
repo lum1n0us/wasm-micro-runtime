@@ -24,7 +24,7 @@ endif ()
 # "X86_64", "AMD_64", "X86_32", "ARM_32", "MIPS_32", "XTENSA_32", "GENERAL"
 #set (BUILD_TARGET "X86_64")
 
-if (NOT BUILD_TARGET)
+if (NOT DEFINED BUILD_TARGET)
   if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     # Build as X86_64 by default in 64-bit platform
     # if BUILD_TARGET isn't set
@@ -77,7 +77,7 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   endif ()
 endif ()
 
-if (NOT WASM_ENABLE_WASI)
+if (NOT DEFINED WASM_ENABLE_WASI)
   # Enable wasi support by default
   set (WASM_ENABLE_WASI 1)
 endif ()
