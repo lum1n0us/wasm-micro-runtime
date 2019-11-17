@@ -553,6 +553,13 @@ _strdup_wrapper(wasm_module_inst_t module_inst,
 }
 
 static int32
+__strdup_wrapper(wasm_module_inst_t module_inst,
+                int32 str_offset)
+{
+    return _strdup_wrapper(module_inst, str_offset);
+}
+
+static int32
 _memcmp_wrapper(wasm_module_inst_t module_inst,
                 int32 s1_offset, int32 s2_offset, uint32 size)
 {
@@ -1195,6 +1202,8 @@ static WASMNativeFuncDef native_func_defs[] = {
     REG_NATIVE_FUNC(env, _malloc),
     REG_NATIVE_FUNC(env, _calloc),
     REG_NATIVE_FUNC(env, _strdup),
+    /* clang may introduce __strdup */
+    REG_NATIVE_FUNC(env, __strdup),
     REG_NATIVE_FUNC(env, _free),
     REG_NATIVE_FUNC(env, _atoi),
     REG_NATIVE_FUNC(env, _bsearch),

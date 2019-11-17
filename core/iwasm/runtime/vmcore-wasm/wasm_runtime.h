@@ -85,6 +85,10 @@ typedef struct WASMGlobalInstance {
 typedef struct WASMFunctionInstance {
     /* whether it is import function or WASM function */
     bool is_import_func;
+    /* parameter count */
+    uint16 param_count;
+    /* local variable count, 0 for import function */
+    uint16 local_count;
     /* cell num of parameters */
     uint16 param_cell_num;
     /* cell num of return type */
@@ -92,6 +96,10 @@ typedef struct WASMFunctionInstance {
     /* cell num of local variables, 0 for import function */
     uint16 local_cell_num;
     uint16 *local_offsets;
+    /* parameter types */
+    uint8 *param_types;
+    /* local types, NULL for import function */
+    uint8 *local_types;
     union {
         WASMFunctionImport *func_import;
         WASMFunction *func;

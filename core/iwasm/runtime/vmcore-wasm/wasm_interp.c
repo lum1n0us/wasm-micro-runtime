@@ -237,21 +237,6 @@ popcount64(uint64 u)
     return ret;
 }
 
-static inline WASMGlobalInstance*
-get_global(const WASMModuleInstance *module, uint32 global_idx)
-{
-    if (global_idx >= module->global_count)
-        return NULL;
-
-    return module->globals + global_idx;
-}
-
-static inline uint8*
-get_global_addr(WASMMemoryInstance *memory, WASMGlobalInstance *global)
-{
-    return memory->global_data + global->data_offset;
-}
-
 static uint64
 read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
 {
@@ -314,7 +299,7 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
 #define POP_F64() (frame_sp -= 2, GET_F64_FROM_ADDR(frame_sp))
 
 #define POP_CSP_CHECK_OVERFLOW(n) do {                          \
-    wasm_assert(frame_csp - n >= frame->csp_bottom);              \
+    wasm_assert(frame_csp - n >= frame->csp_bottom);            \
   } while (0)
 
 #define POP_CSP() do {                                          \
@@ -427,15 +412,15 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
   p += _off;                                    \
 } while (0)
 
-#define RECOVER_CONTEXT(new_frame) do {                              \
-    frame = (new_frame);                                             \
-    cur_func = frame->function;                                      \
-    prev_frame = frame->prev_frame;                                  \
-    frame_ip = frame->ip;                                            \
-    frame_ip_end = wasm_runtime_get_func_code_end(cur_func);         \
-    frame_lp = frame->lp;                                            \
-    frame_sp = frame->sp;                                            \
-    frame_csp = frame->csp;                                          \
+#define RECOVER_CONTEXT(new_frame) do {                             \
+    frame = (new_frame);                                            \
+    cur_func = frame->function;                                     \
+    prev_frame = frame->prev_frame;                                 \
+    frame_ip = frame->ip;                                           \
+    frame_ip_end = wasm_runtime_get_func_code_end(cur_func);        \
+    frame_lp = frame->lp;                                           \
+    frame_sp = frame->sp;                                           \
+    frame_csp = frame->csp;                                         \
   } while (0)
 
 #if WASM_ENABLE_LABELS_AS_VALUES != 0
@@ -444,56 +429,56 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
 #define GET_OPCODE() (void)0
 #endif
 
-#define DEF_OP_LOAD(operation) do {                                  \
-    uint32 offset, flags, addr;                                      \
-    GET_OPCODE();                                                    \
-    read_leb_uint32(frame_ip, frame_ip_end, flags);                  \
-    read_leb_uint32(frame_ip, frame_ip_end, offset);                 \
-    addr = POP_I32();                                                \
-    CHECK_MEMORY_OVERFLOW();                                         \
-    operation;                                                       \
-    (void)flags;                                                     \
+#define DEF_OP_LOAD(operation) do {                                 \
+    uint32 offset, flags, addr;                                     \
+    GET_OPCODE();                                                   \
+    read_leb_uint32(frame_ip, frame_ip_end, flags);                 \
+    read_leb_uint32(frame_ip, frame_ip_end, offset);                \
+    addr = POP_I32();                                               \
+    CHECK_MEMORY_OVERFLOW();                                        \
+    operation;                                                      \
+    (void)flags;                                                    \
   } while (0)
 
-#define DEF_OP_STORE(sval_type, sval_op_type, operation) do {        \
-    uint32 offset, flags, addr;                                      \
-    sval_type sval;                                                  \
-    GET_OPCODE();                                                    \
-    read_leb_uint32(frame_ip, frame_ip_end, flags);                  \
-    read_leb_uint32(frame_ip, frame_ip_end, offset);                 \
-    sval = POP_##sval_op_type();                                     \
-    addr = POP_I32();                                                \
-    CHECK_MEMORY_OVERFLOW();                                         \
-    operation;                                                       \
-    (void)flags;                                                     \
+#define DEF_OP_STORE(sval_type, sval_op_type, operation) do {       \
+    uint32 offset, flags, addr;                                     \
+    sval_type sval;                                                 \
+    GET_OPCODE();                                                   \
+    read_leb_uint32(frame_ip, frame_ip_end, flags);                 \
+    read_leb_uint32(frame_ip, frame_ip_end, offset);                \
+    sval = POP_##sval_op_type();                                    \
+    addr = POP_I32();                                               \
+    CHECK_MEMORY_OVERFLOW();                                        \
+    operation;                                                      \
+    (void)flags;                                                    \
   } while (0)
 
-#define DEF_OP_I_CONST(ctype, src_op_type) do {                      \
-    ctype cval;                                                      \
-    read_leb_##ctype(frame_ip, frame_ip_end, cval);                  \
-    PUSH_##src_op_type(cval);                                        \
+#define DEF_OP_I_CONST(ctype, src_op_type) do {                     \
+    ctype cval;                                                     \
+    read_leb_##ctype(frame_ip, frame_ip_end, cval);                 \
+    PUSH_##src_op_type(cval);                                       \
   } while (0)
 
-#define DEF_OP_EQZ(src_op_type) do {                                 \
-    int32 val;                                                       \
-    val = POP_##src_op_type() == 0;                                  \
-    PUSH_I32(val);                                                   \
+#define DEF_OP_EQZ(src_op_type) do {                                \
+    int32 val;                                                      \
+    val = POP_##src_op_type() == 0;                                 \
+    PUSH_I32(val);                                                  \
   } while (0)
 
-#define DEF_OP_CMP(src_type, src_op_type, cond) do {                 \
-    uint32 res;                                                      \
-    src_type val1, val2;                                             \
-    val2 = (src_type)POP_##src_op_type();                            \
-    val1 = (src_type)POP_##src_op_type();                            \
-    res = val1 cond val2;                                            \
-    PUSH_I32(res);                                                   \
+#define DEF_OP_CMP(src_type, src_op_type, cond) do {                \
+    uint32 res;                                                     \
+    src_type val1, val2;                                            \
+    val2 = (src_type)POP_##src_op_type();                           \
+    val1 = (src_type)POP_##src_op_type();                           \
+    res = val1 cond val2;                                           \
+    PUSH_I32(res);                                                  \
   } while (0)
 
-#define DEF_OP_BIT_COUNT(src_type, src_op_type, operation) do {      \
-    src_type val1, val2;                                             \
-    val1 = (src_type)POP_##src_op_type();                            \
-    val2 = (src_type)operation(val1);                                \
-    PUSH_##src_op_type(val2);                                        \
+#define DEF_OP_BIT_COUNT(src_type, src_op_type, operation) do {     \
+    src_type val1, val2;                                            \
+    val1 = (src_type)POP_##src_op_type();                           \
+    val2 = (src_type)operation(val1);                               \
+    PUSH_##src_op_type(val2);                                       \
   } while (0)
 
 #define DEF_OP_NUMERIC(src_type1, src_type2, src_op_type, operation) do {   \
@@ -502,43 +487,41 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
     *(src_type2*)(frame_sp);                                                \
   } while (0)
 
-#define DEF_OP_MATH(src_type, src_op_type, method) do {              \
-    src_type val;                                                    \
-    val = POP_##src_op_type();                                       \
-    PUSH_##src_op_type(method(val));                                 \
+#define DEF_OP_MATH(src_type, src_op_type, method) do {             \
+    src_type val;                                                   \
+    val = POP_##src_op_type();                                      \
+    PUSH_##src_op_type(method(val));                                \
   } while (0)
 
-#define DEF_OP_TRUNC(dst_type, dst_op_type, src_type, src_op_type,   \
-                     min_cond, max_cond) do {                        \
-    src_type value = POP_##src_op_type();                            \
-    if (isnan(value)) {                                              \
-      wasm_runtime_set_exception(module,                             \
-                                 "invalid conversion to integer");   \
-      goto got_exception;                                            \
-    }                                                                \
-    else if (value min_cond || value max_cond) {                     \
-      wasm_runtime_set_exception(module, "integer overflow");        \
-      goto got_exception;                                            \
-    }                                                                \
-    PUSH_##dst_op_type(((dst_type)value));                           \
+#define DEF_OP_TRUNC(dst_type, dst_op_type, src_type, src_op_type,  \
+                     min_cond, max_cond) do {                       \
+    src_type value = POP_##src_op_type();                           \
+    if (isnan(value)) {                                             \
+      wasm_runtime_set_exception(module,                            \
+                                 "invalid conversion to integer");  \
+      goto got_exception;                                           \
+    }                                                               \
+    else if (value min_cond || value max_cond) {                    \
+      wasm_runtime_set_exception(module, "integer overflow");       \
+      goto got_exception;                                           \
+    }                                                               \
+    PUSH_##dst_op_type(((dst_type)value));                          \
   } while (0)
 
-#define DEF_OP_CONVERT(dst_type, dst_op_type,                        \
-                       src_type, src_op_type) do {                   \
-    dst_type value = (dst_type)(src_type)POP_##src_op_type();        \
-    PUSH_##dst_op_type(value);                                       \
+#define DEF_OP_CONVERT(dst_type, dst_op_type,                       \
+                       src_type, src_op_type) do {                  \
+    dst_type value = (dst_type)(src_type)POP_##src_op_type();       \
+    PUSH_##dst_op_type(value);                                      \
   } while (0)
 
 #define GET_LOCAL_INDEX_AND_TYPE() do {                             \
-    param_count = cur_func->u.func->func_type->param_count;         \
-    local_count = cur_func->u.func->local_count;                    \
+    uint32 param_count = cur_func->param_count;                     \
     read_leb_uint32(frame_ip, frame_ip_end, local_idx);             \
-    wasm_assert(local_idx < param_count + local_count);             \
+    wasm_assert(local_idx < param_count + cur_func->local_count);   \
     if (local_idx < param_count)                                    \
-      local_type = cur_func->u.func->func_type->types[local_idx];   \
+      local_type = cur_func->param_types[local_idx];                \
     else                                                            \
-      local_type =                                                  \
-        cur_func->u.func->local_types[local_idx - param_count];     \
+      local_type = cur_func->local_types[local_idx - param_count];  \
   } while (0)
 
 static inline int32
@@ -677,6 +660,8 @@ wasm_interp_call_func_bytecode(WASMThread *self,
   uint32 heap_data_size = memory
                           ? (uint32)(memory->heap_data_end - memory->heap_data) : 0;
   WASMTableInstance *table = module->default_table;
+  WASMGlobalInstance *globals = module->globals;
+  uint8 *global_data = memory ? memory->global_data : NULL;
   uint8 opcode_IMPDEP2 = WASM_OP_IMPDEP2;
   WASMInterpFrame *frame = NULL;
   /* Points to this special opcode so as to jump to the
@@ -692,8 +677,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
   uint32 i, depth, cond, count, fidx, tidx, frame_size = 0;
   uint64 all_cell_num = 0;
   int32 didx, val;
-  uint8 *else_addr, *end_addr;
-  uint8 *maddr = NULL;
+  uint8 *else_addr, *end_addr, *maddr = NULL;
 
 #if WASM_ENABLE_LABELS_AS_VALUES != 0
   #define HANDLE_OPCODE(op) &&HANDLE_##op
@@ -939,7 +923,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
       /* variable instructions */
       HANDLE_OP (WASM_OP_GET_LOCAL):
         {
-          uint32 local_idx, param_count, local_count;
+          uint32 local_idx;
           uint8 local_type;
 
           GET_LOCAL_INDEX_AND_TYPE();
@@ -962,13 +946,12 @@ wasm_interp_call_func_bytecode(WASMThread *self,
                                          "invalid local type");
               goto got_exception;
           }
-          (void)local_count;
           HANDLE_OP_END ();
         }
 
       HANDLE_OP (WASM_OP_SET_LOCAL):
         {
-          uint32 local_idx, param_count, local_count;
+          uint32 local_idx;
           uint8 local_type;
 
           GET_LOCAL_INDEX_AND_TYPE();
@@ -991,13 +974,12 @@ wasm_interp_call_func_bytecode(WASMThread *self,
                                          "invalid local type");
               goto got_exception;
           }
-          (void)local_count;
           HANDLE_OP_END ();
         }
 
       HANDLE_OP (WASM_OP_TEE_LOCAL):
         {
-          uint32 local_idx, param_count, local_count;
+          uint32 local_idx;
           uint8 local_type;
 
           GET_LOCAL_INDEX_AND_TYPE();
@@ -1019,7 +1001,6 @@ wasm_interp_call_func_bytecode(WASMThread *self,
               wasm_runtime_set_exception(module, "invalid local type");
               goto got_exception;
           }
-          (void)local_count;
           HANDLE_OP_END ();
         }
 
@@ -1027,24 +1008,26 @@ wasm_interp_call_func_bytecode(WASMThread *self,
         {
           WASMGlobalInstance *global;
           uint32 global_idx;
+          uint8 *global_addr;
 
           read_leb_uint32(frame_ip, frame_ip_end, global_idx);
 
-          global = get_global(module, global_idx);
-          wasm_assert(global && global_idx < module->global_count);
+          wasm_assert(global_idx < module->global_count);
+          global = globals + global_idx;
+          global_addr = global_data + global->data_offset;
 
           switch (global->type) {
             case VALUE_TYPE_I32:
-              PUSH_I32(*(uint32*)get_global_addr(memory, global));
+              PUSH_I32(*(uint32*)global_addr);
               break;
             case VALUE_TYPE_F32:
-              PUSH_F32(*(float32*)get_global_addr(memory, global));
+              PUSH_F32(*(float32*)global_addr);
               break;
             case VALUE_TYPE_I64:
-              PUSH_I64(*(uint64*)get_global_addr(memory, global));
+              PUSH_I64(GET_I64_FROM_ADDR((uint32*)global_addr));
               break;
             case VALUE_TYPE_F64:
-              PUSH_F64(*(float64*)get_global_addr(memory, global));
+              PUSH_F64(GET_F64_FROM_ADDR((uint32*)global_addr));
               break;
             default:
               wasm_runtime_set_exception(module, "invalid global type");
@@ -1061,10 +1044,10 @@ wasm_interp_call_func_bytecode(WASMThread *self,
 
           read_leb_uint32(frame_ip, frame_ip_end, global_idx);
 
-          global = get_global(module, global_idx);
-          wasm_assert(global && global_idx < module->global_count);
+          wasm_assert(global_idx < module->global_count);
+          global = globals + global_idx;
+          global_addr = global_data + global->data_offset;
 
-          global_addr = get_global_addr(memory, global);
           switch (global->type) {
             case VALUE_TYPE_I32:
               *(int32*)global_addr = POP_I32();
@@ -1297,6 +1280,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
           /* update the memory instance ptr */
           memory = module->default_memory;
           memory_data_size = NumBytesPerPage * memory->cur_page_count;
+          global_data = memory->global_data;
         }
 
         (void)reserved;
@@ -2094,13 +2078,16 @@ wasm_interp_call_func_bytecode(WASMThread *self,
           goto got_exception;
       }
       else {
+        WASMFunction *cur_wasm_func = cur_func->u.func;
         WASMType *func_type;
         uint8 ret_type;
 
+        func_type = cur_wasm_func->func_type;
+
         all_cell_num = (uint64)cur_func->param_cell_num
                        + (uint64)cur_func->local_cell_num
-                       + (uint64)cur_func->u.func->max_stack_cell_num
-                       + ((uint64)cur_func->u.func->max_block_num) * sizeof(WASMBranchBlock) / 4;
+                       + (uint64)cur_wasm_func->max_stack_cell_num
+                       + ((uint64)cur_wasm_func->max_block_num) * sizeof(WASMBranchBlock) / 4;
         if (all_cell_num >= UINT32_MAX) {
             wasm_runtime_set_exception(self->module_inst,
                                        "WASM interp failed: stack overflow.");
@@ -2121,19 +2108,18 @@ wasm_interp_call_func_bytecode(WASMThread *self,
 
         frame_sp = frame->sp_bottom = frame_lp + cur_func->param_cell_num
                                                + cur_func->local_cell_num;
-        frame->sp_boundary = frame->sp_bottom + cur_func->u.func->max_stack_cell_num;
+        frame->sp_boundary = frame->sp_bottom + cur_wasm_func->max_stack_cell_num;
 
         frame_csp = frame->csp_bottom = (WASMBranchBlock*)frame->sp_boundary;
-        frame->csp_boundary = frame->csp_bottom + cur_func->u.func->max_block_num;
+        frame->csp_boundary = frame->csp_bottom + cur_wasm_func->max_block_num;
 
         /* Initialize the local varialbes */
         memset(frame_lp + cur_func->param_cell_num, 0,
                (uint32)(cur_func->local_cell_num * 4));
 
         /* Push function block as first block */
-        func_type = cur_func->u.func->func_type;
         ret_type = func_type->result_count
-                   ? func_type->types[func_type->param_count]
+                   ? cur_func->param_types[func_type->param_count]
                    : VALUE_TYPE_VOID;
         PUSH_CSP(BLOCK_TYPE_FUNCTION, ret_type,
                  frame_ip, NULL, frame_ip_end - 1);

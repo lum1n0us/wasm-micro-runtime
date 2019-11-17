@@ -467,6 +467,12 @@ functions_instantiate(const WASMModule *module,
             wasm_type_return_cell_num(import->u.function.func_type);
         function->local_cell_num = 0;
 
+        function->param_count =
+            (uint16)function->u.func_import->func_type->param_count;
+        function->local_count = 0;
+        function->param_types = function->u.func_import->func_type->types;
+        function->local_types = NULL;
+
         function++;
     }
 
@@ -482,6 +488,11 @@ functions_instantiate(const WASMModule *module,
         function->local_cell_num =
             wasm_get_cell_num(function->u.func->local_types,
                               function->u.func->local_count);
+
+        function->param_count = (uint16)function->u.func->func_type->param_count;
+        function->local_count = (uint16)function->u.func->local_count;
+        function->param_types = function->u.func->func_type->types;
+        function->local_types = function->u.func->local_types;
 
         if (!function_init_local_offsets(function)) {
             functions_deinstantiate(functions, function_count);
