@@ -917,21 +917,6 @@ _strstr_wrapper(wasm_module_inst_t module_inst,
 }
 
 static int32
-_time_wrapper(wasm_module_inst_t module_inst,
-              int32 t_offset)       /* const time_t * */
-{
-    time_t *t = NULL;
-
-    if (!validate_app_addr(t_offset, sizeof(time_t)))
-        return 0;
-
-    if (t_offset != 0)
-        t = addr_app_to_native(t_offset);
-
-    return (int32)time(t);
-}
-
-static int32
 _isupper_wrapper(wasm_module_inst_t module_inst,
                  int32 c)
 {
@@ -1221,7 +1206,6 @@ static WASMNativeFuncDef native_func_defs[] = {
     REG_NATIVE_FUNC(env, _strspn),
     REG_NATIVE_FUNC(env, _strcspn),
     REG_NATIVE_FUNC(env, _strstr),
-    REG_NATIVE_FUNC(env, _time),
     REG_NATIVE_FUNC(env, _isupper),
     REG_NATIVE_FUNC(env, _isalpha),
     REG_NATIVE_FUNC(env, _isspace),

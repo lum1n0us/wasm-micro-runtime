@@ -298,7 +298,7 @@ static int subscribe(reg_info *info)
     p = strtok(info->urls, ",");
     while(p != NULL) {
         char url[URL_MAX_LEN] = {0};
-        sprintf(url, "%s%s", "/event/", p);
+        snprintf(url, URL_MAX_LEN, "%s%s", "/event/", p);
         init_request(request,
                 url,
                 COAP_PUT,
@@ -312,7 +312,7 @@ static int subscribe(reg_info *info)
 #else
     char url[URL_MAX_LEN] = { 0 };
     char *prefix = info->urls[0] == '/' ? "/event" : "/event/";
-    sprintf(url, "%s%s", prefix, info->urls);
+    snprintf(url, URL_MAX_LEN, "%s%s", prefix, info->urls);
     init_request(request, url, COAP_PUT,
     FMT_ATTR_CONTAINER,
     NULL, 0);
@@ -332,7 +332,7 @@ static int unsubscribe(unreg_info *info)
     p = strtok(info->urls, ",");
     while(p != NULL) {
         char url[URL_MAX_LEN] = {0};
-        sprintf(url, "%s%s", "/event/", p);
+        snprintf(url, URL_MAX_LEN, "%s%s", "/event/", p);
         init_request(request,
                 url,
                 COAP_DELETE,
@@ -345,7 +345,7 @@ static int unsubscribe(unreg_info *info)
     }
 #else
     char url[URL_MAX_LEN] = { 0 };
-    sprintf(url, "%s%s", "/event/", info->urls);
+    snprintf(url, URL_MAX_LEN, "%s%s", "/event/", info->urls);
     init_request(request, url, COAP_DELETE,
     FMT_ATTR_CONTAINER,
     NULL, 0);

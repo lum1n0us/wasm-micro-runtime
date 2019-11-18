@@ -783,7 +783,8 @@ wasm_runtime_init_wasi(WASMModuleInstance *module_inst,
 
     for (i = 0; i < argc; i++) {
         argv_offsets[i] = argv_buf_offset;
-        strcpy(argv_buf + argv_buf_offset, argv[i]);
+        bh_strcpy_s(argv_buf + argv_buf_offset,
+                    (uint32)argv_buf_len - argv_buf_offset, argv[i]);
         argv_buf_offset += (uint32)(strlen(argv[i]) + 1);
     }
 
@@ -809,7 +810,8 @@ wasm_runtime_init_wasi(WASMModuleInstance *module_inst,
 
     for (i = 0; i < env_count; i++) {
         env_offsets[i] = env_buf_offset;
-        strcpy(env_buf + env_buf_offset, env[i]);
+        bh_strcpy_s(env_buf + env_buf_offset,
+                    (uint32)env_buf_len - env_buf_offset, env[i]);
         env_buf_offset += (uint32)(strlen(env[i]) + 1);
     }
 

@@ -57,7 +57,6 @@ strncasecmp
 strspn
 strcspn
 strstr
-time
 isupper
 isalpha
 isspace

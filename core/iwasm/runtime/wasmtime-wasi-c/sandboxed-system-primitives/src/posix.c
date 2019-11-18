@@ -1342,7 +1342,8 @@ __wasi_errno_t wasmtime_ssp_fd_allocate(
 // it. This is needed by path_get().
 static char *readlinkat_dup(
     int fd,
-    const char *path
+    const char *path,
+    size_t *p_len
 ) {
   char *buf = NULL;
   size_t len = 32;
@@ -1360,6 +1361,7 @@ static char *readlinkat_dup(
     }
     if ((size_t)ret + 1 < len) {
       buf[ret] = '\0';
+      *p_len = len;
       return buf;
     }
     len *= 2;
@@ -1438,8 +1440,9 @@ static __wasi_errno_t path_get(
   paths[0] = paths_start[0] = path;
   size_t curpath = 0;
   size_t expansions = 0;
-
   char *symlink;
+  size_t symlink_len;
+
   for (;;) {
     // Extract the next pathname component from 'paths[curpath]', null
     // terminate it and store it in 'file'. 'ends_with_slashes' stores
@@ -1495,7 +1498,7 @@ static __wasi_errno_t path_get(
           error = convert_errno(errno);
           goto fail;
         }
-        symlink = readlinkat_dup(fds[curfd], file);
+        symlink = readlinkat_dup(fds[curfd], file, &symlink_len);
         if (symlink != NULL)
           goto push_symlink;
 
@@ -1513,7 +1516,7 @@ static __wasi_errno_t path_get(
       // expansion.
       if (ends_with_slashes ||
           (flags & __WASI_LOOKUP_SYMLINK_FOLLOW) != 0) {
-        symlink = readlinkat_dup(fds[curfd], file);
+        symlink = readlinkat_dup(fds[curfd], file, &symlink_len);
         if (symlink != NULL)
           goto push_symlink;
         if (errno != EINVAL && errno != ENOENT) {
@@ -1584,7 +1587,7 @@ static __wasi_errno_t path_get(
     // it also contained one. Otherwise we would not throw ENOTDIR if
     // the target is not a directory.
     if (ends_with_slashes)
-      strcat(symlink, "/");
+      bh_strcat_s(symlink, (uint32)symlink_len, "/");
     paths[curpath] = paths_start[curpath] = symlink;
   }
 
@@ -1686,7 +1689,8 @@ __wasi_errno_t wasmtime_ssp_path_link(
   if (ret < 0 && errno == ENOTSUP && !old_pa.follow) {
     // OS X doesn't allow creating hardlinks to symbolic links.
     // Duplicate the symbolic link instead.
-    char *target = readlinkat_dup(old_pa.fd, old_pa.path);
+    size_t target_len;
+    char *target = readlinkat_dup(old_pa.fd, old_pa.path, &target_len);
     if (target != NULL) {
       ret = symlinkat(target, new_pa.fd, new_pa.path);
       free(target);

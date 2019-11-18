@@ -10,6 +10,7 @@
 #if WASM_ENABLE_WASI != 0
 #include "wasi_wrapper.h"
 #endif
+#include "bh_common.h"
 
 void
 wasm_runtime_set_exception(wasm_module_inst_t module, const char *exception);
@@ -296,7 +297,7 @@ wasi_fd_prestat_dir_name(wasm_module_inst_t module_inst,
     WASI_CHECK_ERR();
 
     path_app = (char*)addr_app_to_native(path_offset);
-    strcpy(path_app, path);
+    bh_strcpy_s(path_app, path_len, path);
 
     return 0;
 }
