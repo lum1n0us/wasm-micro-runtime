@@ -300,7 +300,6 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
     frame_csp->block_type = type;                       \
     frame_csp->return_type = ret_type;                  \
     frame_csp->start_addr = start;                      \
-    frame_csp->else_addr = else_;                       \
     frame_csp->end_addr = end;                          \
     frame_csp->frame_sp = frame_sp;                     \
     frame_csp++;                                        \

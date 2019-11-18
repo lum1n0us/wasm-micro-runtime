@@ -186,35 +186,53 @@ There are several methods to build a WASM binary. They are the clang compiler, D
 
 ## Use clang compiler
 
-The recommended method to build a WASM binary is to use clang compiler```clang-8```.
+The recommended method to build a WASM binary is to use clang compiler ```clang-8```. You can refer to [apt.llvm.org](https://apt.llvm.org) for the detailed instructions. Here are referenced steps to install clang-8 in Ubuntu 16.04 and Ubuntu 18.04.
 
-Add source to your system source list from llvm website, for ubuntu16.04, add following lines to /etc/apt/sources.list:
+(1) Add source to your system source list from llvm website
+
+For Ubuntu 16.04, add the following lines to /etc/apt/sources.list:
 
 ```Bash
 deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main
-deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial main # 7
-deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main
-deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main # 8
+deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial main
+# 8
 deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main
 deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main
+# 9
+deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main
+deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main
 ```
 
-Download and install clang-8 tool-chain using following commands:
+For Ubuntu 18.04, add the following lines to /etc/apt/sources.list:
 
 ```Bash
-wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+# i386 not available
+deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main
+deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic main
+# 8
+deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main
+deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main
+# 9
+deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main
+deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main
+
+(2) Download and install clang-8 tool-chain using following commands:
+
+```Bash
+sudo wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+# Fingerprint: 6084 F3CF 814B 57C1 CF12 EFD5 15CF 4D18 AF4F 7421
 sudo apt-get update
 sudo apt-get install llvm-8 lld-8 clang-8
 ```
 
-Create a soft link under /usr/bin:
+(3) Create a soft link under /usr/bin:
 
 ```Bash
 cd /usr/bin
 sudo ln -s wasm-ld-8 wasm-ld
 ```
 
-Use the clang-8 command below to build the WASM C source code into the WASM binary.
+(4) Use the clang-8 command below to build the WASM C source code into the WASM binary.
 
 ```Bash
 clang-8 --target=wasm32 -O3 \
