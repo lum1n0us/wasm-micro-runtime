@@ -297,7 +297,7 @@ wasi_fd_prestat_dir_name(wasm_module_inst_t module_inst,
     WASI_CHECK_ERR();
 
     path_app = (char*)addr_app_to_native(path_offset);
-    bh_strcpy_s(path_app, path_len, path);
+    bh_memcpy_s(path_app, path_len, path, path_len);
 
     return 0;
 }

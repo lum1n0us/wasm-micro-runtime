@@ -756,9 +756,13 @@ wasm_runtime_init_wasi(WASMModuleInstance *module_inst,
     uint64 total_size;
     uint32 i;
 
-    if (!module_inst->default_memory)
-        /* TODO: init wasi with empty data */
+    if (!module_inst->default_memory) {
+        argv_environ = module_inst->wasi_ctx.argv_environ = NULL;
+        prestats = module_inst->wasi_ctx.prestats = NULL;
+        curfds = module_inst->wasi_ctx.curfds = NULL;
+
         return true;
+    }
 
     /* process argv[0], trip the path and suffix, only keep the program name */
     for (i = 0; i < argc; i++)
@@ -1195,6 +1199,10 @@ wasm_runtime_deinstantiate(WASMModuleInstance *module_inst)
     if (!module_inst)
         return;
 
+#if WASM_ENABLE_WASI != 0
+    wasm_runtime_destroy_wasi(module_inst);
+#endif
+
     if (module_inst->memory_count > 0)
         memories_deinstantiate(module_inst->memories, module_inst->memory_count);
     else if (module_inst->memories != NULL && module_inst->global_count > 0)
@@ -1209,10 +1217,6 @@ wasm_runtime_deinstantiate(WASMModuleInstance *module_inst)
 
     if (module_inst->wasm_stack)
         wasm_free(module_inst->wasm_stack);
-
-#if WASM_ENABLE_WASI != 0
-    wasm_runtime_destroy_wasi(module_inst);
-#endif
 
     wasm_free(module_inst);
 }

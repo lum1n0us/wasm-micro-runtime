@@ -39,7 +39,7 @@ static inline void refcount_acquire(struct refcount *r) PRODUCES(*r) {
 // Decrement the reference counter, returning whether the reference
 // dropped to zero.
 static inline bool refcount_release(struct refcount *r) CONSUMES(*r) {
-  int old = atomic_fetch_sub_explicit(&r->count, 1, memory_order_release);
+  int old = (int)atomic_fetch_sub_explicit(&r->count, 1, memory_order_release);
   assert(old != 0 && "Reference count becoming negative");
   return old == 1;
 }

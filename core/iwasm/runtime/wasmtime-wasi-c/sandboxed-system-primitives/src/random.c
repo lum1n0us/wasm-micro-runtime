@@ -63,7 +63,7 @@ void random_buf(void *buf, size_t len) {
   static pthread_once_t open_once = PTHREAD_ONCE_INIT;
   pthread_once(&open_once, open_urandom);
 
-  if (read(urandom, buf, len) != len) {
+  if ((size_t)read(urandom, buf, len) != len) {
     fputs("Short read on /dev/urandom\n", stderr);
     abort();
   }
