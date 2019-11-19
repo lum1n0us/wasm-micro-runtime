@@ -133,134 +133,157 @@ static void app_instance_queue_callback(void *queue_msg, void *arg)
     module_data *m_data = app_manager_get_module_data(Module_WASM_App, inst);
     int message_type = bh_message_type(queue_msg);
 
-    switch (message_type) {
-    case RESTFUL_REQUEST: {
-        request_t *request = (request_t *) bh_message_payload(queue_msg);
-        int size;
-        char *buffer;
-        int32 buffer_offset;
+    bh_assert(m_data);
 
-        app_manager_printf("App %s got request, url %s, action %d\n",
-                           m_data->module_name, request->url, request->action);
+    if (message_type < BASE_EVENT_MAX) {
+        switch (message_type) {
+            case RESTFUL_REQUEST: {
+                 request_t *request = (request_t *)bh_message_payload(queue_msg);
+                 int size;
+                 char *buffer;
+                 int32 buffer_offset;
 
-        func_onRequest = app_manager_lookup_function(inst, "_on_request",
-                                                     "(i32i32)");
-        if (!func_onRequest) {
-            app_manager_printf("Cannot find function onRequest\n");
-            break;
-        }
+                 app_manager_printf("App %s got request, url %s, action %d\n",
+                                    m_data->module_name,
+                                    request->url,
+                                    request->action);
 
-        buffer = pack_request(request, &size);
-        if (buffer == NULL)
-            break;
+                 func_onRequest = app_manager_lookup_function(inst,
+                                                              "_on_request",
+                                                              "(i32i32)");
+                 if (!func_onRequest) {
+                     app_manager_printf("Cannot find function onRequest\n");
+                     break;
+                 }
 
-        buffer_offset = wasm_runtime_module_dup_data(inst, buffer, size);
-        if (buffer_offset == 0) {
-            app_manager_printf("Got exception running wasm code: %s\n",
-                    wasm_runtime_get_exception(inst));
-            wasm_runtime_clear_exception(inst);
-            free_req_resp_packet(buffer);
-            break;
-        }
+                 buffer = pack_request(request, &size);
+                 if (buffer == NULL)
+                     break;
 
-        free_req_resp_packet(buffer);
+                 buffer_offset = wasm_runtime_module_dup_data(inst, buffer, size);
+                 if (buffer_offset == 0) {
+                     app_manager_printf("Got exception running wasm code: %s\n",
+                                        wasm_runtime_get_exception(inst));
+                     wasm_runtime_clear_exception(inst);
+                     free_req_resp_packet(buffer);
+                     break;
+                 }
 
-        argv[0] = (uint32) buffer_offset;
-        argv[1] = (uint32) size;
+                 free_req_resp_packet(buffer);
 
-        if (!wasm_runtime_call_wasm(inst, NULL, func_onRequest, 2, argv)) {
-            app_manager_printf("Got exception running wasm code: %s\n",
-                               wasm_runtime_get_exception(inst));
-            wasm_runtime_clear_exception(inst);
-            wasm_runtime_module_free(inst, buffer_offset);
-            break;
-        }
+                 argv[0] = (uint32) buffer_offset;
+                 argv[1] = (uint32) size;
 
-        wasm_runtime_module_free(inst, buffer_offset);
-        app_manager_printf("Wasm app process request success.\n");
-        break;
-    }
-    case RESTFUL_RESPONSE: {
-        wasm_function_inst_t func_onResponse;
-        response_t *response = (response_t *) bh_message_payload(queue_msg);
-        int size;
-        char *buffer;
-        int32 buffer_offset;
+                 if (!wasm_runtime_call_wasm(inst, NULL, func_onRequest, 2, argv)) {
+                     app_manager_printf("Got exception running wasm code: %s\n",
+                                        wasm_runtime_get_exception(inst));
+                     wasm_runtime_clear_exception(inst);
+                     wasm_runtime_module_free(inst, buffer_offset);
+                     break;
+                 }
 
-        app_manager_printf("App %s got response_t,status %d\n",
-                           m_data->module_name, response->status);
-
-        func_onResponse =
-            app_manager_lookup_function(inst, "_on_response", "(i32i32)");
-        if (!func_onResponse) {
-            app_manager_printf("Cannot find function on_response\n");
-            break;
-        }
-
-        buffer = pack_response(response, &size);
-        if (buffer == NULL)
-            break;
-
-        buffer_offset = wasm_runtime_module_dup_data(inst, buffer, size);
-        if (buffer_offset == 0) {
-            app_manager_printf("Got exception running wasm code: %s\n",
-                               wasm_runtime_get_exception(inst));
-            wasm_runtime_clear_exception(inst);
-            free_req_resp_packet(buffer);
-            break;
-        }
-
-        free_req_resp_packet(buffer);
-
-        argv[0] = (uint32) buffer_offset;
-        argv[1] = (uint32) size;
-
-        if (!wasm_runtime_call_wasm(inst, NULL, func_onResponse, 2, argv)) {
-            app_manager_printf("Got exception running wasm code: %s\n",
-                               wasm_runtime_get_exception(inst));
-            wasm_runtime_clear_exception(inst);
-            wasm_runtime_module_free(inst, buffer_offset);
-            break;
-        }
-
-        wasm_runtime_module_free(inst, buffer_offset);
-        app_manager_printf("Wasm app process response success.\n");
-        break;
-    }
-
-    case TIMER_EVENT_WASM: {
-        if (bh_message_payload(queue_msg)) {
-            /* Call Timer.callOnTimer() method */
-            func_onTimer =
-                app_manager_lookup_function(inst, "_on_timer_callback", "(i32)");
-
-            if (!func_onTimer) {
-                app_manager_printf("Cannot find function _on_timer_callback\n");
-                break;
+                 wasm_runtime_module_free(inst, buffer_offset);
+                 app_manager_printf("Wasm app process request success.\n");
+                 break;
             }
-            unsigned int timer_id = (unsigned int)(uintptr_t)
-                                    bh_message_payload(queue_msg);
-            argv[0] = timer_id;
-            if (!wasm_runtime_call_wasm(inst, NULL, func_onTimer, 1, argv)) {
-                app_manager_printf("Got exception running wasm code: %s\n",
-                                   wasm_runtime_get_exception(inst));
-                wasm_runtime_clear_exception(inst);
+            case RESTFUL_RESPONSE: {
+                 wasm_function_inst_t func_onResponse;
+                 response_t *response = (response_t *) bh_message_payload(queue_msg);
+                 int size;
+                 char *buffer;
+                 int32 buffer_offset;
+
+                 app_manager_printf("App %s got response_t,status %d\n",
+                                    m_data->module_name, response->status);
+
+                 func_onResponse =
+                     app_manager_lookup_function(inst, "_on_response", "(i32i32)");
+                 if (!func_onResponse) {
+                     app_manager_printf("Cannot find function on_response\n");
+                     break;
+                 }
+
+                 buffer = pack_response(response, &size);
+                 if (buffer == NULL)
+                     break;
+
+                 buffer_offset = wasm_runtime_module_dup_data(inst, buffer, size);
+                 if (buffer_offset == 0) {
+                     app_manager_printf("Got exception running wasm code: %s\n",
+                                        wasm_runtime_get_exception(inst));
+                     wasm_runtime_clear_exception(inst);
+                     free_req_resp_packet(buffer);
+                     break;
+                 }
+
+                 free_req_resp_packet(buffer);
+
+                 argv[0] = (uint32) buffer_offset;
+                 argv[1] = (uint32) size;
+
+                 if (!wasm_runtime_call_wasm(inst, NULL, func_onResponse, 2, argv)) {
+                     app_manager_printf("Got exception running wasm code: %s\n",
+                                        wasm_runtime_get_exception(inst));
+                     wasm_runtime_clear_exception(inst);
+                     wasm_runtime_module_free(inst, buffer_offset);
+                     break;
+                 }
+
+                 wasm_runtime_module_free(inst, buffer_offset);
+                 app_manager_printf("Wasm app process response success.\n");
+                 break;
+            }
+            default: {
+                 for (int i = 0; i < Max_Msg_Callback; i++) {
+                     if (g_msg_type[i] == message_type) {
+                         g_msg_callbacks[i](m_data, queue_msg);
+                         return;
+                     }
+                 }
+                 app_manager_printf("Invalid message type of WASM app queue message.\n");
+                 break;
+
             }
         }
-
-        break;
     }
+    else {
+        switch (message_type) {
+            case TIMER_EVENT_WASM: {
+                 unsigned int timer_id;
+                 if (bh_message_payload(queue_msg)) {
+                     /* Call Timer.callOnTimer() method */
+                     func_onTimer =
+                         app_manager_lookup_function(inst,
+                                                      "_on_timer_callback",
+                                                      "(i32)");
 
-    default: {
-        for (int i = 0; i < Max_Msg_Callback; i++) {
-            if (g_msg_type[i] == message_type) {
-                g_msg_callbacks[i](m_data, queue_msg);
-                return;
+                     if (!func_onTimer) {
+                         app_manager_printf("Cannot find function _on_timer_callback\n");
+                         break;
+                     }
+                     timer_id =
+                         (unsigned int)(uintptr_t)bh_message_payload(queue_msg);
+                     argv[0] = timer_id;
+                     if (!wasm_runtime_call_wasm(inst, NULL, func_onTimer, 1, argv)) {
+                         app_manager_printf("Got exception running wasm code: %s\n",
+                                            wasm_runtime_get_exception(inst));
+                         wasm_runtime_clear_exception(inst);
+                     }
+                 }
+                 break;
             }
+            default: {
+                 for (int i = 0; i < Max_Msg_Callback; i++) {
+                     if (g_msg_type[i] == message_type) {
+                         g_msg_callbacks[i](m_data, queue_msg);
+                         return;
+                     }
+                 }
+                 app_manager_printf("Invalid message type of WASM app queue message.\n");
+                 break;
+            }
+
         }
-        app_manager_printf("Invalid message type of WASM app queue message.\n");
-        break;
-    }
     }
 }
 

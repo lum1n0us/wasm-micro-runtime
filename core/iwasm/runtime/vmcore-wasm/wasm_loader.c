@@ -523,6 +523,7 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
             read_leb_uint8(p, p_end, kind);
             switch (kind) {
                 case IMPORT_KIND_FUNC: /* import function */
+                    wasm_assert(import_functions);
                     import = import_functions++;
                     read_leb_uint32(p, p_end, type_index);
                     if (type_index >= module->type_count) {
@@ -552,6 +553,7 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                     break;
 
                 case IMPORT_KIND_TABLE: /* import table */
+                    wasm_assert(import_tables);
                     import = import_tables++;
                     if (!load_table_import(&p, p_end, &import->u.table,
                                 error_buf, error_buf_size))
@@ -563,6 +565,7 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                     break;
 
                 case IMPORT_KIND_MEMORY: /* import memory */
+                    wasm_assert(import_memories);
                     import = import_memories++;
                     if (!load_memory_import(&p, p_end, &import->u.memory,
                                 error_buf, error_buf_size))
@@ -574,6 +577,7 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                     break;
 
                 case IMPORT_KIND_GLOBAL: /* import global */
+                    wasm_assert(import_globals);
                     import = import_globals++;
                     read_leb_uint8(p, p_end, import->u.global.type);
                     read_leb_uint8(p, p_end, mutable);
@@ -1384,6 +1388,8 @@ create_sections(const uint8 *buf, uint32 size,
     const uint8 *p = buf, *p_end = buf + size/*, *section_body*/;
     uint8 section_type;
     uint32 section_size;
+
+    wasm_assert(!*p_section_list);
 
     p += 8;
     while (p < p_end) {

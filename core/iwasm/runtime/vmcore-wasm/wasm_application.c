@@ -233,7 +233,7 @@ wasm_application_execute_func(WASMModuleInstance *module_inst,
 
     /* Parse arguments */
     for (i = 0, p = 0; i < argc; i++) {
-        char *endptr;
+        char *endptr = NULL;
         wasm_assert(argv[i] != NULL);
         if (argv[i][0] == '\0') {
             LOG_ERROR("Wasm prepare param failed: invalid num (%s).\n", argv[i]);
@@ -302,7 +302,7 @@ wasm_application_execute_func(WASMModuleInstance *module_inst,
                 break;
             }
         }
-        if (*endptr != '\0' && *endptr != '_') {
+        if (endptr && *endptr != '\0' && *endptr != '_') {
             LOG_ERROR("Wasm prepare param failed: invalid num (%s).\n", argv[i]);
             goto fail;
         }

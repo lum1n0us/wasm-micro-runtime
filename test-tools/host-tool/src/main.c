@@ -777,7 +777,7 @@ int main(int argc, char *argv[])
     int ret;
     imrt_link_recv_context_t recv_ctx = { 0 };
     char buffer[BUF_SIZE] = { 0 };
-    uint32_t last_check, total_elpased_ms = 0;
+    uint32_t last_check = 0, total_elpased_ms = 0;
     bool is_responsed = false;
     operation op;
 

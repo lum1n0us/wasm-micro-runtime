@@ -252,19 +252,6 @@ void destroy_timer_ctx(timer_ctx_t ctx)
     bh_free(ctx);
 }
 
-void timer_ctx_set_lock(timer_ctx_t ctx, bool lock)
-{
-    if (lock)
-        vm_mutex_lock(&ctx->mutex);
-    else
-        vm_mutex_unlock(&ctx->mutex);
-}
-
-void * timer_ctx_get_lock(timer_ctx_t ctx)
-{
-    return &ctx->mutex;
-}
-
 unsigned int timer_ctx_get_owner(timer_ctx_t ctx)
 {
     return ctx->owner;
