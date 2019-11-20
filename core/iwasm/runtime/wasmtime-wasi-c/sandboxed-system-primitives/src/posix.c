@@ -722,7 +722,7 @@ __wasi_errno_t wasmtime_ssp_fd_prestat_dir_name(
     return EINVAL;
   }
 
-  memcpy(path, prestat->dir, path_len);
+  bh_memcpy_s(path, path_len, prestat->dir, path_len);
 
   rwlock_unlock(&prestats->lock);
 
@@ -889,10 +889,10 @@ __wasi_errno_t wasmtime_ssp_fd_pread(
     size_t bufoff = 0;
     for (size_t i = 0; i < iovcnt; ++i) {
       if (bufoff + iov[i].buf_len < len) {
-        memcpy(iov[i].buf, buf + bufoff, iov[i].buf_len);
+        bh_memcpy_s(iov[i].buf, iov[i].buf_len, buf + bufoff, iov[i].buf_len);
         bufoff += iov[i].buf_len;
       } else {
-        memcpy(iov[i].buf, buf + bufoff, len - bufoff);
+        bh_memcpy_s(iov[i].buf, iov[i].buf_len, buf + bufoff, len - bufoff);
         break;
       }
     }
@@ -940,7 +940,8 @@ __wasi_errno_t wasmtime_ssp_fd_pwrite(
     }
     size_t bufoff = 0;
     for (size_t i = 0; i < iovcnt; ++i) {
-      memcpy(buf + bufoff, iov[i].buf, iov[i].buf_len);
+      bh_memcpy_s(buf + bufoff, totalsize - bufoff,
+                  iov[i].buf, iov[i].buf_len);
       bufoff += iov[i].buf_len;
     }
 
@@ -1872,7 +1873,7 @@ static void fd_readdir_put(
   size_t bufavail = bufsize - *bufused;
   if (elemsize > bufavail)
     elemsize = bufavail;
-  memcpy((char *)buf + *bufused, elem, elemsize);
+  bh_memcpy_s((char *)buf + *bufused, bufavail, elem, elemsize);
   *bufused += elemsize;
 }
 
@@ -2744,7 +2745,8 @@ __wasi_errno_t wasmtime_ssp_args_get(
     argv[i] = argv_buf + (argv_environ->argv[i] - argv_environ->argv_buf);
   }
   argv[argv_environ->argc] = NULL;
-  memcpy(argv_buf, argv_environ->argv_buf, argv_environ->argv_buf_size);
+  bh_memcpy_s(argv_buf, argv_environ->argv_buf_size,
+              argv_environ->argv_buf, argv_environ->argv_buf_size);
   return __WASI_ESUCCESS;
 }
 
@@ -2771,7 +2773,8 @@ __wasi_errno_t wasmtime_ssp_environ_get(
     environ[i] = environ_buf + (argv_environ->environ[i] - argv_environ->environ_buf);
   }
   environ[argv_environ->environ_count] = NULL;
-  memcpy(environ_buf, argv_environ->environ_buf, argv_environ->environ_buf_size);
+  bh_memcpy_s(environ_buf, argv_environ->environ_buf_size,
+              argv_environ->environ_buf, argv_environ->environ_buf_size);
   return __WASI_ESUCCESS;
 }
 

@@ -286,20 +286,14 @@ wasi_fd_prestat_dir_name(wasm_module_inst_t module_inst,
                          uint32 path_len)
 {
     wasi_ctx_t wasi_ctx = get_wasi_ctx(module_inst);
-    char path[PATH_MAX];
     char *path_app;
-    wasi_errno_t err;
 
     if (!validate_app_addr(path_offset, path_len))
         return (wasi_errno_t)-1;
 
-    err = wasmtime_ssp_fd_prestat_dir_name(wasi_ctx->prestats, fd, path, path_len);
-    WASI_CHECK_ERR();
-
     path_app = (char*)addr_app_to_native(path_offset);
-    bh_memcpy_s(path_app, path_len, path, path_len);
-
-    return 0;
+    return wasmtime_ssp_fd_prestat_dir_name(wasi_ctx->prestats, fd,
+                                            path_app, path_len);
 }
 
 static wasi_errno_t
