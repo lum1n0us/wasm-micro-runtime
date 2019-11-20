@@ -24,6 +24,43 @@ cmake ..
 make
 ```
 
+Linux SGX (Intel Software Guard Extention)
+-------------------------
+First of all please install library dependencies of lib gcc.
+Use installation commands below for Ubuntu Linux:
+``` Bash
+sudo apt install lib32gcc-5-dev g++-multilib
+```
+Or in Fedora:
+``` Bash
+sudo dnf install glibc-devel.i686
+```
+
+And then install the [Intel SGX SDK](https://software.intel.com/en-us/sgx/sdk).
+
+After installing dependencies, build the source code:
+``` Bash
+cd core/iwasm/products/linux-sgx/
+mkdir build
+cd build
+cmake ..
+make
+```
+This builds the libraries used by SGX enclave sample, the generated file libvmlib.a and libextlib.a will be copied to enclave-sample folder.
+
+Then build the enclave sample:
+``` Bash
+cd enclave-sample
+make
+```
+The binary file app will be generated.
+
+To run the sample:
+``` Bash
+source <SGX_SDK dir>/environment
+./app
+```
+
 Mac
 -------------------------
 Make sure to install Xcode from App Store firstly, and install cmake.
@@ -92,6 +129,7 @@ source ../../../zephyr-env.sh
 cmake -GNinja -DBOARD=qemu_x86 ..
 ninja
 ```
+
 AliOS-Things
 -------------------------
 1. a developerkit board id needed for testing

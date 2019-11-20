@@ -867,7 +867,7 @@ _strncasecmp_wrapper(wasm_module_inst_t module_inst,
     s1 = addr_app_to_native(s1_offset);
     s2 = addr_app_to_native(s2_offset);
 
-    return bh_strncasecmp(s1, s2, n);
+    return strncasecmp(s1, s2, n);
 }
 
 static uint32

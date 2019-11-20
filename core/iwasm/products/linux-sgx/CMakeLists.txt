@@ -110,3 +110,7 @@ add_library (vmlib
              ${UTILS_SHARED_SOURCE})
 
 add_library (extlib ext_lib_export.c)
+
+set (copy_libs_cmd cp -a libvmlib.a libextlib.a ../enclave-sample/)
+add_custom_target (copy_libs_to_enclave ALL COMMAND ${copy_libs_cmd} DEPENDS vmlib extlib)
+
