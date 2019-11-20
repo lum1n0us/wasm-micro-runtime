@@ -23,6 +23,11 @@ cd build
 cmake ..
 make
 ```
+Note:
+The WASI feature is enabled by default, if we want to disable it, please run:
+``` Bash
+cmake .. -DWASM_ENALBE_WASI=0
+```
 
 Linux SGX (Intel Software Guard Extention)
 -------------------------
