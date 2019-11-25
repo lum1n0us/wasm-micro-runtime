@@ -14,16 +14,13 @@ WebAssembly Micro Runtime (WAMR) is a standalone WebAssembly (WASM) runtime with
 Current Features of WAMR
 =========================
 - WASM interpreter (AOT is planned)
-- Supports for a subset of Libc API.
-- Supports for [WASI API](https://github.com/WebAssembly/WASI)
 - Provides embedding C API
 - Provides a mechanism for exporting native API's to WASM applications
-- Supports the programming of firmware apps in a large range of languages (C/C++/Java/Rust/Go/TypeScript etc.)
-- App sandbox execution environment on embedded OS
-- The purely asynchronized programming model
+- Supports libc for WASM applications in two modes: the built-in libc subset for embedded environment and [WASI](https://github.com/WebAssembly/WASI) for standard libc
+- The WASM application framework and purely asynchronized programming model
+- Supports for micro-service and pub-sub event inter-app communication models
+- Supports remote WASM application management from either host or cloud
 - Menu configuration for easy platform integration
-- Supports micro-service and pub-sub event inter-app communication models
-- Easy to extend to support remote FW application management from host or cloud
 
 Application framework architecture
 ===================================
@@ -40,31 +37,43 @@ The WAMR has offered a comprehensive application framework for device and IoT us
 
 
 
-Build WAMR Core and run WASM applications
-================================================
+Build WAMR 
+==========
 
-WAMR VM core (iwasm) can support building on different platforms:
+###Build WAMR VM Core 
+
+
+WAMR VM core (iwasm) can support building for different target platforms:
 - Linux
 - Zephyr
 - Mac
 - VxWorks
 - AliOS-Things
-- Docker
 - Intel Software Guard Extention (SGX)
 
-After building the iwasm, we can compile some basic WASM applications and run it from the WAMR core. As the WAMR core doesn't include the extended application library, your WASM applications can only use the [WAMR built-in APIs](./doc/wamr_api.md).     
+See the [doc/building_wamr.md](./doc/building_wamr.md) for the detailed instructions.
 
-See the [doc/building.md](./doc/building.md) for the detailed instructions.
+###libc building options
+
+WAMR supports WASI for standard libc library as well as a [built-in libc subset](./doc/wamr_api.md) for tiny footprint. 
+
+WASI is supported on following platforms and enabled by default build:
+- Linux
 
 
-Embed WAMR 
-===========
+###Embed WAMR 
 
 WAMR can be built into a standalone executable which takes the WASM application file name as input, and then executes it. In some other situations, the WAMR source code is embedded the product code and built into the final product. 
 
 WAMR provides a set of C API for loading the WASM module, instantiating the module and invoking a WASM function from a native call. 
 
 See the [doc/embed_wamr.md](./doc/embed_wamr.md) for the details.
+
+
+###Build  WAMR with customized application library
+The WAMR provides an application framework and assoicated API sets. The  
+
+
 
 WAMR application programming library
 ===================================
