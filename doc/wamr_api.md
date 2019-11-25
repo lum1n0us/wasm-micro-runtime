@@ -1,5 +1,5 @@
 
-WASM application library
+WAMR application library
 ========================
 
 WAMR APP API includes built-in Libc API's, Base library and Extension library reference.
