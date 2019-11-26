@@ -80,15 +80,17 @@ _printf_hex_uint(out_func_t out, void *ctx,
                  enum pad_type padding,
                  int min_width)
 {
-    int size = sizeof(num) * (is_u64 ? 2 : 1);
+    int shift = sizeof(num) * 8;
     int found_largest_digit = 0;
-    int remaining = 8; /* 8 digits max */
+    int remaining = 16; /* 16 digits max */
     int digits = 0;
+    char nibble;
 
-    for (; size; size--) {
-        char nibble = (num >> ((size - 1) << 2) & 0xf);
+     while (shift >= 4) {
+         shift -= 4;
+         nibble = (num >> shift) & 0xf;
 
-        if (nibble || found_largest_digit || size == 1) {
+        if (nibble || found_largest_digit || shift == 0) {
             found_largest_digit = 1;
             nibble = (char)(nibble + (nibble > 9 ? 87 : 48));
             out((int) nibble, ctx);

@@ -133,14 +133,56 @@ read_leb(const uint8 *buf, const uint8 *buf_end,
   res = (uint8)res64;                               \
 } while (0)
 
+static bool
+check_utf8_str(const uint8* str, uint32 len)
+{
+    const uint8 *p = str, *p_end = str + len, *p_end1;
+    uint8 chr, n_bytes;
+
+    while (p < p_end) {
+        chr = *p++;
+        if (chr >= 0x80) {
+            /* Calculate the byte count: the first byte must be
+               110XXXXX, 1110XXXX, 11110XXX, 111110XX, or 1111110X,
+               the count of leading '1' denotes the total byte count */
+            n_bytes = 0;
+            while ((chr & 0x80) != 0) {
+                chr <<= 1;
+                n_bytes++;
+            }
+
+            /* Check byte count */
+            if (n_bytes < 2 || n_bytes > 6
+                || p + n_bytes - 1 > p_end)
+                return false;
+
+            /* Check the following bytes, which must be 10XXXXXX */
+            p_end1 = p + n_bytes - 1;
+            while (p < p_end1) {
+                if (!(*p & 0x80) || (*p | 0x40))
+                    return false;
+                p++;
+            }
+        }
+    }
+    return true;
+}
+
 static char*
 const_str_set_insert(const uint8 *str, uint32 len, WASMModule *module,
                      char* error_buf, uint32 error_buf_size)
 {
     HashMap *set = module->const_str_set;
-    char *c_str = wasm_malloc(len + 1), *value;
+    char *c_str, *value;
 
-    if (!c_str) {
+    if (!check_utf8_str(str, len)) {
+        set_error_buf(error_buf, error_buf_size,
+                      "WASM module load failed: "
+                      "invalid UTF-8 encoding");
+        return NULL;
+    }
+
+    if (!(c_str = wasm_malloc(len + 1))) {
         set_error_buf(error_buf, error_buf_size,
                       "WASM module load failed: "
                       "allocate memory failed.");
@@ -1227,6 +1269,13 @@ load_user_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
         || p + name_len > p_end) {
         set_error_buf(error_buf, error_buf_size,
                       "Load custom section failed: unexpected end");
+        return false;
+    }
+
+    if (!check_utf8_str(p, name_len)) {
+        set_error_buf(error_buf, error_buf_size,
+                      "WASM module load failed: "
+                      "invalid UTF-8 encoding");
         return false;
     }
 
