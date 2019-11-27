@@ -1155,7 +1155,9 @@ __cxa_throw_wrapper(wasm_module_inst_t module_inst,
     wasm_runtime_set_exception(module_inst, buf);
 }
 
+#ifndef ENABLE_SPEC_TEST
 #define ENABLE_SPEC_TEST 0
+#endif
 
 #if ENABLE_SPEC_TEST != 0
 static void
