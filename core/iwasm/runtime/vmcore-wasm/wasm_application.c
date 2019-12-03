@@ -280,10 +280,10 @@ wasm_application_execute_func(WASMModuleInstance *module_inst,
                             u.ieee.ieee_little_endian.mantissa = sig;
                         else
                             u.ieee.ieee_big_endian.mantissa = sig;
-                        f32 = u.f;
+                        memcpy(&f32, &u.f, sizeof(float));
                     }
                 }
-                *(float32*)&argv1[p++] = f32;
+                memcpy(&argv1[p++], &f32, sizeof(float));
                 break;
             }
             case VALUE_TYPE_F64:
@@ -307,7 +307,7 @@ wasm_application_execute_func(WASMModuleInstance *module_inst,
                             ud.ieee.ieee_big_endian.mantissa0 = sig >> 32;
                             ud.ieee.ieee_big_endian.mantissa1 = (uint32)sig;
                         }
-                        u.val = ud.d;
+                        memcpy(&u.val, &ud.d, sizeof(double));
                     }
                 }
                 argv1[p++] = u.parts[0];
