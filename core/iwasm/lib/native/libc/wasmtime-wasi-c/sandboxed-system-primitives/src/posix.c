@@ -1689,9 +1689,29 @@ __wasi_errno_t wasmtime_ssp_path_create_directory(
   return 0;
 }
 
+static bool
+validate_path(const char *path, struct fd_prestats *pt)
+{
+    size_t i;
+    char path_resolved[PATH_MAX];
+    char *path_real;
+
+    if (!(path_real = realpath(path, path_resolved)))
+        return false;
+
+    for (i = 0; i < pt->size; i++)
+        if (pt->prestats[i].dir &&
+            !strncmp(path_real, pt->prestats[i].dir,
+                     strlen(pt->prestats[i].dir)))
+            return true;
+
+    return false;
+}
+
 __wasi_errno_t wasmtime_ssp_path_link(
 #if !defined(WASMTIME_SSP_STATIC_CURFDS)
     struct fd_table *curfds,
+    struct fd_prestats *prestats,
 #endif
     __wasi_fd_t old_fd,
     __wasi_lookupflags_t old_flags,
@@ -1723,6 +1743,14 @@ __wasi_errno_t wasmtime_ssp_path_link(
     size_t target_len;
     char *target = readlinkat_dup(old_pa.fd, old_pa.path, &target_len);
     if (target != NULL) {
+      bh_assert(target[target_len] == '\0');
+      rwlock_rdlock(&prestats->lock);
+      if (!validate_path(target, prestats)) {
+          rwlock_unlock(&prestats->lock);
+          bh_free(target);
+          return __WASI_EBADF;
+      }
+      rwlock_unlock(&prestats->lock);
       ret = symlinkat(target, new_pa.fd, new_pa.path);
       bh_free(target);
     }
@@ -2245,6 +2273,7 @@ __wasi_errno_t wasmtime_ssp_path_filestat_set_times(
 __wasi_errno_t wasmtime_ssp_path_symlink(
 #if !defined(WASMTIME_SSP_STATIC_CURFDS)
     struct fd_table *curfds,
+    struct fd_prestats *prestats,
 #endif
     const char *old_path,
     size_t old_path_len,
@@ -2263,6 +2292,14 @@ __wasi_errno_t wasmtime_ssp_path_symlink(
     bh_free(target);
     return error;
   }
+
+  rwlock_rdlock(&prestats->lock);
+  if (!validate_path(target, prestats)) {
+      rwlock_unlock(&prestats->lock);
+      bh_free(target);
+      return __WASI_EBADF;
+  }
+  rwlock_unlock(&prestats->lock);
 
   int ret = symlinkat(target, pa.fd, pa.path);
   path_put(&pa);

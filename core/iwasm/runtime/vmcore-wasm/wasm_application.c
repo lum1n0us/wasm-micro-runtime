@@ -333,6 +333,7 @@ wasm_application_execute_func(WASMModuleInstance *module_inst,
     wasm_runtime_set_exception(module_inst, NULL);
     if (!wasm_runtime_call_wasm(module_inst, NULL, func, argc1, argv1)) {
         exception = wasm_runtime_get_exception(module_inst);
+        wasm_assert(exception);
         wasm_printf("%s\n", exception);
         goto fail;
     }
