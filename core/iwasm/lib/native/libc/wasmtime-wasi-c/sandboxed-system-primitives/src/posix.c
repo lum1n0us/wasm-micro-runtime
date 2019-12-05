@@ -1693,17 +1693,25 @@ static bool
 validate_path(const char *path, struct fd_prestats *pt)
 {
     size_t i;
-    char path_resolved[PATH_MAX];
-    char *path_real;
+    char path_resolved[PATH_MAX], prestat_dir_resolved[PATH_MAX];
+    char *path_real, *prestat_dir_real;
 
     if (!(path_real = realpath(path, path_resolved)))
-        return false;
+        /* path doesn't exist, creating a link to this file
+           is allowed: if this file is to be created in
+           the future, WASI will strictly check whether it
+           can be created or not. */
+        return true;
 
-    for (i = 0; i < pt->size; i++)
-        if (pt->prestats[i].dir &&
-            !strncmp(path_real, pt->prestats[i].dir,
-                     strlen(pt->prestats[i].dir)))
-            return true;
+    for (i = 0; i < pt->size; i++) {
+        if (pt->prestats[i].dir) {
+            if (!(prestat_dir_real = realpath(pt->prestats[i].dir,
+                                              prestat_dir_resolved)))
+                return false;
+            if (!strncmp(path_real, prestat_dir_real, strlen(prestat_dir_real)))
+                return true;
+        }
+    }
 
     return false;
 }
