@@ -2111,7 +2111,7 @@ wasm_loader_find_block_addr(WASMModule *module,
 typedef struct BranchBlock {
     uint8 block_type;
     uint8 return_type;
-    bool jumped_by_br;
+    bool is_block_reachable;
     uint8 *start_addr;
     uint8 *else_addr;
     uint8 *end_addr;
@@ -2381,7 +2381,7 @@ pop_type(uint8 type, uint8 **p_frame_ref, uint32 *p_stack_cell_num,
 #define PUSH_CSP(type, ret_type, _start_addr) do {  \
     CHECK_CSP_PUSH();                               \
     frame_csp->block_type = type;                   \
-    frame_csp->jumped_by_br = false;                \
+    frame_csp->is_block_reachable = false;          \
     frame_csp->return_type = ret_type;              \
     frame_csp->start_addr = _start_addr;            \
     frame_csp->else_addr = NULL;                    \
@@ -2438,7 +2438,7 @@ pop_type(uint8 type, uint8 **p_frame_ref, uint32 *p_stack_cell_num,
                 "expect data but stack was empty or other type");   \
         goto fail;                                                  \
       }                                                             \
-      (frame_csp - (depth + 1))->jumped_by_br = true;               \
+      (frame_csp - (depth + 1))->is_block_reachable = true;         \
     }                                                               \
   } while (0)
 
@@ -2514,14 +2514,14 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
     frame_csp_boundary = frame_csp_bottom + 8;
 
     PUSH_CSP(BLOCK_TYPE_FUNCTION, ret_type, p);
-    (frame_csp - 1)->jumped_by_br = true;
+    (frame_csp - 1)->is_block_reachable = true;
 
     while (p < p_end) {
         opcode = *p++;
 
         switch (opcode) {
             case WASM_OP_UNREACHABLE:
-                goto handle_op_br;
+                goto handle_next_reachable_block;
 
             case WASM_OP_NOP:
                 break;
@@ -2541,7 +2541,7 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
                 read_leb_uint8(p, p_end, block_return_type);
                 PUSH_CSP(BLOCK_TYPE_IF, block_return_type, p);
                 if (!is_i32_const)
-                    (frame_csp - 1)->jumped_by_br = true;
+                    (frame_csp - 1)->is_block_reachable = true;
                 else {
                     if (!i32_const) {
                         if(!wasm_loader_find_block_addr(module,
@@ -2616,6 +2616,11 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
                     }
 #endif
                 }
+                else {
+                    /* end of function block, function will return,
+                       ignore the following bytecodes */
+                    p = p_end;
+                }
                 break;
             }
 
@@ -2624,9 +2629,9 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
                 read_leb_uint32(p, p_end, depth);
                 CHECK_BR(depth);
 
-handle_op_br:
+handle_next_reachable_block:
                 for (i = 1; i <= csp_num; i++)
-                    if ((frame_csp - i)->jumped_by_br)
+                    if ((frame_csp - i)->is_block_reachable)
                         break;
 
                 block_return_type = (frame_csp - i)->return_type;
@@ -2662,10 +2667,10 @@ handle_op_br:
                 POP_I32();
                 CHECK_BR(depth);
                 if (!is_i32_const)
-                    (frame_csp - (depth + 1))->jumped_by_br = true;
+                    (frame_csp - (depth + 1))->is_block_reachable = true;
                 else {
                     if (i32_const)
-                        goto handle_op_br;
+                        goto handle_next_reachable_block;
                 }
                 break;
 
@@ -2679,7 +2684,7 @@ handle_op_br:
                     read_leb_uint32(p, p_end, depth);
                     CHECK_BR(depth);
                 }
-                goto handle_op_br;
+                goto handle_next_reachable_block;
             }
 
             case WASM_OP_RETURN:
