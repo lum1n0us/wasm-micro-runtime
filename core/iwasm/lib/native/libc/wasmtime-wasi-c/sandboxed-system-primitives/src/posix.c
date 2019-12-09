@@ -1743,6 +1743,14 @@ __wasi_errno_t wasmtime_ssp_path_link(
     return error;
   }
 
+  rwlock_rdlock(&prestats->lock);
+  if (!validate_path(old_pa.path, prestats)
+      || !validate_path(new_pa.path, prestats)) {
+      rwlock_unlock(&prestats->lock);
+      return __WASI_EBADF;
+  }
+  rwlock_unlock(&prestats->lock);
+
   int ret = linkat(old_pa.fd, old_pa.path, new_pa.fd, new_pa.path,
                    old_pa.follow ? AT_SYMLINK_FOLLOW : 0);
   if (ret < 0 && errno == ENOTSUP && !old_pa.follow) {
