@@ -32,7 +32,9 @@
 #include "attr_container.h"
 #include "module_wasm_app.h"
 #include "wasm_export.h"
+#if WASM_ENABLE_GUI != 0
 #include "wgl.h"
+#endif
 
 #if WASM_ENABLE_GUI != 0
 #include "lv_drivers/display/monitor.h"
@@ -514,7 +516,9 @@ int iwasm_main(int argc, char *argv[])
 
     exit_wasm_timer();
     exit_sensor_framework();
+#if WASM_ENABLE_GUI != 0
     wgl_exit();
+#endif
     exit_connection_framework();
 
 fail1:
