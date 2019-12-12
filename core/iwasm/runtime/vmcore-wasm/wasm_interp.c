@@ -43,9 +43,9 @@ typedef float64 CellType_F64;
 #define LOAD_I64(addr) (*(int64*)(addr))
 #define LOAD_F64(addr) (*(float64*)(addr))
 #define LOAD_I32(addr) (*(int32*)(addr))
-#define LOAD_U32(addr) (*(unt32*)(addr))
+#define LOAD_U32(addr) (*(uint32*)(addr))
 #define LOAD_I16(addr) (*(int16*)(addr))
-#define LOAD_U16(addr) (*(unt16*)(addr))
+#define LOAD_U16(addr) (*(uint16*)(addr))
 
 #else  /* WASM_CPU_SUPPORTS_UNALIGNED_64BIT_ACCESS != 0 */
 #define PUT_I64_TO_ADDR(addr, value) do {       \
@@ -543,12 +543,6 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
     frame_csp = frame->csp;                     \
   } while (0)
 
-#define read_leb_uint64(p, p_end, res) do {     \
-  uint32 _off = 0;                              \
-  res = read_leb(p, &_off, 64, false);          \
-  p += _off;                                    \
-} while (0)
-
 #define read_leb_int64(p, p_end, res) do {      \
   uint32 _off = 0;                              \
   res = (int64)read_leb(p, &_off, 64, true);    \
@@ -564,12 +558,6 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
 #define read_leb_int32(p, p_end, res) do {      \
   uint32 _off = 0;                              \
   res = (int32)read_leb(p, &_off, 32, true);    \
-  p += _off;                                    \
-} while (0)
-
-#define read_leb_uint8(p, p_end, res) do {      \
-  uint32 _off = 0;                              \
-  res = (uint8)read_leb(p, &_off, 7, false);    \
   p += _off;                                    \
 } while (0)
 
@@ -892,7 +880,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_BLOCK):
-        read_leb_uint8(frame_ip, frame_ip_end, block_ret_type);
+        block_ret_type = *frame_ip++;
 
         if (!wasm_loader_find_block_addr(module->module,
                                          frame_ip, frame_ip_end,
@@ -907,7 +895,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_LOOP):
-        read_leb_uint8(frame_ip, frame_ip_end, block_ret_type);
+        block_ret_type = *frame_ip++;
 
         if (!wasm_loader_find_block_addr(module->module,
                                          frame_ip, frame_ip_end,
@@ -922,7 +910,7 @@ wasm_interp_call_func_bytecode(WASMThread *self,
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_IF):
-        read_leb_uint8(frame_ip, frame_ip_end, block_ret_type);
+        block_ret_type = *frame_ip++;
 
         if (!wasm_loader_find_block_addr(module->module,
                                          frame_ip, frame_ip_end,
