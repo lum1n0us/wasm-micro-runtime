@@ -162,6 +162,9 @@ host_interface interface = {
     .destroy = host_destroy
 };
 
+/* Change it to 1 when fuzzing test */
+#define WASM_ENABLE_FUZZ_TEST 0
+
 void* func_server_mode(void* arg)
 {
     int clilent;
@@ -230,6 +233,12 @@ void* func_server_mode(void* arg)
 
             aee_host_msg_callback(buff, n);
         }
+#if WASM_ENABLE_FUZZ_TEST != 0
+        /* Exit the process when host disconnect.
+         * This is helpful for reproducing failure case. */
+        close(sockfd);
+        exit(1);
+#endif
     }
 }
 
