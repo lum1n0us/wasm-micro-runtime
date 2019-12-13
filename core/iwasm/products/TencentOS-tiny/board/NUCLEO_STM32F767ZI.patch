@@ -1,0 +1,1633 @@
+diff -urN NUCLEO_STM32F746ZG/BSP/Inc/bsp_eth.h NUCLEO_STM32F767ZI/BSP/Inc/bsp_eth.h
+--- NUCLEO_STM32F746ZG/BSP/Inc/bsp_eth.h	2019-11-11 14:06:27.807604973 +0800
++++ NUCLEO_STM32F767ZI/BSP/Inc/bsp_eth.h	1970-01-01 08:00:00.000000000 +0800
+@@ -1,58 +0,0 @@
+-/**
+-  ******************************************************************************
+-  * File Name          : ETH.h
+-  * Description        : This file provides code for the configuration
+-  *                      of the ETH instances.
+-  ******************************************************************************
+-  * @attention
+-  *
+-  * <h2><center>&copy; Copyright (c) 2019 STMicroelectronics.
+-  * All rights reserved.</center></h2>
+-  *
+-  * This software component is licensed by ST under BSD 3-Clause license,
+-  * the "License"; You may not use this file except in compliance with the
+-  * License. You may obtain a copy of the License at:
+-  *                        opensource.org/licenses/BSD-3-Clause
+-  *
+-  ******************************************************************************
+-  */
+-/* Define to prevent recursive inclusion -------------------------------------*/
+-#ifndef __bsp_eth_H
+-#define __bsp_eth_H
+-#ifdef __cplusplus
+- extern "C" {
+-#endif
+-
+-/* Includes ------------------------------------------------------------------*/
+-#include "main.h"
+-#include "ethernetif.h"
+-/* USER CODE BEGIN Includes */
+-
+-/* USER CODE END Includes */
+-
+-extern ETH_HandleTypeDef heth;
+-
+-/* USER CODE BEGIN Private defines */
+-
+-/* USER CODE END Private defines */
+-
+-extern ethernetif_drv_t lan8742a_drv;
+-
+-/* USER CODE BEGIN Prototypes */
+-
+-/* USER CODE END Prototypes */
+-
+-#ifdef __cplusplus
+-}
+-#endif
+-#endif /*__ eth_H */
+-
+-/**
+-  * @}
+-  */
+-
+-/**
+-  * @}
+-  */
+-
+-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+diff -urN NUCLEO_STM32F746ZG/BSP/Inc/iperf.h NUCLEO_STM32F767ZI/BSP/Inc/iperf.h
+--- NUCLEO_STM32F746ZG/BSP/Inc/iperf.h	2019-11-11 14:06:27.807604973 +0800
++++ NUCLEO_STM32F767ZI/BSP/Inc/iperf.h	1970-01-01 08:00:00.000000000 +0800
+@@ -1,44 +0,0 @@
+-/*
+- * Copyright (c) 2001-2003 Swedish Institute of Computer Science.
+- * All rights reserved. 
+- * 
+- * Redistribution and use in source and binary forms, with or without modification, 
+- * are permitted provided that the following conditions are met:
+- *
+- * 1. Redistributions of source code must retain the above copyright notice,
+- *    this list of conditions and the following disclaimer.
+- * 2. Redistributions in binary form must reproduce the above copyright notice,
+- *    this list of conditions and the following disclaimer in the documentation
+- *    and/or other materials provided with the distribution.
+- * 3. The name of the author may not be used to endorse or promote products
+- *    derived from this software without specific prior written permission. 
+- *
+- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED 
+- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+- * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+- * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
+- * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY 
+- * OF SUCH DAMAGE.
+- *
+- * This file is part of the lwIP TCP/IP stack.
+- * 
+- * Author: Adam Dunkels <adam@sics.se>
+- *
+- */
+-
+-#ifndef LWIP_IPERF_H
+-#define LWIP_IPERF_H
+-
+-
+-#define TCP_SERVER_THREAD_NAME            "iperf_server"
+-#define TCP_SERVER_THREAD_STACKSIZE        1024
+-#define TCP_SERVER_THREAD_PRIO             4
+-
+-void iperf_server(void *thread_param);
+-void iperf_server_init(void);
+-
+-#endif /* LWIP_IPERF_H */
+diff -urN NUCLEO_STM32F746ZG/BSP/Inc/mcu_init.h NUCLEO_STM32F767ZI/BSP/Inc/mcu_init.h
+--- NUCLEO_STM32F746ZG/BSP/Inc/mcu_init.h	2019-11-11 14:06:27.807604973 +0800
++++ NUCLEO_STM32F767ZI/BSP/Inc/mcu_init.h	2019-12-16 15:34:55.374959000 +0800
+@@ -8,7 +8,6 @@
+ #include "stm32f7xx_hal.h"
+ #include "usart.h"
+ #include "gpio.h"
+-#include "bsp_eth.h"
+ #include "usb_otg.h"
+ #include "tos.h"
+ 
+diff -urN NUCLEO_STM32F746ZG/BSP/.mxproject NUCLEO_STM32F767ZI/BSP/.mxproject
+--- NUCLEO_STM32F746ZG/BSP/.mxproject	2019-11-11 14:06:27.807604973 +0800
++++ NUCLEO_STM32F767ZI/BSP/.mxproject	1970-01-01 08:00:00.000000000 +0800
+@@ -1,14 +0,0 @@
+-[PreviousGenFiles]
+-HeaderPath=C:/Users/supowang/Desktop/CubeMx/TencentOS_tiny/NUCLEO_STM32F746ZG/Inc
+-HeaderFiles=gpio.h;eth.h;usart.h;usb_otg.h;stm32f7xx_it.h;stm32f7xx_hal_conf.h;main.h;
+-SourcePath=C:/Users/supowang/Desktop/CubeMx/TencentOS_tiny/NUCLEO_STM32F746ZG/Src
+-SourceFiles=gpio.c;eth.c;usart.c;usb_otg.c;stm32f7xx_it.c;stm32f7xx_hal_msp.c;main.c;
+-
+-[PreviousLibFiles]
+-LibFiles=Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_cortex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_eth.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_tim.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_tim_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_uart.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_uart_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_pcd.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_pcd_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_ll_usb.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_rcc.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_rcc_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_flash.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_flash_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_gpio.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_gpio_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_dma.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_dma_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_pwr.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_pwr_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_def.h;Drivers/STM32F7xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_i2c.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_i2c_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_exti.h;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_eth.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pcd.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pcd_ex.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_ll_usb.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash_ex.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma_ex.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c;Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_exti.c;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_cortex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_eth.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_tim.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_tim_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_uart.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_uart_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_pcd.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_pcd_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_ll_usb.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_rcc.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_rcc_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_flash.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_flash_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_gpio.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_gpio_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_dma.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_dma_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_pwr.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_pwr_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_def.h;Drivers/STM32F7xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_i2c.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_i2c_ex.h;Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_exti.h;Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f746xx.h;Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h;Drivers/CMSIS/Device/ST/STM32F7xx/Include/system_stm32f7xx.h;Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/system_stm32f7xx.c;Drivers/CMSIS/Include/cmsis_armcc.h;Drivers/CMSIS/Include/cmsis_armclang.h;Drivers/CMSIS/Include/cmsis_compiler.h;Drivers/CMSIS/Include/cmsis_gcc.h;Drivers/CMSIS/Include/cmsis_iccarm.h;Drivers/CMSIS/Include/cmsis_version.h;Drivers/CMSIS/Include/core_armv8mbl.h;Drivers/CMSIS/Include/core_armv8mml.h;Drivers/CMSIS/Include/core_cm0.h;Drivers/CMSIS/Include/core_cm0plus.h;Drivers/CMSIS/Include/core_cm1.h;Drivers/CMSIS/Include/core_cm23.h;Drivers/CMSIS/Include/core_cm3.h;Drivers/CMSIS/Include/core_cm33.h;Drivers/CMSIS/Include/core_cm4.h;Drivers/CMSIS/Include/core_cm7.h;Drivers/CMSIS/Include/core_sc000.h;Drivers/CMSIS/Include/core_sc300.h;Drivers/CMSIS/Include/mpu_armv7.h;Drivers/CMSIS/Include/mpu_armv8.h;Drivers/CMSIS/Include/tz_context.h;
+-
+-[PreviousUsedKeilFiles]
+-SourceFiles=..\Src\main.c;..\Src\gpio.c;..\Src\eth.c;..\Src\usart.c;..\Src\usb_otg.c;..\Src\stm32f7xx_it.c;..\Src\stm32f7xx_hal_msp.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_eth.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pcd.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pcd_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_ll_usb.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_exti.c;../\Src/system_stm32f7xx.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_eth.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pcd.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pcd_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_ll_usb.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c;../Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_exti.c;../\Src/system_stm32f7xx.c;../Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/system_stm32f7xx.c;null;
+-HeaderPath=..\Drivers\STM32F7xx_HAL_Driver\Inc;..\Drivers\STM32F7xx_HAL_Driver\Inc\Legacy;..\Drivers\CMSIS\Device\ST\STM32F7xx\Include;..\Drivers\CMSIS\Include;..\Inc;
+-CDefines=USE_HAL_DRIVER;STM32F746xx;USE_HAL_DRIVER;STM32F746xx;
+-
+diff -urN NUCLEO_STM32F746ZG/BSP/NUCLEO_STM32F746ZG.ioc NUCLEO_STM32F767ZI/BSP/NUCLEO_STM32F746ZG.ioc
+--- NUCLEO_STM32F746ZG/BSP/NUCLEO_STM32F746ZG.ioc	2019-11-11 14:06:27.807604973 +0800
++++ NUCLEO_STM32F767ZI/BSP/NUCLEO_STM32F746ZG.ioc	1970-01-01 08:00:00.000000000 +0800
+@@ -1,323 +0,0 @@
+-#MicroXplorer Configuration settings - do not modify
+-ETH.IPParameters=MediaInterface,PHY_Name,PHY_Value,PhyAddress
+-ETH.MediaInterface=ETH_MEDIA_INTERFACE_RMII
+-ETH.PHY_Name=LAN8742A_PHY_ADDRESS
+-ETH.PHY_Value=0
+-ETH.PhyAddress=0
+-File.Version=6
+-KeepUserPlacement=true
+-Mcu.Family=STM32F7
+-Mcu.IP0=CORTEX_M7
+-Mcu.IP1=ETH
+-Mcu.IP2=NVIC
+-Mcu.IP3=RCC
+-Mcu.IP4=SYS
+-Mcu.IP5=USART3
+-Mcu.IP6=USB_OTG_FS
+-Mcu.IPNb=7
+-Mcu.Name=STM32F746ZGTx
+-Mcu.Package=LQFP144
+-Mcu.Pin0=PC13
+-Mcu.Pin1=PC14/OSC32_IN
+-Mcu.Pin10=PC5
+-Mcu.Pin11=PB0
+-Mcu.Pin12=PB13
+-Mcu.Pin13=PB14
+-Mcu.Pin14=PD8
+-Mcu.Pin15=PD9
+-Mcu.Pin16=PG6
+-Mcu.Pin17=PG7
+-Mcu.Pin18=PA8
+-Mcu.Pin19=PA9
+-Mcu.Pin2=PC15/OSC32_OUT
+-Mcu.Pin20=PA10
+-Mcu.Pin21=PA11
+-Mcu.Pin22=PA12
+-Mcu.Pin23=PA13
+-Mcu.Pin24=PA14
+-Mcu.Pin25=PG11
+-Mcu.Pin26=PG13
+-Mcu.Pin27=PB3
+-Mcu.Pin28=PB7
+-Mcu.Pin29=VP_SYS_VS_Systick
+-Mcu.Pin3=PH0/OSC_IN
+-Mcu.Pin4=PH1/OSC_OUT
+-Mcu.Pin5=PC1
+-Mcu.Pin6=PA1
+-Mcu.Pin7=PA2
+-Mcu.Pin8=PA7
+-Mcu.Pin9=PC4
+-Mcu.PinsNb=30
+-Mcu.ThirdPartyNb=0
+-Mcu.UserConstants=
+-Mcu.UserName=STM32F746ZGTx
+-MxCube.Version=5.3.0
+-MxDb.Version=DB.5.0.30
+-NVIC.BusFault_IRQn=true\:0\:0\:false\:false\:true\:true\:false
+-NVIC.DebugMonitor_IRQn=true\:0\:0\:false\:false\:true\:true\:false
+-NVIC.HardFault_IRQn=true\:0\:0\:false\:false\:true\:true\:false
+-NVIC.MemoryManagement_IRQn=true\:0\:0\:false\:false\:true\:true\:false
+-NVIC.NonMaskableInt_IRQn=true\:0\:0\:false\:false\:true\:true\:false
+-NVIC.PendSV_IRQn=true\:0\:0\:false\:false\:true\:true\:false
+-NVIC.PriorityGroup=NVIC_PRIORITYGROUP_4
+-NVIC.SVCall_IRQn=true\:0\:0\:false\:false\:true\:true\:false
+-NVIC.SysTick_IRQn=true\:0\:0\:false\:false\:true\:true\:true
+-NVIC.UsageFault_IRQn=true\:0\:0\:false\:false\:true\:true\:false
+-PA1.GPIOParameters=GPIO_Label
+-PA1.GPIO_Label=RMII_REF_CLK [LAN8742A-CZ-TR_REFCLK0]
+-PA1.Locked=true
+-PA1.Mode=RMII
+-PA1.Signal=ETH_REF_CLK
+-PA10.GPIOParameters=GPIO_Label
+-PA10.GPIO_Label=USB_ID
+-PA10.Locked=true
+-PA10.Signal=USB_OTG_FS_ID
+-PA11.GPIOParameters=GPIO_Label
+-PA11.GPIO_Label=USB_DM
+-PA11.Locked=true
+-PA11.Mode=Device_Only
+-PA11.Signal=USB_OTG_FS_DM
+-PA12.GPIOParameters=GPIO_Label
+-PA12.GPIO_Label=USB_DP
+-PA12.Locked=true
+-PA12.Mode=Device_Only
+-PA12.Signal=USB_OTG_FS_DP
+-PA13.GPIOParameters=GPIO_Label
+-PA13.GPIO_Label=TMS
+-PA13.Locked=true
+-PA13.Mode=Serial_Wire
+-PA13.Signal=SYS_JTMS-SWDIO
+-PA14.GPIOParameters=GPIO_Label
+-PA14.GPIO_Label=TCK
+-PA14.Locked=true
+-PA14.Mode=Serial_Wire
+-PA14.Signal=SYS_JTCK-SWCLK
+-PA2.GPIOParameters=GPIO_Label
+-PA2.GPIO_Label=RMII_MDIO [LAN8742A-CZ-TR_MDIO]
+-PA2.Locked=true
+-PA2.Mode=RMII
+-PA2.Signal=ETH_MDIO
+-PA7.GPIOParameters=GPIO_Label
+-PA7.GPIO_Label=RMII_CRS_DV [LAN8742A-CZ-TR_CRS_DV]
+-PA7.Locked=true
+-PA7.Mode=RMII
+-PA7.Signal=ETH_CRS_DV
+-PA8.GPIOParameters=GPIO_Label
+-PA8.GPIO_Label=USB_SOF [TP1]
+-PA8.Locked=true
+-PA8.Mode=Activate_SOF_FS
+-PA8.Signal=USB_OTG_FS_SOF
+-PA9.GPIOParameters=GPIO_Label
+-PA9.GPIO_Label=USB_VBUS
+-PA9.Locked=true
+-PA9.Mode=Activate_VBUS
+-PA9.Signal=USB_OTG_FS_VBUS
+-PB0.GPIOParameters=GPIO_Label
+-PB0.GPIO_Label=LD1 [Green]
+-PB0.Locked=true
+-PB0.Signal=GPIO_Output
+-PB13.GPIOParameters=GPIO_Label
+-PB13.GPIO_Label=RMII_TXD1 [LAN8742A-CZ-TR_TXD1]
+-PB13.Locked=true
+-PB13.Mode=RMII
+-PB13.Signal=ETH_TXD1
+-PB14.GPIOParameters=GPIO_Label
+-PB14.GPIO_Label=LD3 [Red]
+-PB14.Locked=true
+-PB14.Signal=GPIO_Output
+-PB3.GPIOParameters=GPIO_Label
+-PB3.GPIO_Label=SW0
+-PB3.Locked=true
+-PB3.Signal=SYS_JTDO-SWO
+-PB7.GPIOParameters=GPIO_Label
+-PB7.GPIO_Label=LD2 [Blue]
+-PB7.Locked=true
+-PB7.Signal=GPIO_Output
+-PC1.GPIOParameters=GPIO_Label
+-PC1.GPIO_Label=RMII_MDC [LAN8742A-CZ-TR_MDC]
+-PC1.Locked=true
+-PC1.Mode=RMII
+-PC1.Signal=ETH_MDC
+-PC13.GPIOParameters=GPIO_Label
+-PC13.GPIO_Label=USER_Btn [B1]
+-PC13.Locked=true
+-PC13.Signal=GPXTI13
+-PC14/OSC32_IN.Locked=true
+-PC14/OSC32_IN.Mode=LSE-External-Oscillator
+-PC14/OSC32_IN.Signal=RCC_OSC32_IN
+-PC15/OSC32_OUT.Locked=true
+-PC15/OSC32_OUT.Mode=LSE-External-Oscillator
+-PC15/OSC32_OUT.Signal=RCC_OSC32_OUT
+-PC4.GPIOParameters=GPIO_Label
+-PC4.GPIO_Label=RMII_RXD0 [LAN8742A-CZ-TR_RXD0]
+-PC4.Locked=true
+-PC4.Mode=RMII
+-PC4.Signal=ETH_RXD0
+-PC5.GPIOParameters=GPIO_Label
+-PC5.GPIO_Label=RMII_RXD1 [LAN8742A-CZ-TR_RXD1]
+-PC5.Locked=true
+-PC5.Mode=RMII
+-PC5.Signal=ETH_RXD1
+-PCC.Checker=false
+-PCC.Line=STM32F7x6
+-PCC.MCU=STM32F746ZGTx
+-PCC.PartNumber=STM32F746ZGTx
+-PCC.Seq0=0
+-PCC.Series=STM32F7
+-PCC.Temperature=25
+-PCC.Vdd=3.6
+-PD8.GPIOParameters=GPIO_Label
+-PD8.GPIO_Label=STLK_RX [STM32F103CBT6_PA3]
+-PD8.Locked=true
+-PD8.Mode=Asynchronous
+-PD8.Signal=USART3_TX
+-PD9.GPIOParameters=GPIO_Label
+-PD9.GPIO_Label=STLK_TX [STM32F103CBT6_PA2]
+-PD9.Locked=true
+-PD9.Mode=Asynchronous
+-PD9.Signal=USART3_RX
+-PG11.GPIOParameters=GPIO_Label
+-PG11.GPIO_Label=RMII_TX_EN [LAN8742A-CZ-TR_TXEN]
+-PG11.Locked=true
+-PG11.Mode=RMII
+-PG11.Signal=ETH_TX_EN
+-PG13.GPIOParameters=GPIO_Label
+-PG13.GPIO_Label=RMII_TXD0 [LAN8742A-CZ-TR_TXD0]
+-PG13.Locked=true
+-PG13.Mode=RMII
+-PG13.Signal=ETH_TXD0
+-PG6.GPIOParameters=GPIO_Label
+-PG6.GPIO_Label=USB_PowerSwitchOn [STMPS2151STR_EN]
+-PG6.Locked=true
+-PG6.Signal=GPIO_Output
+-PG7.GPIOParameters=GPIO_Label
+-PG7.GPIO_Label=USB_OverCurrent [STMPS2151STR_FAULT]
+-PG7.Locked=true
+-PG7.Signal=GPIO_Input
+-PH0/OSC_IN.GPIOParameters=GPIO_Label
+-PH0/OSC_IN.GPIO_Label=MCO [STM32F103CBT6_PA8]
+-PH0/OSC_IN.Locked=true
+-PH0/OSC_IN.Mode=HSE-External-Clock-Source
+-PH0/OSC_IN.Signal=RCC_OSC_IN
+-PH1/OSC_OUT.Locked=true
+-PH1/OSC_OUT.Mode=HSE-External-Clock-Source
+-PH1/OSC_OUT.Signal=RCC_OSC_OUT
+-PinOutPanel.RotationAngle=0
+-ProjectManager.AskForMigrate=true
+-ProjectManager.BackupPrevious=false
+-ProjectManager.CompilerOptimize=6
+-ProjectManager.ComputerToolchain=false
+-ProjectManager.CoupleFile=true
+-ProjectManager.CustomerFirmwarePackage=
+-ProjectManager.DefaultFWLocation=true
+-ProjectManager.DeletePrevious=true
+-ProjectManager.DeviceId=STM32F746ZGTx
+-ProjectManager.FirmwarePackage=STM32Cube FW_F7 V1.15.0
+-ProjectManager.FreePins=false
+-ProjectManager.HalAssertFull=false
+-ProjectManager.HeapSize=0x200
+-ProjectManager.KeepUserCode=true
+-ProjectManager.LastFirmware=true
+-ProjectManager.LibraryCopy=0
+-ProjectManager.MainLocation=Src
+-ProjectManager.NoMain=false
+-ProjectManager.PreviousToolchain=
+-ProjectManager.ProjectBuild=false
+-ProjectManager.ProjectFileName=NUCLEO_STM32F746ZG.ioc
+-ProjectManager.ProjectName=NUCLEO_STM32F746ZG
+-ProjectManager.StackSize=0x400
+-ProjectManager.TargetToolchain=MDK-ARM V5
+-ProjectManager.ToolChainLocation=
+-ProjectManager.UnderRoot=false
+-ProjectManager.functionlistsort=1-MX_GPIO_Init-GPIO-false-HAL-true,2-SystemClock_Config-RCC-false-HAL-false,3-MX_ETH_Init-ETH-false-HAL-true,4-MX_USART3_UART_Init-USART3-false-HAL-true,5-MX_USB_OTG_FS_PCD_Init-USB_OTG_FS-false-HAL-true
+-RCC.48MHZClocksFreq_Value=24000000
+-RCC.ADC12outputFreq_Value=72000000
+-RCC.ADC34outputFreq_Value=72000000
+-RCC.AHBFreq_Value=72000000
+-RCC.APB1CLKDivider=RCC_HCLK_DIV2
+-RCC.APB1Freq_Value=36000000
+-RCC.APB1TimFreq_Value=72000000
+-RCC.APB2Freq_Value=72000000
+-RCC.APB2TimFreq_Value=72000000
+-RCC.CECFreq_Value=32786.88524590164
+-RCC.CortexFreq_Value=72000000
+-RCC.EthernetFreq_Value=72000000
+-RCC.FCLKCortexFreq_Value=72000000
+-RCC.FamilyName=M
+-RCC.HCLKFreq_Value=72000000
+-RCC.HSE_VALUE=8000000
+-RCC.HSI_VALUE=16000000
+-RCC.I2C1Freq_Value=36000000
+-RCC.I2C2Freq_Value=36000000
+-RCC.I2C3Freq_Value=36000000
+-RCC.I2C4Freq_Value=36000000
+-RCC.I2SClocksFreq_Value=48000000
+-RCC.I2SFreq_Value=192000000
+-RCC.IPParameters=48MHZClocksFreq_Value,ADC12outputFreq_Value,ADC34outputFreq_Value,AHBFreq_Value,APB1CLKDivider,APB1Freq_Value,APB1TimFreq_Value,APB2Freq_Value,APB2TimFreq_Value,CECFreq_Value,CortexFreq_Value,EthernetFreq_Value,FCLKCortexFreq_Value,FamilyName,HCLKFreq_Value,HSE_VALUE,HSI_VALUE,I2C1Freq_Value,I2C2Freq_Value,I2C3Freq_Value,I2C4Freq_Value,I2SClocksFreq_Value,I2SFreq_Value,LCDTFToutputFreq_Value,LPTIM1Freq_Value,LSI_VALUE,MCO1PinFreq_Value,MCO2PinFreq_Value,MCOFreq_Value,PLLCLKFreq_Value,PLLI2SPCLKFreq_Value,PLLI2SQCLKFreq_Value,PLLI2SRCLKFreq_Value,PLLI2SRoutputFreq_Value,PLLM,PLLMCOFreq_Value,PLLMUL,PLLN,PLLQ,PLLQCLKFreq_Value,PLLQoutputFreq_Value,PLLSAIPCLKFreq_Value,PLLSAIQCLKFreq_Value,PLLSAIRCLKFreq_Value,PLLSAIoutputFreq_Value,PRESCALERUSB,RNGFreq_Value,RTCFreq_Value,RTCHSEDivFreq_Value,SAI1Freq_Value,SAI2Freq_Value,SDMMCFreq_Value,SPDIFRXFreq_Value,SYSCLKFreq_VALUE,SYSCLKSource,SYSCLKSourceVirtual,TIM15Freq_Value,TIM16Freq_Value,TIM17Freq_Value,TIM1Freq_Value,TIM20Freq_Value,TIM2Freq_Value,TIM3Freq_Value,TIM8Freq_Value,UART4Freq_Value,UART5Freq_Value,UART7Freq_Value,UART8Freq_Value,USART1Freq_Value,USART2Freq_Value,USART3Freq_Value,USART6Freq_Value,USBFreq_Value,VCOI2SOutputFreq_Value,VCOInputFreq_Value,VCOOutput2Freq_Value,VCOOutputFreq_Value,VCOSAIOutputFreq_Value,VcooutputI2S,WatchDogFreq_Value
+-RCC.LCDTFToutputFreq_Value=96000000
+-RCC.LPTIM1Freq_Value=36000000
+-RCC.LSI_VALUE=32000
+-RCC.MCO1PinFreq_Value=16000000
+-RCC.MCO2PinFreq_Value=72000000
+-RCC.MCOFreq_Value=72000000
+-RCC.PLLCLKFreq_Value=72000000
+-RCC.PLLI2SPCLKFreq_Value=192000000
+-RCC.PLLI2SQCLKFreq_Value=192000000
+-RCC.PLLI2SRCLKFreq_Value=192000000
+-RCC.PLLI2SRoutputFreq_Value=192000000
+-RCC.PLLM=4
+-RCC.PLLMCOFreq_Value=72000000
+-RCC.PLLMUL=RCC_PLL_MUL9
+-RCC.PLLN=72
+-RCC.PLLQ=3
+-RCC.PLLQCLKFreq_Value=48000000
+-RCC.PLLQoutputFreq_Value=48000000
+-RCC.PLLSAIPCLKFreq_Value=192000000
+-RCC.PLLSAIQCLKFreq_Value=192000000
+-RCC.PLLSAIRCLKFreq_Value=192000000
+-RCC.PLLSAIoutputFreq_Value=192000000
+-RCC.PRESCALERUSB=RCC_USBCLKSOURCE_PLL_DIV1_5
+-RCC.RNGFreq_Value=48000000
+-RCC.RTCFreq_Value=32000
+-RCC.RTCHSEDivFreq_Value=4000000
+-RCC.SAI1Freq_Value=192000000
+-RCC.SAI2Freq_Value=192000000
+-RCC.SDMMCFreq_Value=72000000
+-RCC.SPDIFRXFreq_Value=192000000
+-RCC.SYSCLKFreq_VALUE=72000000
+-RCC.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK
+-RCC.SYSCLKSourceVirtual=RCC_SYSCLKSOURCE_PLLCLK
+-RCC.TIM15Freq_Value=72000000
+-RCC.TIM16Freq_Value=72000000
+-RCC.TIM17Freq_Value=72000000
+-RCC.TIM1Freq_Value=72000000
+-RCC.TIM20Freq_Value=72000000
+-RCC.TIM2Freq_Value=72000000
+-RCC.TIM3Freq_Value=72000000
+-RCC.TIM8Freq_Value=72000000
+-RCC.UART4Freq_Value=36000000
+-RCC.UART5Freq_Value=36000000
+-RCC.UART7Freq_Value=36000000
+-RCC.UART8Freq_Value=36000000
+-RCC.USART1Freq_Value=72000000
+-RCC.USART2Freq_Value=36000000
+-RCC.USART3Freq_Value=36000000
+-RCC.USART6Freq_Value=72000000
+-RCC.USBFreq_Value=48000000
+-RCC.VCOI2SOutputFreq_Value=384000000
+-RCC.VCOInputFreq_Value=2000000
+-RCC.VCOOutput2Freq_Value=8000000
+-RCC.VCOOutputFreq_Value=144000000
+-RCC.VCOSAIOutputFreq_Value=384000000
+-RCC.VcooutputI2S=48000000
+-RCC.WatchDogFreq_Value=32000
+-SH.GPXTI13.0=GPIO_EXTI13
+-SH.GPXTI13.ConfNb=1
+-USART3.IPParameters=VirtualMode-Asynchronous
+-USART3.VirtualMode-Asynchronous=VM_ASYNC
+-USB_OTG_FS.IPParameters=VirtualMode
+-USB_OTG_FS.VirtualMode=Device_Only
+-VP_SYS_VS_Systick.Mode=SysTick
+-VP_SYS_VS_Systick.Signal=SYS_VS_Systick
+-board=NUCLEO-F746ZG
+-boardIOC=true
+diff -urN NUCLEO_STM32F746ZG/BSP/Src/mcu_init.c NUCLEO_STM32F767ZI/BSP/Src/mcu_init.c
+--- NUCLEO_STM32F746ZG/BSP/Src/mcu_init.c	2019-11-11 14:06:27.807604973 +0800
++++ NUCLEO_STM32F767ZI/BSP/Src/mcu_init.c	2019-12-16 15:34:55.374959000 +0800
+@@ -30,7 +30,6 @@
+   SystemClock_Config();
+   MX_GPIO_Init();
+   MX_USART3_UART_Init();
+-  MX_USB_OTG_FS_PCD_Init();
+ }
+ 
+ /**
+diff -urN NUCLEO_STM32F746ZG/BSP/Src/stm32f7xx_it.c NUCLEO_STM32F767ZI/BSP/Src/stm32f7xx_it.c
+--- NUCLEO_STM32F746ZG/BSP/Src/stm32f7xx_it.c	2019-11-11 14:06:27.807604973 +0800
++++ NUCLEO_STM32F767ZI/BSP/Src/stm32f7xx_it.c	2019-12-16 15:34:55.374959000 +0800
+@@ -200,16 +200,16 @@
+ /**
+   * @brief This function handles Ethernet global interrupt.
+   */
+-void ETH_IRQHandler(void)
+-{
+-  /* USER CODE BEGIN ETH_IRQn 0 */
+-
+-  /* USER CODE END ETH_IRQn 0 */
+-  HAL_ETH_IRQHandler(&heth);
+-  /* USER CODE BEGIN ETH_IRQn 1 */
+-
+-  /* USER CODE END ETH_IRQn 1 */
+-}
++//void ETH_IRQHandler(void)
++//{
++//  /* USER CODE BEGIN ETH_IRQn 0 */
++//
++//  /* USER CODE END ETH_IRQn 0 */
++//  HAL_ETH_IRQHandler(&heth);
++//  /* USER CODE BEGIN ETH_IRQn 1 */
++//
++//  /* USER CODE END ETH_IRQn 1 */
++//}
+ /******************************************************************************/
+ /* STM32F7xx Peripheral Interrupt Handlers                                    */
+ /* Add here the Interrupt Handlers for the used peripherals.                  */
+diff -urN NUCLEO_STM32F746ZG/GCC/iwasm_sample/Makefile NUCLEO_STM32F767ZI/GCC/iwasm_sample/Makefile
+--- NUCLEO_STM32F746ZG/GCC/iwasm_sample/Makefile	1970-01-01 08:00:00.000000000 +0800
++++ NUCLEO_STM32F767ZI/GCC/iwasm_sample/Makefile	2019-12-16 15:34:55.374959516 +0800
+@@ -0,0 +1,291 @@
++##########################################################################################################################
++# File automatically-generated by tool: [projectgenerator] version: [3.3.0] date: [Mon Aug 05 10:29:11 CST 2019]
++##########################################################################################################################
++
++# ------------------------------------------------
++# Generic Makefile (based on gcc)
++#
++# ChangeLog :
++#	2017-02-10 - Several enhancements + project update mode
++#   2015-07-22 - first version
++# ------------------------------------------------
++
++######################################
++# target
++######################################
++TARGET = TencentOS_tiny
++
++
++######################################
++# building variables
++######################################
++# debug build?
++##DEBUG = 1
++# optimization
++OPT = -O0
++
++TOP_DIR = ../../../..
++#######################################
++# paths
++#######################################
++# Build path
++BUILD_DIR = build
++
++######################################
++# source
++######################################
++# C sources
++KERNEL_SRC =  \
++        ${wildcard $(TOP_DIR)/kernel/core/*.c}
++        C_SOURCES += $(KERNEL_SRC)
++
++ARCH_SRC =  \
++        ${wildcard $(TOP_DIR)/arch/arm/arm-v7m/cortex-m7/gcc/*.c} \
++        ${wildcard $(TOP_DIR)/arch/arm/arm-v7m/common/*.c}
++        C_SOURCES += $(ARCH_SRC)
++
++CMSIS_SRC =  \
++        ${wildcard $(TOP_DIR)/osal/cmsis_os/*.c}
++        C_SOURCES += $(CMSIS_SRC)
++
++PLATFORM_SRC =  \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash_ex.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma_ex.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_adc_ex.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_adc.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dac.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dac_ex.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_spi.c \
++		$(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_spi_ex.c
++		C_SOURCES += $(PLATFORM_SRC)
++
++BSP_SRC =  \
++		$(TOP_DIR)/board/NUCLEO_STM32F767ZI/BSP/Src/gpio.c \
++		$(TOP_DIR)/board/NUCLEO_STM32F767ZI/BSP/Src/mcu_init.c \
++		$(TOP_DIR)/board/NUCLEO_STM32F767ZI/BSP/Src/main.c \
++		$(TOP_DIR)/board/NUCLEO_STM32F767ZI/BSP/Src/stm32f7xx_hal_msp.c \
++		$(TOP_DIR)/board/NUCLEO_STM32F767ZI/BSP/Src/stm32f7xx_it.c \
++		$(TOP_DIR)/board/NUCLEO_STM32F767ZI/BSP/Src/usart.c \
++		$(TOP_DIR)/board/NUCLEO_STM32F767ZI/BSP/Src/system_stm32f7xx.c
++		C_SOURCES += $(BSP_SRC)
++
++EXAMPLES_SRC =  \
++		$(TOP_DIR)/examples/simple/src/iwasm_main.c	\
++		$(TOP_DIR)/examples/simple/src/ext_lib_export.c
++		C_SOURCES += $(EXAMPLES_SRC)
++
++IWASM_SRC =  \
++		$(TOP_DIR)/examples/simple/iwasm/runtime/utils/wasm_hashmap.c \
++		$(TOP_DIR)/examples/simple/iwasm/runtime/utils/wasm_log.c \
++		$(TOP_DIR)/examples/simple/iwasm/runtime/utils/wasm_dlfcn.c \
++		$(TOP_DIR)/examples/simple/iwasm/runtime/vmcore-wasm/wasm_application.c \
++		$(TOP_DIR)/examples/simple/iwasm/runtime/vmcore-wasm/wasm_interp.c \
++		$(TOP_DIR)/examples/simple/iwasm/runtime/vmcore-wasm/wasm_loader.c \
++		$(TOP_DIR)/examples/simple/iwasm/runtime/vmcore-wasm/wasm_runtime.c \
++		$(TOP_DIR)/examples/simple/iwasm/runtime/vmcore-wasm/invokeNative_general.c \
++		$(TOP_DIR)/examples/simple/iwasm/lib/native/libc/libc_builtin_wrapper.c \
++		$(TOP_DIR)/examples/simple/iwasm/lib/native/base/base_lib_export.c \
++		$(TOP_DIR)/examples/simple/shared-lib/platform/TencentOS-tiny/bh_platform.c \
++		$(TOP_DIR)/examples/simple/shared-lib/platform/TencentOS-tiny/bh_definition.c \
++		$(TOP_DIR)/examples/simple/shared-lib/platform/TencentOS-tiny/bh_assert.c \
++		$(TOP_DIR)/examples/simple/shared-lib/platform/TencentOS-tiny/bh_thread.c \
++		$(TOP_DIR)/examples/simple/shared-lib/platform/TencentOS-tiny/bh_math.c \
++		$(TOP_DIR)/examples/simple/shared-lib/mem-alloc/bh_memory.c \
++		$(TOP_DIR)/examples/simple/shared-lib/mem-alloc/mem_alloc.c \
++		$(TOP_DIR)/examples/simple/shared-lib/mem-alloc/ems/ems_kfc.c \
++		$(TOP_DIR)/examples/simple/shared-lib/mem-alloc/ems/ems_alloc.c \
++		$(TOP_DIR)/examples/simple/shared-lib/mem-alloc/ems/ems_hmu.c
++        C_SOURCES += $(IWASM_SRC)
++
++
++# ASM sources
++ASM_SOURCES =  \
++startup_stm32f767xx.s
++
++ASM_SOURCES_S =  \
++$(TOP_DIR)/arch/arm/arm-v7m/cortex-m7/gcc/port_s.S
++
++
++#######################################
++# binaries
++#######################################
++PREFIX = arm-none-eabi-
++# The gcc compiler bin path can be either defined in make command via GCC_PATH variable (> make GCC_PATH=xxx)
++# either it can be added to the PATH environment variable.
++ifdef GCC_PATH
++CC = $(GCC_PATH)/$(PREFIX)gcc
++AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
++CP = $(GCC_PATH)/$(PREFIX)objcopy
++SZ = $(GCC_PATH)/$(PREFIX)size
++else
++CC = $(PREFIX)gcc
++AS = $(PREFIX)gcc -x assembler-with-cpp
++CP = $(PREFIX)objcopy
++SZ = $(PREFIX)size
++endif
++HEX = $(CP) -O ihex
++BIN = $(CP) -O binary -S
++
++#######################################
++# CFLAGS
++#######################################
++# cpu
++CPU = -mcpu=cortex-m7
++
++# fpu
++FPU = -mfpu=fpv5-d16
++
++# float-abi
++# FLOAT-ABI = -mfloat-abi=hard
++
++# mcu
++MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
++
++# macros for gcc
++# AS defines
++AS_DEFS =
++
++# C defines
++C_DEFS =  \
++-DUSE_HAL_DRIVER \
++-DSTM32F767xx \
++-DUSE_HAL_DRIVER \
++-DSTM32F767xx \
++-DNVALGRIND \
++-DWASM_ENABLE_LOG=1
++
++# AS includes
++AS_INCLUDES =
++
++# C includes
++KERNEL_INC = \
++		-I $(TOP_DIR)/kernel/core/include  \
++		-I $(TOP_DIR)/kernel/pm/include  \
++		-I $(TOP_DIR)/kernel/hal/include \
++		-I $(TOP_DIR)/arch/arm/arm-v7m/common/include \
++		-I $(TOP_DIR)/arch/arm/arm-v7m/cortex-m7/gcc
++		C_INCLUDES += $(KERNEL_INC)
++
++CMSIS_INC = \
++		-I $(TOP_DIR)/osal/cmsis_os
++		C_INCLUDES += $(CMSIS_INC)
++
++PLATFORM_INC = \
++		-I $(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Inc \
++		-I $(TOP_DIR)/platform/vendor_bsp/st/STM32F7xx_HAL_Driver/Inc/Legacy \
++		-I $(TOP_DIR)/platform/vendor_bsp/st/CMSIS/Device/ST/STM32F7xx/Include \
++		-I $(TOP_DIR)/platform/vendor_bsp/st/CMSIS/Include
++		C_INCLUDES += $(PLATFORM_INC)
++
++BOARD_INC =  \
++		-I $(TOP_DIR)/board/NUCLEO_STM32F767ZI/TOS_CONFIG \
++		-I $(TOP_DIR)/board/NUCLEO_STM32F767ZI/BSP/Inc
++		C_INCLUDES += $(BOARD_INC)
++
++IWASM_INC = \
++	    -I $(TOP_DIR)/examples/simple/iwasm/runtime/include \
++	    -I $(TOP_DIR)/examples/simple/iwasm/runtime/platform/include \
++	    -I $(TOP_DIR)/examples/simple/iwasm/runtime/platform/TencentOS-tiny \
++	    -I $(TOP_DIR)/examples/simple/iwasm/runtime/vmcore-wasm \
++	    -I $(TOP_DIR)/examples/simple/shared-lib/include \
++	    -I $(TOP_DIR)/examples/simple/shared-lib/platform/include \
++	    -I $(TOP_DIR)/examples/simple/shared-lib/platform/TencentOS-tiny \
++	    -I $(TOP_DIR)/examples/simple/shared-lib/core/shared-lib/mem-alloc/tlsf \
++	    -I $(TOP_DIR)/examples/simple/app-mgr/app-mgr-shared \
++	    -I $(TOP_DIR)/examples/simple/iwasm/lib/native-interface \
++        -I $(TOP_DIR)/examples/simple/shared-lib/utils \
++	    -I $(TOP_DIR)/examples/simple/shared-lib/coap/extension \
++	    -I $(TOP_DIR)/examples/simple/shared-lib/coap/er-coap
++        C_INCLUDES += $(IWASM_INC)
++
++# compile gcc flags
++ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
++
++CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
++
++ifeq ($(DEBUG), 1)
++CFLAGS += -g -gdwarf-2
++endif
++
++
++# Generate dependency information
++CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
++
++CFLAGS += -DBUILD_TARGET_ARM_32
++
++#######################################
++# LDFLAGS
++#######################################
++# link script
++LDSCRIPT = STM32F767ZITx_FLASH.ld
++
++# libraries
++LIBS = -lc -lm -lnosys
++LIBDIR =
++LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
++
++# default action: build all
++all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin
++
++
++#######################################
++# build the application
++#######################################
++# list of objects
++OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
++vpath %.c $(sort $(dir $(C_SOURCES)))
++# list of ASM program objects
++OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
++vpath %.s $(sort $(dir $(ASM_SOURCES)))
++OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES_S:.S=.o)))
++vpath %.S $(sort $(dir $(ASM_SOURCES_S)))
++
++$(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR)
++	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
++
++$(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
++	$(AS) -c $(CFLAGS) $< -o $@
++
++$(BUILD_DIR)/%.o: %.S Makefile | $(BUILD_DIR)
++	$(AS) -c $(CFLAGS) $< -o $@
++
++$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
++	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
++	$(SZ) $@
++
++$(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
++	$(HEX) $< $@
++
++$(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
++	$(BIN) $< $@
++
++$(BUILD_DIR):
++	mkdir $@
++
++#######################################
++# clean up
++#######################################
++clean:
++	-rm -fR $(BUILD_DIR)
++
++#######################################
++# dependencies
++#######################################
++-include $(wildcard $(BUILD_DIR)/*.d)
++
++# *** EOF ***
+diff -urN NUCLEO_STM32F746ZG/GCC/iwasm_sample/startup_stm32f767xx.s NUCLEO_STM32F767ZI/GCC/iwasm_sample/startup_stm32f767xx.s
+--- NUCLEO_STM32F746ZG/GCC/iwasm_sample/startup_stm32f767xx.s	1970-01-01 08:00:00.000000000 +0800
++++ NUCLEO_STM32F767ZI/GCC/iwasm_sample/startup_stm32f767xx.s	2019-12-16 15:34:55.374959516 +0800
+@@ -0,0 +1,634 @@
++/**
++  ******************************************************************************
++  * @file      startup_stm32f767xx.s
++  * @author    MCD Application Team
++  * @brief     STM32F767xx Devices vector table for GCC based toolchain. 
++  *            This module performs:
++  *                - Set the initial SP
++  *                - Set the initial PC == Reset_Handler,
++  *                - Set the vector table entries with the exceptions ISR address
++  *                - Branches to main in the C library (which eventually
++  *                  calls main()).
++  *            After Reset the Cortex-M7 processor is in Thread mode,
++  *            priority is Privileged, and the Stack is set to Main.
++  ******************************************************************************
++  * @attention
++  *
++  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
++  *
++  * Redistribution and use in source and binary forms, with or without modification,
++  * are permitted provided that the following conditions are met:
++  *   1. Redistributions of source code must retain the above copyright notice,
++  *      this list of conditions and the following disclaimer.
++  *   2. Redistributions in binary form must reproduce the above copyright notice,
++  *      this list of conditions and the following disclaimer in the documentation
++  *      and/or other materials provided with the distribution.
++  *   3. Neither the name of STMicroelectronics nor the names of its contributors
++  *      may be used to endorse or promote products derived from this software
++  *      without specific prior written permission.
++  *
++  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
++  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
++  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
++  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
++  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
++  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++  *
++  ******************************************************************************
++  */
++    
++  .syntax unified
++  .cpu cortex-m7
++  .fpu softvfp
++  .thumb
++
++.global  g_pfnVectors
++.global  Default_Handler
++
++/* start address for the initialization values of the .data section. 
++defined in linker script */
++.word  _sidata
++/* start address for the .data section. defined in linker script */  
++.word  _sdata
++/* end address for the .data section. defined in linker script */
++.word  _edata
++/* start address for the .bss section. defined in linker script */
++.word  _sbss
++/* end address for the .bss section. defined in linker script */
++.word  _ebss
++/* stack used for SystemInit_ExtMemCtl; always internal RAM used */
++
++/**
++ * @brief  This is the code that gets called when the processor first
++ *          starts execution following a reset event. Only the absolutely
++ *          necessary set is performed, after which the application
++ *          supplied main() routine is called. 
++ * @param  None
++ * @retval : None
++*/
++
++    .section  .text.Reset_Handler
++  .weak  Reset_Handler
++  .type  Reset_Handler, %function
++Reset_Handler:  
++  ldr   sp, =_estack      /* set stack pointer */
++
++/* Copy the data segment initializers from flash to SRAM */  
++  movs  r1, #0
++  b  LoopCopyDataInit
++
++CopyDataInit:
++  ldr  r3, =_sidata
++  ldr  r3, [r3, r1]
++  str  r3, [r0, r1]
++  adds  r1, r1, #4
++    
++LoopCopyDataInit:
++  ldr  r0, =_sdata
++  ldr  r3, =_edata
++  adds  r2, r0, r1
++  cmp  r2, r3
++  bcc  CopyDataInit
++  ldr  r2, =_sbss
++  b  LoopFillZerobss
++/* Zero fill the bss segment. */  
++FillZerobss:
++  movs  r3, #0
++  str  r3, [r2], #4
++    
++LoopFillZerobss:
++  ldr  r3, = _ebss
++  cmp  r2, r3
++  bcc  FillZerobss
++
++/* Call the clock system initialization function.*/
++  bl  SystemInit   
++/* Call static constructors */
++    bl __libc_init_array
++/* Call the application's entry point.*/
++  bl  main
++  bx  lr    
++.size  Reset_Handler, .-Reset_Handler
++
++/**
++ * @brief  This is the code that gets called when the processor receives an 
++ *         unexpected interrupt.  This simply enters an infinite loop, preserving
++ *         the system state for examination by a debugger.
++ * @param  None     
++ * @retval None       
++*/
++    .section  .text.Default_Handler,"ax",%progbits
++Default_Handler:
++Infinite_Loop:
++  b  Infinite_Loop
++  .size  Default_Handler, .-Default_Handler
++/******************************************************************************
++*
++* The minimal vector table for a Cortex M7. Note that the proper constructs
++* must be placed on this to ensure that it ends up at physical address
++* 0x0000.0000.
++* 
++*******************************************************************************/
++   .section  .isr_vector,"a",%progbits
++  .type  g_pfnVectors, %object
++  .size  g_pfnVectors, .-g_pfnVectors
++   
++   
++g_pfnVectors:
++  .word  _estack
++  .word  Reset_Handler
++
++  .word  NMI_Handler
++  .word  HardFault_Handler
++  .word  MemManage_Handler
++  .word  BusFault_Handler
++  .word  UsageFault_Handler
++  .word  0
++  .word  0
++  .word  0
++  .word  0
++  .word  SVC_Handler
++  .word  DebugMon_Handler
++  .word  0
++  .word  PendSV_Handler
++  .word  SysTick_Handler
++  
++  /* External Interrupts */
++  .word     WWDG_IRQHandler                   /* Window WatchDog              */
++  .word     PVD_IRQHandler                    /* PVD through EXTI Line detection */
++  .word     TAMP_STAMP_IRQHandler             /* Tamper and TimeStamps through the EXTI line */
++  .word     RTC_WKUP_IRQHandler               /* RTC Wakeup through the EXTI line */
++  .word     FLASH_IRQHandler                  /* FLASH                        */
++  .word     RCC_IRQHandler                    /* RCC                          */
++  .word     EXTI0_IRQHandler                  /* EXTI Line0                   */
++  .word     EXTI1_IRQHandler                  /* EXTI Line1                   */
++  .word     EXTI2_IRQHandler                  /* EXTI Line2                   */
++  .word     EXTI3_IRQHandler                  /* EXTI Line3                   */
++  .word     EXTI4_IRQHandler                  /* EXTI Line4                   */
++  .word     DMA1_Stream0_IRQHandler           /* DMA1 Stream 0                */
++  .word     DMA1_Stream1_IRQHandler           /* DMA1 Stream 1                */
++  .word     DMA1_Stream2_IRQHandler           /* DMA1 Stream 2                */
++  .word     DMA1_Stream3_IRQHandler           /* DMA1 Stream 3                */
++  .word     DMA1_Stream4_IRQHandler           /* DMA1 Stream 4                */
++  .word     DMA1_Stream5_IRQHandler           /* DMA1 Stream 5                */
++  .word     DMA1_Stream6_IRQHandler           /* DMA1 Stream 6                */
++  .word     ADC_IRQHandler                    /* ADC1, ADC2 and ADC3s         */
++  .word     CAN1_TX_IRQHandler                /* CAN1 TX                      */
++  .word     CAN1_RX0_IRQHandler               /* CAN1 RX0                     */
++  .word     CAN1_RX1_IRQHandler               /* CAN1 RX1                     */
++  .word     CAN1_SCE_IRQHandler               /* CAN1 SCE                     */
++  .word     EXTI9_5_IRQHandler                /* External Line[9:5]s          */
++  .word     TIM1_BRK_TIM9_IRQHandler          /* TIM1 Break and TIM9          */
++  .word     TIM1_UP_TIM10_IRQHandler          /* TIM1 Update and TIM10        */
++  .word     TIM1_TRG_COM_TIM11_IRQHandler     /* TIM1 Trigger and Commutation and TIM11 */
++  .word     TIM1_CC_IRQHandler                /* TIM1 Capture Compare         */
++  .word     TIM2_IRQHandler                   /* TIM2                         */
++  .word     TIM3_IRQHandler                   /* TIM3                         */
++  .word     TIM4_IRQHandler                   /* TIM4                         */
++  .word     I2C1_EV_IRQHandler                /* I2C1 Event                   */
++  .word     I2C1_ER_IRQHandler                /* I2C1 Error                   */
++  .word     I2C2_EV_IRQHandler                /* I2C2 Event                   */
++  .word     I2C2_ER_IRQHandler                /* I2C2 Error                   */
++  .word     SPI1_IRQHandler                   /* SPI1                         */
++  .word     SPI2_IRQHandler                   /* SPI2                         */
++  .word     USART1_IRQHandler                 /* USART1                       */
++  .word     USART2_IRQHandler                 /* USART2                       */
++  .word     USART3_IRQHandler                 /* USART3                       */
++  .word     EXTI15_10_IRQHandler              /* External Line[15:10]s        */
++  .word     RTC_Alarm_IRQHandler              /* RTC Alarm (A and B) through EXTI Line */
++  .word     OTG_FS_WKUP_IRQHandler            /* USB OTG FS Wakeup through EXTI line */
++  .word     TIM8_BRK_TIM12_IRQHandler         /* TIM8 Break and TIM12         */
++  .word     TIM8_UP_TIM13_IRQHandler          /* TIM8 Update and TIM13        */
++  .word     TIM8_TRG_COM_TIM14_IRQHandler     /* TIM8 Trigger and Commutation and TIM14 */
++  .word     TIM8_CC_IRQHandler                /* TIM8 Capture Compare         */
++  .word     DMA1_Stream7_IRQHandler           /* DMA1 Stream7                 */
++  .word     FMC_IRQHandler                    /* FMC                          */
++  .word     SDMMC1_IRQHandler                 /* SDMMC1                       */
++  .word     TIM5_IRQHandler                   /* TIM5                         */
++  .word     SPI3_IRQHandler                   /* SPI3                         */
++  .word     UART4_IRQHandler                  /* UART4                        */
++  .word     UART5_IRQHandler                  /* UART5                        */
++  .word     TIM6_DAC_IRQHandler               /* TIM6 and DAC1&2 underrun errors */
++  .word     TIM7_IRQHandler                   /* TIM7                         */
++  .word     DMA2_Stream0_IRQHandler           /* DMA2 Stream 0                */
++  .word     DMA2_Stream1_IRQHandler           /* DMA2 Stream 1                */
++  .word     DMA2_Stream2_IRQHandler           /* DMA2 Stream 2                */
++  .word     DMA2_Stream3_IRQHandler           /* DMA2 Stream 3                */
++  .word     DMA2_Stream4_IRQHandler           /* DMA2 Stream 4                */
++  .word     ETH_IRQHandler                    /* Ethernet                     */
++  .word     ETH_WKUP_IRQHandler               /* Ethernet Wakeup through EXTI line */
++  .word     CAN2_TX_IRQHandler                /* CAN2 TX                      */
++  .word     CAN2_RX0_IRQHandler               /* CAN2 RX0                     */
++  .word     CAN2_RX1_IRQHandler               /* CAN2 RX1                     */
++  .word     CAN2_SCE_IRQHandler               /* CAN2 SCE                     */
++  .word     OTG_FS_IRQHandler                 /* USB OTG FS                   */
++  .word     DMA2_Stream5_IRQHandler           /* DMA2 Stream 5                */
++  .word     DMA2_Stream6_IRQHandler           /* DMA2 Stream 6                */
++  .word     DMA2_Stream7_IRQHandler           /* DMA2 Stream 7                */
++  .word     USART6_IRQHandler                 /* USART6                       */
++  .word     I2C3_EV_IRQHandler                /* I2C3 event                   */
++  .word     I2C3_ER_IRQHandler                /* I2C3 error                   */
++  .word     OTG_HS_EP1_OUT_IRQHandler         /* USB OTG HS End Point 1 Out   */
++  .word     OTG_HS_EP1_IN_IRQHandler          /* USB OTG HS End Point 1 In    */
++  .word     OTG_HS_WKUP_IRQHandler            /* USB OTG HS Wakeup through EXTI */
++  .word     OTG_HS_IRQHandler                 /* USB OTG HS                   */
++  .word     DCMI_IRQHandler                   /* DCMI                         */
++  .word     0                                 /* Reserved                     */
++  .word     RNG_IRQHandler                    /* RNG                          */
++  .word     FPU_IRQHandler                    /* FPU                          */
++  .word     UART7_IRQHandler                  /* UART7                        */
++  .word     UART8_IRQHandler                  /* UART8                        */
++  .word     SPI4_IRQHandler                   /* SPI4                         */
++  .word     SPI5_IRQHandler                   /* SPI5                         */
++  .word     SPI6_IRQHandler                   /* SPI6                         */
++  .word     SAI1_IRQHandler                   /* SAI1                         */
++  .word     LTDC_IRQHandler                   /* LTDC                         */
++  .word     LTDC_ER_IRQHandler                /* LTDC error                   */
++  .word     DMA2D_IRQHandler                  /* DMA2D                        */
++  .word     SAI2_IRQHandler                   /* SAI2                         */
++  .word     QUADSPI_IRQHandler                /* QUADSPI                      */
++  .word     LPTIM1_IRQHandler                 /* LPTIM1                       */
++  .word     CEC_IRQHandler                    /* HDMI_CEC                     */
++  .word     I2C4_EV_IRQHandler                /* I2C4 Event                   */
++  .word     I2C4_ER_IRQHandler                /* I2C4 Error                   */
++  .word     SPDIF_RX_IRQHandler               /* SPDIF_RX                     */
++  .word     0                                 /* Reserved                     */
++  .word     DFSDM1_FLT0_IRQHandler            /* DFSDM1 Filter 0 global Interrupt */
++  .word     DFSDM1_FLT1_IRQHandler            /* DFSDM1 Filter 1 global Interrupt */
++  .word     DFSDM1_FLT2_IRQHandler            /* DFSDM1 Filter 2 global Interrupt */
++  .word     DFSDM1_FLT3_IRQHandler            /* DFSDM1 Filter 3 global Interrupt */
++  .word     SDMMC2_IRQHandler                 /* SDMMC2                       */
++  .word     CAN3_TX_IRQHandler                /* CAN3 TX                      */
++  .word     CAN3_RX0_IRQHandler               /* CAN3 RX0                     */
++  .word     CAN3_RX1_IRQHandler               /* CAN3 RX1                     */
++  .word     CAN3_SCE_IRQHandler               /* CAN3 SCE                     */
++  .word     JPEG_IRQHandler                   /* JPEG                         */
++  .word     MDIOS_IRQHandler                  /* MDIOS                        */
++  
++/*******************************************************************************
++*
++* Provide weak aliases for each Exception handler to the Default_Handler. 
++* As they are weak aliases, any function with the same name will override 
++* this definition.
++* 
++*******************************************************************************/
++   .weak      NMI_Handler
++   .thumb_set NMI_Handler,Default_Handler
++  
++   .weak      HardFault_Handler
++   .thumb_set HardFault_Handler,Default_Handler
++  
++   .weak      MemManage_Handler
++   .thumb_set MemManage_Handler,Default_Handler
++  
++   .weak      BusFault_Handler
++   .thumb_set BusFault_Handler,Default_Handler
++
++   .weak      UsageFault_Handler
++   .thumb_set UsageFault_Handler,Default_Handler
++
++   .weak      SVC_Handler
++   .thumb_set SVC_Handler,Default_Handler
++
++   .weak      DebugMon_Handler
++   .thumb_set DebugMon_Handler,Default_Handler
++
++   .weak      PendSV_Handler
++   .thumb_set PendSV_Handler,Default_Handler
++
++   .weak      SysTick_Handler
++   .thumb_set SysTick_Handler,Default_Handler              
++  
++   .weak      WWDG_IRQHandler                   
++   .thumb_set WWDG_IRQHandler,Default_Handler      
++                  
++   .weak      PVD_IRQHandler      
++   .thumb_set PVD_IRQHandler,Default_Handler
++               
++   .weak      TAMP_STAMP_IRQHandler            
++   .thumb_set TAMP_STAMP_IRQHandler,Default_Handler
++            
++   .weak      RTC_WKUP_IRQHandler                  
++   .thumb_set RTC_WKUP_IRQHandler,Default_Handler
++            
++   .weak      FLASH_IRQHandler         
++   .thumb_set FLASH_IRQHandler,Default_Handler
++                  
++   .weak      RCC_IRQHandler      
++   .thumb_set RCC_IRQHandler,Default_Handler
++                  
++   .weak      EXTI0_IRQHandler         
++   .thumb_set EXTI0_IRQHandler,Default_Handler
++                  
++   .weak      EXTI1_IRQHandler         
++   .thumb_set EXTI1_IRQHandler,Default_Handler
++                     
++   .weak      EXTI2_IRQHandler         
++   .thumb_set EXTI2_IRQHandler,Default_Handler 
++                 
++   .weak      EXTI3_IRQHandler         
++   .thumb_set EXTI3_IRQHandler,Default_Handler
++                        
++   .weak      EXTI4_IRQHandler         
++   .thumb_set EXTI4_IRQHandler,Default_Handler
++                  
++   .weak      DMA1_Stream0_IRQHandler               
++   .thumb_set DMA1_Stream0_IRQHandler,Default_Handler
++         
++   .weak      DMA1_Stream1_IRQHandler               
++   .thumb_set DMA1_Stream1_IRQHandler,Default_Handler
++                  
++   .weak      DMA1_Stream2_IRQHandler               
++   .thumb_set DMA1_Stream2_IRQHandler,Default_Handler
++                  
++   .weak      DMA1_Stream3_IRQHandler               
++   .thumb_set DMA1_Stream3_IRQHandler,Default_Handler 
++                 
++   .weak      DMA1_Stream4_IRQHandler              
++   .thumb_set DMA1_Stream4_IRQHandler,Default_Handler
++                  
++   .weak      DMA1_Stream5_IRQHandler               
++   .thumb_set DMA1_Stream5_IRQHandler,Default_Handler
++                  
++   .weak      DMA1_Stream6_IRQHandler               
++   .thumb_set DMA1_Stream6_IRQHandler,Default_Handler
++                  
++   .weak      ADC_IRQHandler      
++   .thumb_set ADC_IRQHandler,Default_Handler
++               
++   .weak      CAN1_TX_IRQHandler   
++   .thumb_set CAN1_TX_IRQHandler,Default_Handler
++            
++   .weak      CAN1_RX0_IRQHandler                  
++   .thumb_set CAN1_RX0_IRQHandler,Default_Handler
++                           
++   .weak      CAN1_RX1_IRQHandler                  
++   .thumb_set CAN1_RX1_IRQHandler,Default_Handler
++            
++   .weak      CAN1_SCE_IRQHandler                  
++   .thumb_set CAN1_SCE_IRQHandler,Default_Handler
++            
++   .weak      EXTI9_5_IRQHandler   
++   .thumb_set EXTI9_5_IRQHandler,Default_Handler
++            
++   .weak      TIM1_BRK_TIM9_IRQHandler            
++   .thumb_set TIM1_BRK_TIM9_IRQHandler,Default_Handler
++            
++   .weak      TIM1_UP_TIM10_IRQHandler            
++   .thumb_set TIM1_UP_TIM10_IRQHandler,Default_Handler
++
++   .weak      TIM1_TRG_COM_TIM11_IRQHandler      
++   .thumb_set TIM1_TRG_COM_TIM11_IRQHandler,Default_Handler
++      
++   .weak      TIM1_CC_IRQHandler   
++   .thumb_set TIM1_CC_IRQHandler,Default_Handler
++                  
++   .weak      TIM2_IRQHandler            
++   .thumb_set TIM2_IRQHandler,Default_Handler
++                  
++   .weak      TIM3_IRQHandler            
++   .thumb_set TIM3_IRQHandler,Default_Handler
++                  
++   .weak      TIM4_IRQHandler            
++   .thumb_set TIM4_IRQHandler,Default_Handler
++                  
++   .weak      I2C1_EV_IRQHandler   
++   .thumb_set I2C1_EV_IRQHandler,Default_Handler
++                     
++   .weak      I2C1_ER_IRQHandler   
++   .thumb_set I2C1_ER_IRQHandler,Default_Handler
++                     
++   .weak      I2C2_EV_IRQHandler   
++   .thumb_set I2C2_EV_IRQHandler,Default_Handler
++                  
++   .weak      I2C2_ER_IRQHandler   
++   .thumb_set I2C2_ER_IRQHandler,Default_Handler
++                           
++   .weak      SPI1_IRQHandler            
++   .thumb_set SPI1_IRQHandler,Default_Handler
++                        
++   .weak      SPI2_IRQHandler            
++   .thumb_set SPI2_IRQHandler,Default_Handler
++                  
++   .weak      USART1_IRQHandler      
++   .thumb_set USART1_IRQHandler,Default_Handler
++                     
++   .weak      USART2_IRQHandler      
++   .thumb_set USART2_IRQHandler,Default_Handler
++                     
++   .weak      USART3_IRQHandler      
++   .thumb_set USART3_IRQHandler,Default_Handler
++                  
++   .weak      EXTI15_10_IRQHandler               
++   .thumb_set EXTI15_10_IRQHandler,Default_Handler
++               
++   .weak      RTC_Alarm_IRQHandler               
++   .thumb_set RTC_Alarm_IRQHandler,Default_Handler
++            
++   .weak      OTG_FS_WKUP_IRQHandler         
++   .thumb_set OTG_FS_WKUP_IRQHandler,Default_Handler
++            
++   .weak      TIM8_BRK_TIM12_IRQHandler         
++   .thumb_set TIM8_BRK_TIM12_IRQHandler,Default_Handler
++         
++   .weak      TIM8_UP_TIM13_IRQHandler            
++   .thumb_set TIM8_UP_TIM13_IRQHandler,Default_Handler
++         
++   .weak      TIM8_TRG_COM_TIM14_IRQHandler      
++   .thumb_set TIM8_TRG_COM_TIM14_IRQHandler,Default_Handler
++      
++   .weak      TIM8_CC_IRQHandler   
++   .thumb_set TIM8_CC_IRQHandler,Default_Handler
++                  
++   .weak      DMA1_Stream7_IRQHandler               
++   .thumb_set DMA1_Stream7_IRQHandler,Default_Handler
++                     
++   .weak      FMC_IRQHandler            
++   .thumb_set FMC_IRQHandler,Default_Handler
++                     
++   .weak      SDMMC1_IRQHandler            
++   .thumb_set SDMMC1_IRQHandler,Default_Handler
++                     
++   .weak      TIM5_IRQHandler            
++   .thumb_set TIM5_IRQHandler,Default_Handler
++                     
++   .weak      SPI3_IRQHandler            
++   .thumb_set SPI3_IRQHandler,Default_Handler
++                     
++   .weak      UART4_IRQHandler         
++   .thumb_set UART4_IRQHandler,Default_Handler
++                  
++   .weak      UART5_IRQHandler         
++   .thumb_set UART5_IRQHandler,Default_Handler
++                  
++   .weak      TIM6_DAC_IRQHandler                  
++   .thumb_set TIM6_DAC_IRQHandler,Default_Handler
++               
++   .weak      TIM7_IRQHandler            
++   .thumb_set TIM7_IRQHandler,Default_Handler
++         
++   .weak      DMA2_Stream0_IRQHandler               
++   .thumb_set DMA2_Stream0_IRQHandler,Default_Handler
++               
++   .weak      DMA2_Stream1_IRQHandler               
++   .thumb_set DMA2_Stream1_IRQHandler,Default_Handler
++                  
++   .weak      DMA2_Stream2_IRQHandler               
++   .thumb_set DMA2_Stream2_IRQHandler,Default_Handler
++            
++   .weak      DMA2_Stream3_IRQHandler               
++   .thumb_set DMA2_Stream3_IRQHandler,Default_Handler
++            
++   .weak      DMA2_Stream4_IRQHandler               
++   .thumb_set DMA2_Stream4_IRQHandler,Default_Handler
++   
++   .weak      DMA2_Stream4_IRQHandler               
++   .thumb_set DMA2_Stream4_IRQHandler,Default_Handler   
++
++   .weak      ETH_IRQHandler   
++   .thumb_set ETH_IRQHandler,Default_Handler
++   
++   .weak      ETH_WKUP_IRQHandler   
++   .thumb_set ETH_WKUP_IRQHandler,Default_Handler
++
++   .weak      CAN2_TX_IRQHandler   
++   .thumb_set CAN2_TX_IRQHandler,Default_Handler   
++                           
++   .weak      CAN2_RX0_IRQHandler                  
++   .thumb_set CAN2_RX0_IRQHandler,Default_Handler
++                           
++   .weak      CAN2_RX1_IRQHandler                  
++   .thumb_set CAN2_RX1_IRQHandler,Default_Handler
++                           
++   .weak      CAN2_SCE_IRQHandler                  
++   .thumb_set CAN2_SCE_IRQHandler,Default_Handler
++                           
++   .weak      OTG_FS_IRQHandler      
++   .thumb_set OTG_FS_IRQHandler,Default_Handler
++                     
++   .weak      DMA2_Stream5_IRQHandler               
++   .thumb_set DMA2_Stream5_IRQHandler,Default_Handler
++                  
++   .weak      DMA2_Stream6_IRQHandler               
++   .thumb_set DMA2_Stream6_IRQHandler,Default_Handler
++                  
++   .weak      DMA2_Stream7_IRQHandler               
++   .thumb_set DMA2_Stream7_IRQHandler,Default_Handler
++                  
++   .weak      USART6_IRQHandler      
++   .thumb_set USART6_IRQHandler,Default_Handler
++                        
++   .weak      I2C3_EV_IRQHandler   
++   .thumb_set I2C3_EV_IRQHandler,Default_Handler
++                        
++   .weak      I2C3_ER_IRQHandler   
++   .thumb_set I2C3_ER_IRQHandler,Default_Handler
++                        
++   .weak      OTG_HS_EP1_OUT_IRQHandler         
++   .thumb_set OTG_HS_EP1_OUT_IRQHandler,Default_Handler
++               
++   .weak      OTG_HS_EP1_IN_IRQHandler            
++   .thumb_set OTG_HS_EP1_IN_IRQHandler,Default_Handler
++               
++   .weak      OTG_HS_WKUP_IRQHandler         
++   .thumb_set OTG_HS_WKUP_IRQHandler,Default_Handler
++            
++   .weak      OTG_HS_IRQHandler      
++   .thumb_set OTG_HS_IRQHandler,Default_Handler
++                  
++   .weak      DCMI_IRQHandler            
++   .thumb_set DCMI_IRQHandler,Default_Handler
++
++   .weak      RNG_IRQHandler            
++   .thumb_set RNG_IRQHandler,Default_Handler   
++
++   .weak      FPU_IRQHandler                  
++   .thumb_set FPU_IRQHandler,Default_Handler
++
++   .weak      UART7_IRQHandler                  
++   .thumb_set UART7_IRQHandler,Default_Handler
++
++   .weak      UART8_IRQHandler                  
++   .thumb_set UART8_IRQHandler,Default_Handler   
++
++   .weak      SPI4_IRQHandler            
++   .thumb_set SPI4_IRQHandler,Default_Handler
++   
++   .weak      SPI5_IRQHandler            
++   .thumb_set SPI5_IRQHandler,Default_Handler
++
++   .weak      SPI6_IRQHandler            
++   .thumb_set SPI6_IRQHandler,Default_Handler   
++
++   .weak      SAI1_IRQHandler            
++   .thumb_set SAI1_IRQHandler,Default_Handler
++   
++   .weak      LTDC_IRQHandler            
++   .thumb_set LTDC_IRQHandler,Default_Handler
++
++   .weak      LTDC_ER_IRQHandler            
++   .thumb_set LTDC_ER_IRQHandler,Default_Handler
++
++   .weak      DMA2D_IRQHandler            
++   .thumb_set DMA2D_IRQHandler,Default_Handler   
++
++   .weak      SAI2_IRQHandler            
++   .thumb_set SAI2_IRQHandler,Default_Handler
++   
++   .weak      QUADSPI_IRQHandler            
++   .thumb_set QUADSPI_IRQHandler,Default_Handler
++ 
++   .weak      LPTIM1_IRQHandler            
++   .thumb_set LPTIM1_IRQHandler,Default_Handler
++
++   .weak      CEC_IRQHandler            
++   .thumb_set CEC_IRQHandler,Default_Handler
++   
++   .weak      I2C4_EV_IRQHandler            
++   .thumb_set I2C4_EV_IRQHandler,Default_Handler 
++ 
++   .weak      I2C4_ER_IRQHandler            
++   .thumb_set I2C4_ER_IRQHandler,Default_Handler
++   
++   .weak      SPDIF_RX_IRQHandler            
++   .thumb_set SPDIF_RX_IRQHandler,Default_Handler
++
++   .weak      DFSDM1_FLT0_IRQHandler            
++   .thumb_set DFSDM1_FLT0_IRQHandler,Default_Handler
++
++   .weak      DFSDM1_FLT1_IRQHandler            
++   .thumb_set DFSDM1_FLT1_IRQHandler,Default_Handler
++
++   .weak      DFSDM1_FLT2_IRQHandler            
++   .thumb_set DFSDM1_FLT2_IRQHandler,Default_Handler
++
++   .weak      DFSDM1_FLT3_IRQHandler            
++   .thumb_set DFSDM1_FLT3_IRQHandler,Default_Handler
++
++   .weak      SDMMC2_IRQHandler            
++   .thumb_set SDMMC2_IRQHandler,Default_Handler
++
++   .weak      CAN3_TX_IRQHandler            
++   .thumb_set CAN3_TX_IRQHandler,Default_Handler
++
++   .weak      CAN3_RX0_IRQHandler            
++   .thumb_set CAN3_RX0_IRQHandler,Default_Handler
++
++   .weak      CAN3_RX1_IRQHandler            
++   .thumb_set CAN3_RX1_IRQHandler,Default_Handler
++
++   .weak      CAN3_SCE_IRQHandler            
++   .thumb_set CAN3_SCE_IRQHandler,Default_Handler
++
++   .weak      JPEG_IRQHandler            
++   .thumb_set JPEG_IRQHandler,Default_Handler
++
++   .weak      MDIOS_IRQHandler            
++   .thumb_set MDIOS_IRQHandler,Default_Handler   
++
++/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
++ 
+diff -urN NUCLEO_STM32F746ZG/GCC/iwasm_sample/STM32F767ZITx_FLASH.ld NUCLEO_STM32F767ZI/GCC/iwasm_sample/STM32F767ZITx_FLASH.ld
+--- NUCLEO_STM32F746ZG/GCC/iwasm_sample/STM32F767ZITx_FLASH.ld	1970-01-01 08:00:00.000000000 +0800
++++ NUCLEO_STM32F767ZI/GCC/iwasm_sample/STM32F767ZITx_FLASH.ld	2019-12-16 15:34:55.374959516 +0800
+@@ -0,0 +1,189 @@
++/*
++******************************************************************************
++**
++
++**  File        : LinkerScript.ld
++**
++**  Author		: Auto-generated by Ac6 System Workbench
++**
++**  Abstract    : Linker script for STM32F767ZITx series
++**                2048Kbytes FLASH and 512Kbytes RAM
++**
++**                Set heap size, stack size and stack location according
++**                to application requirements.
++**
++**                Set memory bank area and size if external memory is used.
++**
++**  Target      : STMicroelectronics STM32
++**
++**  Distribution: The file is distributed “as is,” without any warranty
++**                of any kind.
++**
++*****************************************************************************
++** @attention
++**
++** <h2><center>&copy; COPYRIGHT(c) 2014 Ac6</center></h2>
++**
++** Redistribution and use in source and binary forms, with or without modification,
++** are permitted provided that the following conditions are met:
++**   1. Redistributions of source code must retain the above copyright notice,
++**      this list of conditions and the following disclaimer.
++**   2. Redistributions in binary form must reproduce the above copyright notice,
++**      this list of conditions and the following disclaimer in the documentation
++**      and/or other materials provided with the distribution.
++**   3. Neither the name of Ac6 nor the names of its contributors
++**      may be used to endorse or promote products derived from this software
++**      without specific prior written permission.
++**
++** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++** DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
++** FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
++** DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
++** SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
++** CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
++** OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++** OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++**
++*****************************************************************************
++*/
++
++/* Entry Point */
++ENTRY(Reset_Handler)
++
++/* Highest address of the user mode stack */
++_estack = 0x20080000;    /* end of RAM */
++/* Generate a link error if heap and stack don't fit into RAM */
++_Min_Heap_Size = 0x200;      /* required amount of heap  */
++_Min_Stack_Size = 0x400; /* required amount of stack */
++
++/* Specify the memory areas */
++MEMORY
++{
++RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 512K
++FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 2048K
++}
++
++/* Define output sections */
++SECTIONS
++{
++  /* The startup code goes first into FLASH */
++  .isr_vector :
++  {
++    . = ALIGN(4);
++    KEEP(*(.isr_vector)) /* Startup code */
++    . = ALIGN(4);
++  } >FLASH
++
++  /* The program code and other data goes into FLASH */
++  .text :
++  {
++    . = ALIGN(4);
++    *(.text)           /* .text sections (code) */
++    *(.text*)          /* .text* sections (code) */
++    *(.glue_7)         /* glue arm to thumb code */
++    *(.glue_7t)        /* glue thumb to arm code */
++    *(.eh_frame)
++
++    KEEP (*(.init))
++    KEEP (*(.fini))
++
++    . = ALIGN(4);
++    _etext = .;        /* define a global symbols at end of code */
++  } >FLASH
++
++  /* Constant data goes into FLASH */
++  .rodata :
++  {
++    . = ALIGN(4);
++    *(.rodata)         /* .rodata sections (constants, strings, etc.) */
++    *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
++    . = ALIGN(4);
++  } >FLASH
++
++  .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >FLASH
++  .ARM : {
++    __exidx_start = .;
++    *(.ARM.exidx*)
++    __exidx_end = .;
++  } >FLASH
++
++  .preinit_array     :
++  {
++    PROVIDE_HIDDEN (__preinit_array_start = .);
++    KEEP (*(.preinit_array*))
++    PROVIDE_HIDDEN (__preinit_array_end = .);
++  } >FLASH
++  .init_array :
++  {
++    PROVIDE_HIDDEN (__init_array_start = .);
++    KEEP (*(SORT(.init_array.*)))
++    KEEP (*(.init_array*))
++    PROVIDE_HIDDEN (__init_array_end = .);
++  } >FLASH
++  .fini_array :
++  {
++    PROVIDE_HIDDEN (__fini_array_start = .);
++    KEEP (*(SORT(.fini_array.*)))
++    KEEP (*(.fini_array*))
++    PROVIDE_HIDDEN (__fini_array_end = .);
++  } >FLASH
++
++  /* used by the startup to initialize data */
++  _sidata = LOADADDR(.data);
++
++  /* Initialized data sections goes into RAM, load LMA copy after code */
++  .data : 
++  {
++    . = ALIGN(4);
++    _sdata = .;        /* create a global symbol at data start */
++    *(.data)           /* .data sections */
++    *(.data*)          /* .data* sections */
++
++    . = ALIGN(4);
++    _edata = .;        /* define a global symbol at data end */
++  } >RAM AT> FLASH
++
++  
++  /* Uninitialized data section */
++  . = ALIGN(4);
++  .bss :
++  {
++    /* This is used by the startup in order to initialize the .bss secion */
++    _sbss = .;         /* define a global symbol at bss start */
++    __bss_start__ = _sbss;
++    *(.bss)
++    *(.bss*)
++    *(COMMON)
++
++    . = ALIGN(4);
++    _ebss = .;         /* define a global symbol at bss end */
++    __bss_end__ = _ebss;
++  } >RAM
++
++  /* User_heap_stack section, used to check that there is enough RAM left */
++  ._user_heap_stack :
++  {
++    . = ALIGN(8);
++    PROVIDE ( end = . );
++    PROVIDE ( _end = . );
++    . = . + _Min_Heap_Size;
++    . = . + _Min_Stack_Size;
++    . = ALIGN(8);
++  } >RAM
++
++  
++
++  /* Remove information from the standard libraries */
++  /DISCARD/ :
++  {
++    libc.a ( * )
++    libm.a ( * )
++    libgcc.a ( * )
++  }
++
++  .ARM.attributes 0 : { *(.ARM.attributes) }
++}
++
++

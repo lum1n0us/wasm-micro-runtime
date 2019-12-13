@@ -175,6 +175,30 @@ AliOS-Things
    ```
 9. download the binary to developerkit board, check the output from serial port
 
+TencentOS Tiny
+-------------------------
+Currently we have ported WAMR to NUCLEO_STM32F767ZI board<br/>
+Firstly you have to get a cross compiler for the specific target. For NUCLEO_STM32F767ZI board, we use arm-none-eabi-gcc. You can download it from [developer.arm.com](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads)<br/>
+Then you need to download the TencentOS Tiny source code and embed WAMR into it.
+```Bash
+git clone https://github.com/Tencent/TencentOS-tiny.git
+cd TencentOS-Tiny
+# NUCLEO_STM32F767ZI is not currently official supported by TencentOS
+# We had some modification based on its NUCLEO_STM32F746ZG board
+cp -r board/NUCLEO_STM32F746ZG board/NUCLEO_STM32F767ZI
+cd board/NUCLEO_STM32F767ZI
+patch -p1 < <iwasm_dir>/products/TencentOS-tiny/board/NUCLEO_STM32F767ZI.patch
+cd ../../examples
+cp -a <iwasm_dir>/products/TencentOS-tiny/simple .
+cd simple
+ln -s <iwam_dir> iwasm
+ln -s <shared_lib_dir> shared-lib
+cd ../../board/NUCLEO_STM32F767ZI/GCC/iwasm_sample
+make GCC_PATH=<Your Cross Toolchain Folder>/bin
+```
+
+If you want to build WAMR for other boards, please refer to the Makefile under `<TencentOS-tiny>/board/NUCLEO_STM32F767ZI/GCC/iwasm_sample`
+
 Docker
 -------------------------
 [Docker](https://www.docker.com/) will download all the dependencies and build WAMR Core on your behalf.
