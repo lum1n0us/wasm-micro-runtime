@@ -15,10 +15,11 @@ zephyr_compile_definitions (-DNVALGRIND
     -Dattr_container_malloc=bh_malloc
     -Dattr_container_free=bh_free)
 
-# Build as General by default, change to "ARM_32", "X86_32", "MIPS_32" or "XTENSA_32"
+# Build as THUMB by default
+# change to "ARM_32", "X86_32", "MIPS_32" or "XTENSA_32"
 # if we want to support arm_32, x86, mips or xtensa
 if (NOT DEFINED BUILD_TARGET)
-  set (BUILD_TARGET "General")
+  set (BUILD_TARGET "THUMB")
 endif ()
 
 string(TOUPPER ${BUILD_TARGET} BUILD_TARGET)
@@ -27,17 +28,12 @@ if (BUILD_TARGET STREQUAL "X86_32")
   add_definitions(-DBUILD_TARGET_X86_32)
 elseif (BUILD_TARGET STREQUAL "ARM_32")
   add_definitions(-DBUILD_TARGET_ARM_32)
+elseif (BUILD_TARGET STREQUAL "THUMB")
+  add_definitions(-DBUILD_TARGET_THUMB)
 elseif (BUILD_TARGET STREQUAL "MIPS_32")
   add_definitions(-DBUILD_TARGET_MIPS_32)
 elseif (BUILD_TARGET STREQUAL "XTENSA_32")
   add_definitions(-DBUILD_TARGET_XTENSA_32)
-elseif (BUILD_TARGET STREQUAL "GENERAL")
-  # Will use invokeNative_general.c instead of assembly code,
-  # but the maximum number of native arguments is limited to 20,
-  # and there are possible issues when passing arguments to
-  # native function for some cpus, e.g. int64 and double arguments
-  # in arm and mips need to be 8-bytes aligned, and some arguments
-  # of x86_64 are passed by registers but not stack
 else ()
   message (FATAL_ERROR "-- Build target isn't set")
 endif ()

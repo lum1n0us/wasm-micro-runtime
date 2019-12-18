@@ -12,8 +12,8 @@ set (PLATFORM "zephyr")
 
 add_definitions (-DNVALGRIND)
 
-# Build as X86_32 by default, change to "ARM_32", "MIPS_32" or "XTENSA_32"
-# if we want to support arm, mips or xtensa
+# Build as X86_32 by default, change to "ARM_32", "THUMB", "MIPS_32" or "XTENSA_32"
+# if we want to support arm, thumb, mips or xtensa
 if (NOT DEFINED BUILD_TARGET)
   set (BUILD_TARGET "X86_32")
 endif ()
@@ -24,6 +24,8 @@ if (BUILD_TARGET STREQUAL "X86_32")
   add_definitions(-DBUILD_TARGET_X86_32)
 elseif (BUILD_TARGET STREQUAL "ARM_32")
   add_definitions(-DBUILD_TARGET_ARM_32)
+elseif (BUILD_TARGET STREQUAL "THUMB")
+  add_definitions(-DBUILD_TARGET_THUMB)
 elseif (BUILD_TARGET STREQUAL "MIPS_32")
   add_definitions(-DBUILD_TARGET_MIPS_32)
 elseif (BUILD_TARGET STREQUAL "XTENSA_32")

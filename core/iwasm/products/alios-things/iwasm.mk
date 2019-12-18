@@ -5,6 +5,30 @@ NAME := iwasm
 IWASM_ROOT := iwasm
 SHARED_LIB_ROOT := shared-lib
 
+BUILD_TARGET := X86_32
+
+ifeq (${BUILD_TARGET}, X86_32)
+  GLOBAL_INCLUDES += BUILD_TARGET_X86_32
+  INVOKE_NATIVE := invokeNative_ia32.s
+else ifeq (${BUILD_TARGET}, X86_64)
+  GLOBAL_INCLUDES += BUILD_TARGET_X86_64
+  INVOKE_NATIVE := invokeNative_em64.s
+else ifeq (${BUILD_TARGET}, ARM_32)
+  GLOBAL_INCLUDES += BUILD_TARGET_ARM_32
+  INVOKE_NATIVE := invokeNative_arm.s
+else ifeq (${BUILD_TARGET}, THUMB)
+  GLOBAL_INCLUDES += BUILD_TARGET_THUMB
+  INVOKE_NATIVE := invokeNative_thumb.s
+else ifeq (${BUILD_TARGET}, MIPS_32)
+  GLOBAL_INCLUDES += BUILD_TARGET_MIPS_32
+  INVOKE_NATIVE := invokeNative_mips.s
+else ifeq (${BUILD_TARGET}, XTENSA_32)
+  GLOBAL_INCLUDES += BUILD_TARGET_XTENSA_32
+  INVOKE_NATIVE := invokeNative_xtensa.s
+else
+  $(error Build target isn't set)
+endif
+
 GLOBAL_DEFINES += NVALGRIND
 GLOBAL_INCLUDES += ${IWASM_ROOT}/runtime/include \
                    ${IWASM_ROOT}/runtime/platform/include \
@@ -21,7 +45,7 @@ $(NAME)_SOURCES := ${IWASM_ROOT}/runtime/utils/wasm_hashmap.c \
                    ${IWASM_ROOT}/runtime/vmcore-wasm/wasm_interp.c \
                    ${IWASM_ROOT}/runtime/vmcore-wasm/wasm_loader.c \
                    ${IWASM_ROOT}/runtime/vmcore-wasm/wasm_runtime.c \
-                   ${IWASM_ROOT}/runtime/vmcore-wasm/invokeNative_general.c \
+                   ${IWASM_ROOT}/runtime/vmcore-wasm/${INVOKE_NATIVE} \
                    ${IWASM_ROOT}/lib/native/libc/libc_builtin_wrapper.c \
                    ${IWASM_ROOT}/lib/native/base/base_lib_export.c \
                    ${SHARED_LIB_ROOT}/platform/alios/bh_platform.c \
