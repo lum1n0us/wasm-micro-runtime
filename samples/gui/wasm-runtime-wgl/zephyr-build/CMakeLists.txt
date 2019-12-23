@@ -17,7 +17,7 @@ zephyr_compile_definitions (-DNVALGRIND
     -DWASM_ENABLE_GUI=1)
 
 # Build as THUMB by default
-# change to "ARM_32", "X86_32", "MIPS_32" or "XTENSA_32"
+# change to "ARM[sub]", "THUMB[sub]", "X86_32", "MIPS" or "XTENSA"
 # if we want to support arm_32, x86, mips or xtensa
 if (NOT DEFINED BUILD_TARGET)
   set (BUILD_TARGET "THUMB")
@@ -27,14 +27,16 @@ string(TOUPPER ${BUILD_TARGET} BUILD_TARGET)
 
 if (BUILD_TARGET STREQUAL "X86_32")
   add_definitions(-DBUILD_TARGET_X86_32)
-elseif (BUILD_TARGET STREQUAL "ARM_32")
-  add_definitions(-DBUILD_TARGET_ARM_32)
-elseif (BUILD_TARGET STREQUAL "THUMB")
+elseif (BUILD_TARGET MATCHES "ARM.*")
+  add_definitions(-DBUILD_TARGET_ARM)
+  add_definitions(-DBUILD_TARGET="${BUILD_TARGET}")
+elseif (BUILD_TARGET MATCHES "THUMB.*")
   add_definitions(-DBUILD_TARGET_THUMB)
-elseif (BUILD_TARGET STREQUAL "MIPS_32")
-  add_definitions(-DBUILD_TARGET_MIPS_32)
-elseif (BUILD_TARGET STREQUAL "XTENSA_32")
-  add_definitions(-DBUILD_TARGET_XTENSA_32)
+  add_definitions(-DBUILD_TARGET="${BUILD_TARGET}")
+elseif (BUILD_TARGET STREQUAL "MIPS")
+  add_definitions(-DBUILD_TARGET_MIPS)
+elseif (BUILD_TARGET STREQUAL "XTENSA")
+  add_definitions(-DBUILD_TARGET_XTENSA)
 else ()
   message (FATAL_ERROR "-- Build target isn't set")
 endif ()
