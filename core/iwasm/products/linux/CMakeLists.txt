@@ -104,7 +104,9 @@ include (${SHARED_LIB_DIR}/utils/shared_utils.cmake)
 
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wformat -Wformat-security")
 # set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wconversion -Wsign-conversion")
+if (BUILD_TARGET MATCHES "X86_.*" OR BUILD_TARGET STREQUAL "AMD_64")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mindirect-branch-register")
+endif ()
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-strong --param ssp-buffer-size=4")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,-z,noexecstack,-z,relro,-z,now")
 
