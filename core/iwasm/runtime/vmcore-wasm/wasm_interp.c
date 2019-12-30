@@ -1727,16 +1727,37 @@ wasm_interp_call_func_bytecode(WASMThread *self,
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_I32_SHL):
+      {
+#if defined(BUILD_TARGET_ARM) || defined(BUILD_TARGET_THUMB)
+        uint32 b;
+        b = (uint32)POP_I32();
+        PUSH_I32(b % 32);
+#endif
         DEF_OP_NUMERIC(uint32, uint32, I32, <<);
         HANDLE_OP_END ();
+      }
 
       HANDLE_OP (WASM_OP_I32_SHR_S):
+      {
+#if defined(BUILD_TARGET_ARM) || defined(BUILD_TARGET_THUMB)
+        uint32 b;
+        b = (uint32)POP_I32();
+        PUSH_I32(b % 32);
+#endif
         DEF_OP_NUMERIC(int32, uint32, I32, >>);
         HANDLE_OP_END ();
+      }
 
       HANDLE_OP (WASM_OP_I32_SHR_U):
+      {
+#if defined(BUILD_TARGET_ARM) || defined(BUILD_TARGET_THUMB)
+        uint32 b;
+        b = (uint32)POP_I32();
+        PUSH_I32(b % 32);
+#endif
         DEF_OP_NUMERIC(uint32, uint32, I32, >>);
         HANDLE_OP_END ();
+      }
 
       HANDLE_OP (WASM_OP_I32_ROTL):
       {
@@ -1860,16 +1881,37 @@ wasm_interp_call_func_bytecode(WASMThread *self,
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_I64_SHL):
+      {
+#if defined(BUILD_TARGET_ARM) || defined(BUILD_TARGET_THUMB)
+        uint64 b;
+        b = (uint64)POP_I64();
+        PUSH_I64(b % 64);
+#endif
         DEF_OP_NUMERIC_64(uint64, uint64, I64, <<);
         HANDLE_OP_END ();
+      }
 
       HANDLE_OP (WASM_OP_I64_SHR_S):
+      {
+#if defined(BUILD_TARGET_ARM) || defined(BUILD_TARGET_THUMB)
+        uint64 b;
+        b = (uint64)POP_I64();
+        PUSH_I64(b % 64);
+#endif
         DEF_OP_NUMERIC_64(int64, uint64, I64, >>);
         HANDLE_OP_END ();
+      }
 
       HANDLE_OP (WASM_OP_I64_SHR_U):
+      {
+#if defined(BUILD_TARGET_ARM) || defined(BUILD_TARGET_THUMB)
+        uint64 b;
+        b = (uint64)POP_I64();
+        PUSH_I64(b % 64);
+#endif
         DEF_OP_NUMERIC_64(uint64, uint64, I64, >>);
         HANDLE_OP_END ();
+      }
 
       HANDLE_OP (WASM_OP_I64_ROTL):
       {

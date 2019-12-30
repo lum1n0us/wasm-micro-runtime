@@ -272,7 +272,13 @@ wasm_application_execute_func(WASMModuleInstance *module_inst,
                 float32 f32 = strtof(argv[i], &endptr);
                 if (isnan(f32)) {
                     if (argv[i][0] == '-') {
-                        f32 = -f32;
+                        union ieee754_float u;
+                        u.f = f32;
+                        if (is_little_endian())
+                            u.ieee.ieee_little_endian.negative = 1;
+                        else
+                            u.ieee.ieee_big_endian.negative = 1;
+                        memcpy(&f32, &u.f, sizeof(float));
                     }
                     if (endptr[0] == ':') {
                         uint32 sig;
@@ -295,7 +301,13 @@ wasm_application_execute_func(WASMModuleInstance *module_inst,
                 u.val = strtod(argv[i], &endptr);
                 if (isnan(u.val)) {
                     if (argv[i][0] == '-') {
-                        u.val = -u.val;
+                        union ieee754_double ud;
+                        ud.d = u.val;
+                        if (is_little_endian())
+                            ud.ieee.ieee_little_endian.negative = 1;
+                        else
+                            ud.ieee.ieee_big_endian.negative = 1;
+                        memcpy(&u.val, &ud.d, sizeof(double));
                     }
                     if (endptr[0] == ':') {
                         uint64 sig;
