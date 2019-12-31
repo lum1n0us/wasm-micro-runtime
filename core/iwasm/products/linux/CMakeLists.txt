@@ -64,6 +64,11 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   endif ()
 endif ()
 
+if (BUILD_TARGET STREQUAL "X86_32")
+  # X86_32 doesn't support wasi currently
+  set (WASM_ENABLE_WASI 0)
+endif ()
+
 if (NOT DEFINED WASM_ENABLE_WASI)
   # Enable wasi support by default
   set (WASM_ENABLE_WASI 1)
