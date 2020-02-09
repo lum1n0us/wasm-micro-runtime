@@ -1646,9 +1646,11 @@ load(const uint8 *buf, uint32 size, WASMModule *module,
     return true;
 }
 
+const uint8* wasm_file;
 WASMModule*
 wasm_loader_load(const uint8 *buf, uint32 size, char *error_buf, uint32 error_buf_size)
 {
+    wasm_file = buf;
     WASMModule *module = wasm_malloc(sizeof(WASMModule));
 
     if (!module) {
@@ -1883,6 +1885,15 @@ wasm_loader_find_block_addr(WASMModule *module,
             case WASM_OP_GET_GLOBAL:
             case WASM_OP_SET_GLOBAL:
                 read_leb_uint32(p, p_end, u32); /* localidx */
+                break;
+
+            case WASM_OP_GET_LOCAL_FAST:
+            case WASM_OP_SET_LOCAL_FAST:
+            case WASM_OP_TEE_LOCAL_FAST:
+            case WASM_OP_GET_GLOBAL_FAST:
+            case WASM_OP_SET_GLOBAL_FAST:
+                CHECK_BUF(p, p_end, 1);
+                p++;
                 break;
 
             case WASM_OP_I32_LOAD:
