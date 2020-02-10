@@ -803,7 +803,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 {
   WASMMemoryInstance *memory = module->default_memory;
   uint32 memory_data_size = memory
-                            ? NumBytesPerPage * memory->cur_page_count : 0;
+                            ? memory->num_bytes_per_page * memory->cur_page_count : 0;
   uint32 heap_base_offset = memory ? (uint32)memory->heap_base_offset : 0;
   uint32 heap_data_size = memory
                           ? (uint32)(memory->heap_data_end - memory->heap_data) : 0;
@@ -1542,7 +1542,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
           PUSH_I32(prev_page_count);
           /* update the memory instance ptr */
           memory = module->default_memory;
-          memory_data_size = NumBytesPerPage * memory->cur_page_count;
+          memory_data_size = memory->num_bytes_per_page * memory->cur_page_count;
           global_data = memory->global_data;
         }
 
