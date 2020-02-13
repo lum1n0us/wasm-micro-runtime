@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2019 Intel Corporation.  All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ */
+
 @external("env", "wasm_create_timer")
 declare function wasm_create_timer(a: i32, b: bool, c: bool): i32;
 
