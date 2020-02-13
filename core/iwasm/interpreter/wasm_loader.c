@@ -820,6 +820,39 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 }
 
 static bool
+init_function_local_offsets(WASMFunction *func,
+                            char *error_buf, uint32 error_buf_size)
+{
+    WASMType *param_type = func->func_type;
+    uint32 param_count = param_type->param_count;
+    uint8 *param_types = param_type->types;
+    uint32 local_count = func->local_count;
+    uint8 *local_types = func->local_types;
+    uint32 i, local_offset = 0;
+    uint64 total_size = sizeof(uint16) * ((uint64)param_count + local_count);
+
+    if (total_size >= UINT32_MAX
+        || !(func->local_offsets = wasm_malloc((uint32)total_size))) {
+        set_error_buf(error_buf, error_buf_size,
+                      "Load function section failed: allocate memory failed.");
+        return false;
+    }
+
+    for (i = 0; i < param_count; i++) {
+        func->local_offsets[i] = (uint16)local_offset;
+        local_offset += wasm_value_type_cell_num(param_types[i]);
+    }
+
+    for (i = 0; i < local_count; i++) {
+        func->local_offsets[param_count + i] = (uint16)local_offset;
+        local_offset += wasm_value_type_cell_num(local_types[i]);
+    }
+
+    bh_assert(local_offset == func->param_cell_num + func->local_cell_num);
+    return true;
+}
+
+static bool
 load_function_section(const uint8 *buf, const uint8 *buf_end,
                       const uint8 *buf_code, const uint8 *buf_code_end,
                       WASMModule *module,
@@ -944,6 +977,15 @@ load_function_section(const uint8 *buf, const uint8 *buf_end,
                     func->local_types[local_type_index++] = type;
                 }
             }
+
+            func->param_cell_num = wasm_type_param_cell_num(func->func_type);
+            func->ret_cell_num = wasm_type_return_cell_num(func->func_type);
+            func->local_cell_num =
+                wasm_get_cell_num(func->local_types, func->local_count);
+
+            if (!init_function_local_offsets(func, error_buf, error_buf_size))
+                return false;
+
             p_code = p_code_end;
         }
     }
@@ -1898,8 +1940,11 @@ wasm_loader_unload(WASMModule *module)
 
     if (module->functions) {
         for (i = 0; i < module->function_count; i++) {
-            if (module->functions[i])
+            if (module->functions[i]) {
+                if (module->functions[i]->local_offsets)
+                    wasm_free(module->functions[i]->local_offsets);
                 wasm_free(module->functions[i]);
+            }
         }
         wasm_free(module->functions);
     }
@@ -2081,8 +2126,6 @@ wasm_loader_find_block_addr(WASMModule *module,
             case WASM_OP_GET_LOCAL_FAST:
             case WASM_OP_SET_LOCAL_FAST:
             case WASM_OP_TEE_LOCAL_FAST:
-            case WASM_OP_GET_GLOBAL_FAST:
-            case WASM_OP_SET_GLOBAL_FAST:
                 CHECK_BUF(p, p_end, 1);
                 p++;
                 break;
@@ -2570,7 +2613,7 @@ pop_type(uint8 type, uint8 **p_frame_ref, uint32 *p_stack_cell_num,
     csp_num--;                                      \
   } while (0)
 
-#define GET_LOCAL_INDEX_AND_TYPE() do {             \
+#define GET_LOCAL_INDEX_TYPE_AND_OFFSET() do {      \
     read_leb_uint32(p, p_end, local_idx);           \
     if (local_idx >= param_count + local_count) {   \
       set_error_buf(error_buf, error_buf_size,      \
@@ -2581,6 +2624,7 @@ pop_type(uint8 type, uint8 **p_frame_ref, uint32 *p_stack_cell_num,
     local_type = local_idx < param_count            \
         ? param_types[local_idx]                    \
         : local_types[local_idx - param_count];     \
+    local_offset = local_offsets[local_idx];        \
   } while (0)
 
 #define CHECK_BR(depth) do {                                        \
@@ -2644,6 +2688,7 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
     uint32 stack_cell_num = 0, csp_num = 0;
     uint32 frame_ref_size, frame_csp_size;
     uint8 *param_types, ret_type, *local_types, local_type, global_type;
+    uint16 *local_offsets, local_offset;
     uint32 count, i, local_idx, global_idx, depth, u32;
     int32 i32, i32_const = 0;
     int64 i64;
@@ -2659,6 +2704,7 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
 
     local_count = func->local_count;
     local_types = func->local_types;
+    local_offsets = func->local_offsets;
 
     frame_ref_size = 32;
     if (!(frame_ref_bottom = frame_ref = wasm_malloc(frame_ref_size))) {
@@ -2995,23 +3041,65 @@ handle_next_reachable_block:
 
             case WASM_OP_GET_LOCAL:
             {
-                GET_LOCAL_INDEX_AND_TYPE();
+                uint8 *p_org = p - 1;
+
+                GET_LOCAL_INDEX_TYPE_AND_OFFSET();
                 PUSH_TYPE(local_type);
+
+                if (local_offset < 0x80) {
+                    *p_org++ = WASM_OP_GET_LOCAL_FAST;
+                    if (local_type == VALUE_TYPE_I32
+                        || local_type == VALUE_TYPE_F32)
+                        *p_org++ = (uint8)local_offset;
+                    else
+                        *p_org++ = (uint8)(local_offset | 0x80);
+                    while (p_org < p)
+                        *p_org++ = WASM_OP_NOP;
+                }
+
                 break;
             }
 
             case WASM_OP_SET_LOCAL:
             {
-                GET_LOCAL_INDEX_AND_TYPE();
+                uint8 *p_org = p - 1;
+
+                GET_LOCAL_INDEX_TYPE_AND_OFFSET();
                 POP_TYPE(local_type);
+
+                if (local_offset < 0x80) {
+                    *p_org++ = WASM_OP_SET_LOCAL_FAST;
+                    if (local_type == VALUE_TYPE_I32
+                        || local_type == VALUE_TYPE_F32)
+                        *p_org++ = (uint8)local_offset;
+                    else
+                        *p_org++ = (uint8)(local_offset | 0x80);
+                    while (p_org < p)
+                        *p_org++ = WASM_OP_NOP;
+                }
+
                 break;
             }
 
             case WASM_OP_TEE_LOCAL:
             {
-                GET_LOCAL_INDEX_AND_TYPE();
+                uint8 *p_org = p - 1;
+
+                GET_LOCAL_INDEX_TYPE_AND_OFFSET();
                 POP_TYPE(local_type);
                 PUSH_TYPE(local_type);
+
+                if (local_offset < 0x80) {
+                    *p_org++ = WASM_OP_TEE_LOCAL_FAST;
+                    if (local_type == VALUE_TYPE_I32
+                        || local_type == VALUE_TYPE_F32)
+                        *p_org++ = (uint8)local_offset;
+                    else
+                        *p_org++ = (uint8)(local_offset | 0x80);
+                    while (p_org < p)
+                        *p_org++ = WASM_OP_NOP;
+                }
+
                 break;
             }
 
