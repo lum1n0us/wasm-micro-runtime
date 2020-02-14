@@ -2680,7 +2680,7 @@ static bool
 wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
                              char *error_buf, uint32 error_buf_size)
 {
-    uint8 *p = func->code, *p_end = func->code + func->code_size;
+    uint8 *p = func->code, *p_end = func->code + func->code_size, *p_org;
     uint8 *frame_ref_bottom = NULL, *frame_ref_boundary, *frame_ref;
     BranchBlock *frame_csp_bottom = NULL, *frame_csp_boundary, *frame_csp;
     uint32 param_count, local_count, global_count;
@@ -3041,11 +3041,12 @@ handle_next_reachable_block:
 
             case WASM_OP_GET_LOCAL:
             {
-                uint8 *p_org = p - 1;
+                p_org = p - 1;
 
                 GET_LOCAL_INDEX_TYPE_AND_OFFSET();
                 PUSH_TYPE(local_type);
 
+#ifndef BUILD_AOT_COMPILER /* don't change opcode when building aot compiler */
                 if (local_offset < 0x80) {
                     *p_org++ = WASM_OP_GET_LOCAL_FAST;
                     if (local_type == VALUE_TYPE_I32
@@ -3056,17 +3057,19 @@ handle_next_reachable_block:
                     while (p_org < p)
                         *p_org++ = WASM_OP_NOP;
                 }
+#endif
 
                 break;
             }
 
             case WASM_OP_SET_LOCAL:
             {
-                uint8 *p_org = p - 1;
+                p_org = p - 1;
 
                 GET_LOCAL_INDEX_TYPE_AND_OFFSET();
                 POP_TYPE(local_type);
 
+#ifndef BUILD_AOT_COMPILER /* don't change opcode when building aot compiler */
                 if (local_offset < 0x80) {
                     *p_org++ = WASM_OP_SET_LOCAL_FAST;
                     if (local_type == VALUE_TYPE_I32
@@ -3077,18 +3080,20 @@ handle_next_reachable_block:
                     while (p_org < p)
                         *p_org++ = WASM_OP_NOP;
                 }
+#endif
 
                 break;
             }
 
             case WASM_OP_TEE_LOCAL:
             {
-                uint8 *p_org = p - 1;
+                p_org = p - 1;
 
                 GET_LOCAL_INDEX_TYPE_AND_OFFSET();
                 POP_TYPE(local_type);
                 PUSH_TYPE(local_type);
 
+#ifndef BUILD_AOT_COMPILER /* don't change opcode when building aot compiler */
                 if (local_offset < 0x80) {
                     *p_org++ = WASM_OP_TEE_LOCAL_FAST;
                     if (local_type == VALUE_TYPE_I32
@@ -3099,6 +3104,7 @@ handle_next_reachable_block:
                     while (p_org < p)
                         *p_org++ = WASM_OP_NOP;
                 }
+#endif
 
                 break;
             }
@@ -3554,5 +3560,7 @@ fail:
     (void)u32;
     (void)i32;
     (void)i64;
+    (void)local_offset;
+    (void)p_org;
     return return_value;
 }
