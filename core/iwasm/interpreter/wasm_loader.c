@@ -726,7 +726,7 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
                     if (!(import->u.function.func_ptr_linked =
                                 resolve_sym(module_name, field_name))) {
-#ifndef BUILD_AOT_COMPILER /* Output warning except running aot compiler */
+#ifndef WASM_ENABLE_WAMR_COMPILER /* Output warning except running aot compiler */
                         LOG_WARNING("warning: fail to link import function (%s, %s)\n",
                                     module_name, field_name);
 #endif
@@ -2109,9 +2109,7 @@ wasm_loader_find_block_addr(WASMModule *module,
 
             case WASM_OP_DROP:
             case WASM_OP_SELECT:
-            case WASM_OP_DROP_32:
             case WASM_OP_DROP_64:
-            case WASM_OP_SELECT_32:
             case WASM_OP_SELECT_64:
                 break;
 
@@ -2992,7 +2990,6 @@ handle_next_reachable_block:
                     || *(frame_ref - 1) == REF_F32) {
                     frame_ref--;
                     stack_cell_num--;
-                    *(p - 1) = WASM_OP_DROP_32;
                 }
                 else {
                     if (stack_cell_num <= 1) {
@@ -3024,7 +3021,6 @@ handle_next_reachable_block:
                 switch (*(frame_ref - 1)) {
                     case REF_I32:
                     case REF_F32:
-                        *(p - 1) = WASM_OP_SELECT_32;
                         break;
                     case REF_I64_2:
                     case REF_F64_2:
@@ -3046,7 +3042,7 @@ handle_next_reachable_block:
                 GET_LOCAL_INDEX_TYPE_AND_OFFSET();
                 PUSH_TYPE(local_type);
 
-#ifndef BUILD_AOT_COMPILER /* don't change opcode when building aot compiler */
+#if !defined(WASM_ENABLE_WAMR_COMPILER) && !defined(WASM_ENABLE_JIT)
                 if (local_offset < 0x80) {
                     *p_org++ = WASM_OP_GET_LOCAL_FAST;
                     if (local_type == VALUE_TYPE_I32
@@ -3058,7 +3054,6 @@ handle_next_reachable_block:
                         *p_org++ = WASM_OP_NOP;
                 }
 #endif
-
                 break;
             }
 
@@ -3069,7 +3064,7 @@ handle_next_reachable_block:
                 GET_LOCAL_INDEX_TYPE_AND_OFFSET();
                 POP_TYPE(local_type);
 
-#ifndef BUILD_AOT_COMPILER /* don't change opcode when building aot compiler */
+#if !defined(WASM_ENABLE_WAMR_COMPILER) && !defined(WASM_ENABLE_JIT)
                 if (local_offset < 0x80) {
                     *p_org++ = WASM_OP_SET_LOCAL_FAST;
                     if (local_type == VALUE_TYPE_I32
@@ -3093,7 +3088,7 @@ handle_next_reachable_block:
                 POP_TYPE(local_type);
                 PUSH_TYPE(local_type);
 
-#ifndef BUILD_AOT_COMPILER /* don't change opcode when building aot compiler */
+#if !defined(WASM_ENABLE_WAMR_COMPILER) && !defined(WASM_ENABLE_JIT)
                 if (local_offset < 0x80) {
                     *p_org++ = WASM_OP_TEE_LOCAL_FAST;
                     if (local_type == VALUE_TYPE_I32
