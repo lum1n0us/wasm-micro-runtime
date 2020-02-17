@@ -270,11 +270,10 @@ check_utf8_str(const uint8* str, uint32 len)
 }
 
 static char*
-const_str_set_insert(const uint8 *str, uint32 len, WASMModule *module,
+const_str_list_insert(const uint8 *str, uint32 len, WASMModule *module,
                      char* error_buf, uint32 error_buf_size)
 {
-    HashMap *set = module->const_str_set;
-    char *c_str, *value;
+    StringNode *node, *node_next;
 
     if (!check_utf8_str(str, len)) {
         set_error_buf(error_buf, error_buf_size,
@@ -283,30 +282,42 @@ const_str_set_insert(const uint8 *str, uint32 len, WASMModule *module,
         return NULL;
     }
 
-    if (!(c_str = wasm_malloc(len + 1))) {
+    /* Search const str list */
+    node = module->const_str_list;
+    while (node) {
+        node_next = node->next;
+        if (strlen(node->str) == len
+            && !memcmp(node->str, str, len))
+            break;
+        node = node_next;
+    }
+
+    if (node)
+        return node->str;
+
+    if (!(node = wasm_malloc(sizeof(StringNode) + len + 1))) {
         set_error_buf(error_buf, error_buf_size,
                       "WASM module load failed: "
                       "allocate memory failed.");
         return NULL;
     }
 
-    bh_memcpy_s(c_str, len + 1, str, len);
-    c_str[len] = '\0';
+    node->str = ((char*)node) + sizeof(StringNode);
+    bh_memcpy_s(node->str, len + 1, str, len);
+    node->str[len] = '\0';
 
-    if ((value = bh_hash_map_find(set, c_str))) {
-        wasm_free(c_str);
-        return value;
+    if (!module->const_str_list) {
+        /* set as head */
+        module->const_str_list = node;
+        node->next = NULL;
+    }
+    else {
+        /* insert it */
+        node->next = module->const_str_list;
+        module->const_str_list = node;
     }
 
-    if (!bh_hash_map_insert(set, c_str, c_str)) {
-        set_error_buf(error_buf, error_buf_size,
-                      "WASM module load failed: "
-                      "insert string to hash map failed.");
-        wasm_free(c_str);
-        return NULL;
-    }
-
-    return c_str;
+    return node->str;
 }
 
 static bool
@@ -683,12 +694,19 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
         p = p_old;
 
+        /* insert "env" and "wasi_unstable" to const str list */
+        if (!const_str_list_insert((uint8*)"env", 3, module, error_buf, error_buf_size)
+            || !const_str_list_insert((uint8*)"wasi_unstable", 13, module,
+                                     error_buf, error_buf_size)) {
+            return false;
+        }
+
         /* Scan again to read the data */
         for (i = 0; i < import_count; i++) {
             /* load module name */
             read_leb_uint32(p, p_end, name_len);
             CHECK_BUF(p, p_end, name_len);
-            if (!(module_name = const_str_set_insert
+            if (!(module_name = const_str_list_insert
                         (p, name_len, module, error_buf, error_buf_size))) {
                 return false;
             }
@@ -697,7 +715,7 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
             /* load field name */
             read_leb_uint32(p, p_end, name_len);
             CHECK_BUF(p, p_end, name_len);
-            if (!(field_name = const_str_set_insert
+            if (!(field_name = const_str_list_insert
                         (p, name_len, module, error_buf, error_buf_size))) {
                 return false;
             }
@@ -1176,7 +1194,7 @@ load_export_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
         for (i = 0; i < export_count; i++, export++) {
             read_leb_uint32(p, p_end, str_len);
             CHECK_BUF(p, p_end, str_len);
-            if (!(export->name = const_str_set_insert(p, str_len, module,
+            if (!(export->name = const_str_list_insert(p, str_len, module,
                             error_buf, error_buf_size))) {
                 return false;
             }
@@ -1709,22 +1727,7 @@ create_module(char *error_buf, uint32 error_buf_size)
     /* Set start_function to -1, means no start function */
     module->start_function = (uint32)-1;
 
-    if (!(module->const_str_set = bh_hash_map_create(32, false,
-                    (HashFunc)wasm_string_hash,
-                    (KeyEqualFunc)wasm_string_equal,
-                    NULL,
-                    wasm_loader_free))) {
-        set_error_buf(error_buf, error_buf_size,
-                      "WASM module load failed: "
-                      "create const string set failed.");
-        goto fail;
-    }
-
     return module;
-
-fail:
-    wasm_loader_unload(module);
-    return NULL;
 }
 
 WASMModule *
@@ -1900,14 +1903,6 @@ wasm_loader_load(const uint8 *buf, uint32 size, char *error_buf, uint32 error_bu
     /* Set start_function to -1, means no start function */
     module->start_function = (uint32)-1;
 
-    if (!(module->const_str_set =
-                bh_hash_map_create(32, false,
-                                   (HashFunc)wasm_string_hash,
-                                   (KeyEqualFunc)wasm_string_equal,
-                                   NULL,
-                                   wasm_loader_free)))
-        goto fail;
-
     if (!load(buf, size, module, error_buf, error_buf_size))
         goto fail;
 
@@ -1977,8 +1972,14 @@ wasm_loader_unload(WASMModule *module)
         wasm_free(module->data_segments);
     }
 
-    if (module->const_str_set)
-        bh_hash_map_destroy(module->const_str_set);
+    if (module->const_str_list) {
+        StringNode *node = module->const_str_list, *node_next;
+        while (node) {
+            node_next = node->next;
+            wasm_free(node);
+            node = node_next;
+        }
+    }
 
     wasm_free(module);
 }
