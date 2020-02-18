@@ -457,16 +457,12 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
     frame_sp = (frame_csp - 1)->frame_sp;                       \
     switch ((frame_csp - 1)->return_type) {                     \
       case VALUE_TYPE_I32:                                      \
+      case VALUE_TYPE_F32:                                      \
         PUSH_I32(*(frame_sp_old - 1));                          \
         break;                                                  \
       case VALUE_TYPE_I64:                                      \
-        PUSH_I64(GET_I64_FROM_ADDR(frame_sp_old - 2));          \
-        break;                                                  \
-      case VALUE_TYPE_F32:                                      \
-        PUSH_F32(*(float32*)(frame_sp_old - 1));                \
-        break;                                                  \
       case VALUE_TYPE_F64:                                      \
-        PUSH_F64(GET_F64_FROM_ADDR(frame_sp_old - 2));          \
+        PUSH_I64(GET_I64_FROM_ADDR(frame_sp_old - 2));          \
         break;                                                  \
     }                                                           \
   } while (0)
@@ -531,12 +527,19 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
   p += _off;                                    \
 } while (0)
 
+#if WASM_ENABLE_LABELS_AS_VALUES == 0
+#define RECOVER_FRAME_IP_END() \
+    frame_ip_end = wasm_get_func_code_end(cur_func)
+#else
+#define RECOVER_FRAME_IP_END() (void)0
+#endif
+
 #define RECOVER_CONTEXT(new_frame) do {                             \
     frame = (new_frame);                                            \
     cur_func = frame->function;                                     \
     prev_frame = frame->prev_frame;                                 \
     frame_ip = frame->ip;                                           \
-    frame_ip_end = wasm_get_func_code_end(cur_func);                \
+    RECOVER_FRAME_IP_END();                                         \
     frame_lp = frame->lp;                                           \
     frame_sp = frame->sp;                                           \
     frame_csp = frame->csp;                                         \
@@ -801,13 +804,12 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
   uint32 memory_data_size = memory ? num_bytes_per_page * memory->cur_page_count : 0;
   uint32 heap_base_offset = memory ? (uint32)memory->heap_base_offset : 0;
   uint32 heap_data_size = memory ? (uint32)(memory->heap_data_end - memory->heap_data) : 0;
+  uint8 *global_data = memory ? memory->global_data : NULL;
   WASMTableInstance *table = module->default_table;
   WASMGlobalInstance *globals = module->globals;
-  uint8 *global_data = memory ? memory->global_data : NULL;
   uint8 opcode_IMPDEP = WASM_OP_IMPDEP;
   WASMInterpFrame *frame = NULL;
-  /* Points to this special opcode so as to jump to the
-     call_method_from_entry.  */
+  /* Points to this special opcode so as to jump to the call_method_from_entry.  */
   register uint8  *frame_ip = &opcode_IMPDEP; /* cache of frame->ip */
   register uint32 *frame_lp = NULL;  /* cache of frame->lp */
   register uint32 *frame_sp = NULL;  /* cache of frame->sp */
@@ -862,7 +864,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
         }
         else {
           if (!wasm_loader_find_block_addr(module->module,
-                                           frame_ip, frame_ip_end,
+                                           frame_ip, (uint8*)-1,
                                            BLOCK_TYPE_BLOCK,
                                            &else_addr, &end_addr,
                                            NULL, 0)) {
@@ -885,7 +887,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
         }
         else {
           if (!wasm_loader_find_block_addr(module->module,
-                                           frame_ip, frame_ip_end,
+                                           frame_ip, (uint8*)-1,
                                            BLOCK_TYPE_LOOP,
                                            &else_addr, &end_addr,
                                            NULL, 0)) {
@@ -909,7 +911,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
         }
         else {
           if (!wasm_loader_find_block_addr(module->module,
-                                           frame_ip, frame_ip_end,
+                                           frame_ip, (uint8*)-1,
                                            BLOCK_TYPE_IF,
                                            &else_addr, &end_addr,
                                            NULL, 0)) {
@@ -1052,12 +1054,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
       /* parametric instructions */
       HANDLE_OP (WASM_OP_DROP):
         {
-          wasm_set_exception(module, "WASM interp failed: unsupported opcode.");
-          goto got_exception;
-        }
-
-      HANDLE_OP (WASM_OP_DROP_32):
-        {
           frame_sp--;
           HANDLE_OP_END ();
         }
@@ -1069,12 +1065,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
         }
 
       HANDLE_OP (WASM_OP_SELECT):
-        {
-          wasm_set_exception(module, "WASM interp failed: unsupported opcode.");
-          goto got_exception;
-        }
-
-      HANDLE_OP (WASM_OP_SELECT_32):
         {
           cond = (uint32)POP_I32();
           frame_sp--;
@@ -2124,8 +2114,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
         }
 
       HANDLE_OP (WASM_OP_I32_TRUNC_S_F32):
-        /* Copy the float32/float64 values from WAVM, need to test more.
-           We don't use INT32_MIN/INT32_MAX/UINT32_MIN/UINT32_MAX,
+        /* We don't use INT32_MIN/INT32_MAX/UINT32_MIN/UINT32_MAX,
            since float/double values of ieee754 cannot precisely represent
            all int32/uint32/int64/uint64 values, e.g.:
            UINT32_MAX is 4294967295, but (float32)4294967295 is 4294967296.0f,
@@ -2242,30 +2231,30 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 #endif
 
 #if WASM_ENABLE_LABELS_AS_VALUES != 0
-      HANDLE_OP (WASM_OP_UNUSED_0x06):
-      HANDLE_OP (WASM_OP_UNUSED_0x07):
-      HANDLE_OP (WASM_OP_UNUSED_0x08):
-      HANDLE_OP (WASM_OP_UNUSED_0x09):
-      HANDLE_OP (WASM_OP_UNUSED_0x0a):
-      HANDLE_OP (WASM_OP_UNUSED_0x12):
-      HANDLE_OP (WASM_OP_UNUSED_0x13):
-      HANDLE_OP (WASM_OP_UNUSED_0x14):
-      HANDLE_OP (WASM_OP_UNUSED_0x15):
-      HANDLE_OP (WASM_OP_UNUSED_0x16):
-      HANDLE_OP (WASM_OP_UNUSED_0x17):
-      HANDLE_OP (WASM_OP_UNUSED_0x18):
-      HANDLE_OP (WASM_OP_UNUSED_0x19):
-      HANDLE_OP (WASM_OP_UNUSED_0x1c):
-      HANDLE_OP (WASM_OP_UNUSED_0x1d):
-      HANDLE_OP (WASM_OP_UNUSED_0x1e):
-      HANDLE_OP (WASM_OP_UNUSED_0x1f):
-      HANDLE_OP (WASM_OP_UNUSED_0x25):
-      HANDLE_OP (WASM_OP_UNUSED_0x26):
-      HANDLE_OP (WASM_OP_UNUSED_0x27):
-      {
-        wasm_set_exception(module, "WASM interp failed: unsupported opcode.");
-        goto got_exception;
-      }
+    HANDLE_OP (WASM_OP_UNUSED_0x06):
+    HANDLE_OP (WASM_OP_UNUSED_0x07):
+    HANDLE_OP (WASM_OP_UNUSED_0x08):
+    HANDLE_OP (WASM_OP_UNUSED_0x09):
+    HANDLE_OP (WASM_OP_UNUSED_0x0a):
+    HANDLE_OP (WASM_OP_UNUSED_0x12):
+    HANDLE_OP (WASM_OP_UNUSED_0x13):
+    HANDLE_OP (WASM_OP_UNUSED_0x14):
+    HANDLE_OP (WASM_OP_UNUSED_0x15):
+    HANDLE_OP (WASM_OP_UNUSED_0x16):
+    HANDLE_OP (WASM_OP_UNUSED_0x17):
+    HANDLE_OP (WASM_OP_UNUSED_0x18):
+    HANDLE_OP (WASM_OP_UNUSED_0x19):
+    HANDLE_OP (WASM_OP_UNUSED_0x1c):
+    HANDLE_OP (WASM_OP_UNUSED_0x1d):
+    HANDLE_OP (WASM_OP_UNUSED_0x1e):
+    HANDLE_OP (WASM_OP_UNUSED_0x1f):
+    HANDLE_OP (WASM_OP_UNUSED_0x25):
+    HANDLE_OP (WASM_OP_UNUSED_0x26):
+    HANDLE_OP (WASM_OP_UNUSED_0x27):
+    {
+      wasm_set_exception(module, "WASM interp failed: unsupported opcode.");
+      goto got_exception;
+    }
 #endif
 
 #if WASM_ENABLE_LABELS_AS_VALUES == 0
@@ -2363,10 +2352,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
     wasm_set_exception(module, "out of bounds memory access");
 
   got_exception:
-    if (depths && depths != depth_buf) {
-      wasm_free(depths);
-      depths = NULL;
-    }
     return;
 
 #if WASM_ENABLE_LABELS_AS_VALUES == 0
@@ -2374,7 +2359,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 #else
   FETCH_OPCODE_AND_DISPATCH ();
 #endif
-
 }
 
 void

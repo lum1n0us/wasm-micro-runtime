@@ -237,6 +237,11 @@ typedef struct WASIArguments {
 } WASIArguments;
 #endif
 
+typedef struct StringNode {
+    struct StringNode *next;
+    char *str;
+} StringNode, *StringList;
+
 typedef struct WASMModule {
     /* Module type, for module loaded from WASM bytecode binary,
        this field is Wasm_Module_Bytecode;
@@ -290,7 +295,8 @@ typedef struct WASMModule {
        memory.grow opcode or call enlargeMemory */
     bool possible_memory_grow;
 
-    HashMap *const_str_set;
+    StringList const_str_list;
+
     BlockAddr block_addr_cache[BLOCK_ADDR_CACHE_SIZE][BLOCK_ADDR_CONFLICT_SIZE];
 
 #if WASM_ENABLE_LIBC_WASI != 0

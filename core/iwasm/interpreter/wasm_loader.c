@@ -270,11 +270,10 @@ check_utf8_str(const uint8* str, uint32 len)
 }
 
 static char*
-const_str_set_insert(const uint8 *str, uint32 len, WASMModule *module,
+const_str_list_insert(const uint8 *str, uint32 len, WASMModule *module,
                      char* error_buf, uint32 error_buf_size)
 {
-    HashMap *set = module->const_str_set;
-    char *c_str, *value;
+    StringNode *node, *node_next;
 
     if (!check_utf8_str(str, len)) {
         set_error_buf(error_buf, error_buf_size,
@@ -283,30 +282,42 @@ const_str_set_insert(const uint8 *str, uint32 len, WASMModule *module,
         return NULL;
     }
 
-    if (!(c_str = wasm_malloc(len + 1))) {
+    /* Search const str list */
+    node = module->const_str_list;
+    while (node) {
+        node_next = node->next;
+        if (strlen(node->str) == len
+            && !memcmp(node->str, str, len))
+            break;
+        node = node_next;
+    }
+
+    if (node)
+        return node->str;
+
+    if (!(node = wasm_malloc(sizeof(StringNode) + len + 1))) {
         set_error_buf(error_buf, error_buf_size,
                       "WASM module load failed: "
                       "allocate memory failed.");
         return NULL;
     }
 
-    bh_memcpy_s(c_str, len + 1, str, len);
-    c_str[len] = '\0';
+    node->str = ((char*)node) + sizeof(StringNode);
+    bh_memcpy_s(node->str, len + 1, str, len);
+    node->str[len] = '\0';
 
-    if ((value = bh_hash_map_find(set, c_str))) {
-        wasm_free(c_str);
-        return value;
+    if (!module->const_str_list) {
+        /* set as head */
+        module->const_str_list = node;
+        node->next = NULL;
+    }
+    else {
+        /* insert it */
+        node->next = module->const_str_list;
+        module->const_str_list = node;
     }
 
-    if (!bh_hash_map_insert(set, c_str, c_str)) {
-        set_error_buf(error_buf, error_buf_size,
-                      "WASM module load failed: "
-                      "insert string to hash map failed.");
-        wasm_free(c_str);
-        return NULL;
-    }
-
-    return c_str;
+    return node->str;
 }
 
 static bool
@@ -683,12 +694,19 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
         p = p_old;
 
+        /* insert "env" and "wasi_unstable" to const str list */
+        if (!const_str_list_insert((uint8*)"env", 3, module, error_buf, error_buf_size)
+            || !const_str_list_insert((uint8*)"wasi_unstable", 13, module,
+                                     error_buf, error_buf_size)) {
+            return false;
+        }
+
         /* Scan again to read the data */
         for (i = 0; i < import_count; i++) {
             /* load module name */
             read_leb_uint32(p, p_end, name_len);
             CHECK_BUF(p, p_end, name_len);
-            if (!(module_name = const_str_set_insert
+            if (!(module_name = const_str_list_insert
                         (p, name_len, module, error_buf, error_buf_size))) {
                 return false;
             }
@@ -697,7 +715,7 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
             /* load field name */
             read_leb_uint32(p, p_end, name_len);
             CHECK_BUF(p, p_end, name_len);
-            if (!(field_name = const_str_set_insert
+            if (!(field_name = const_str_list_insert
                         (p, name_len, module, error_buf, error_buf_size))) {
                 return false;
             }
@@ -726,7 +744,7 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
                     if (!(import->u.function.func_ptr_linked =
                                 resolve_sym(module_name, field_name))) {
-#ifndef BUILD_AOT_COMPILER /* Output warning except running aot compiler */
+#if WASM_ENABLE_WAMR_COMPILER == 0 /* Output warning except running aot compiler */
                         LOG_WARNING("warning: fail to link import function (%s, %s)\n",
                                     module_name, field_name);
 #endif
@@ -1176,7 +1194,7 @@ load_export_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
         for (i = 0; i < export_count; i++, export++) {
             read_leb_uint32(p, p_end, str_len);
             CHECK_BUF(p, p_end, str_len);
-            if (!(export->name = const_str_set_insert(p, str_len, module,
+            if (!(export->name = const_str_list_insert(p, str_len, module,
                             error_buf, error_buf_size))) {
                 return false;
             }
@@ -1709,22 +1727,7 @@ create_module(char *error_buf, uint32 error_buf_size)
     /* Set start_function to -1, means no start function */
     module->start_function = (uint32)-1;
 
-    if (!(module->const_str_set = bh_hash_map_create(32, false,
-                    (HashFunc)wasm_string_hash,
-                    (KeyEqualFunc)wasm_string_equal,
-                    NULL,
-                    wasm_loader_free))) {
-        set_error_buf(error_buf, error_buf_size,
-                      "WASM module load failed: "
-                      "create const string set failed.");
-        goto fail;
-    }
-
     return module;
-
-fail:
-    wasm_loader_unload(module);
-    return NULL;
 }
 
 WASMModule *
@@ -1900,14 +1903,6 @@ wasm_loader_load(const uint8 *buf, uint32 size, char *error_buf, uint32 error_bu
     /* Set start_function to -1, means no start function */
     module->start_function = (uint32)-1;
 
-    if (!(module->const_str_set =
-                bh_hash_map_create(32, false,
-                                   (HashFunc)wasm_string_hash,
-                                   (KeyEqualFunc)wasm_string_equal,
-                                   NULL,
-                                   wasm_loader_free)))
-        goto fail;
-
     if (!load(buf, size, module, error_buf, error_buf_size))
         goto fail;
 
@@ -1977,8 +1972,14 @@ wasm_loader_unload(WASMModule *module)
         wasm_free(module->data_segments);
     }
 
-    if (module->const_str_set)
-        bh_hash_map_destroy(module->const_str_set);
+    if (module->const_str_list) {
+        StringNode *node = module->const_str_list, *node_next;
+        while (node) {
+            node_next = node->next;
+            wasm_free(node);
+            node = node_next;
+        }
+    }
 
     wasm_free(module);
 }
@@ -2109,9 +2110,7 @@ wasm_loader_find_block_addr(WASMModule *module,
 
             case WASM_OP_DROP:
             case WASM_OP_SELECT:
-            case WASM_OP_DROP_32:
             case WASM_OP_DROP_64:
-            case WASM_OP_SELECT_32:
             case WASM_OP_SELECT_64:
                 break;
 
@@ -2680,7 +2679,7 @@ static bool
 wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
                              char *error_buf, uint32 error_buf_size)
 {
-    uint8 *p = func->code, *p_end = func->code + func->code_size;
+    uint8 *p = func->code, *p_end = func->code + func->code_size, *p_org;
     uint8 *frame_ref_bottom = NULL, *frame_ref_boundary, *frame_ref;
     BranchBlock *frame_csp_bottom = NULL, *frame_csp_boundary, *frame_csp;
     uint32 param_count, local_count, global_count;
@@ -2992,7 +2991,6 @@ handle_next_reachable_block:
                     || *(frame_ref - 1) == REF_F32) {
                     frame_ref--;
                     stack_cell_num--;
-                    *(p - 1) = WASM_OP_DROP_32;
                 }
                 else {
                     if (stack_cell_num <= 1) {
@@ -3024,7 +3022,6 @@ handle_next_reachable_block:
                 switch (*(frame_ref - 1)) {
                     case REF_I32:
                     case REF_F32:
-                        *(p - 1) = WASM_OP_SELECT_32;
                         break;
                     case REF_I64_2:
                     case REF_F64_2:
@@ -3041,11 +3038,12 @@ handle_next_reachable_block:
 
             case WASM_OP_GET_LOCAL:
             {
-                uint8 *p_org = p - 1;
+                p_org = p - 1;
 
                 GET_LOCAL_INDEX_TYPE_AND_OFFSET();
                 PUSH_TYPE(local_type);
 
+#if (WASM_ENABLE_WAMR_COMPILER == 0) && (WASM_ENABLE_JIT == 0)
                 if (local_offset < 0x80) {
                     *p_org++ = WASM_OP_GET_LOCAL_FAST;
                     if (local_type == VALUE_TYPE_I32
@@ -3056,17 +3054,18 @@ handle_next_reachable_block:
                     while (p_org < p)
                         *p_org++ = WASM_OP_NOP;
                 }
-
+#endif
                 break;
             }
 
             case WASM_OP_SET_LOCAL:
             {
-                uint8 *p_org = p - 1;
+                p_org = p - 1;
 
                 GET_LOCAL_INDEX_TYPE_AND_OFFSET();
                 POP_TYPE(local_type);
 
+#if (WASM_ENABLE_WAMR_COMPILER == 0) && (WASM_ENABLE_JIT == 0)
                 if (local_offset < 0x80) {
                     *p_org++ = WASM_OP_SET_LOCAL_FAST;
                     if (local_type == VALUE_TYPE_I32
@@ -3077,18 +3076,20 @@ handle_next_reachable_block:
                     while (p_org < p)
                         *p_org++ = WASM_OP_NOP;
                 }
+#endif
 
                 break;
             }
 
             case WASM_OP_TEE_LOCAL:
             {
-                uint8 *p_org = p - 1;
+                p_org = p - 1;
 
                 GET_LOCAL_INDEX_TYPE_AND_OFFSET();
                 POP_TYPE(local_type);
                 PUSH_TYPE(local_type);
 
+#if (WASM_ENABLE_WAMR_COMPILER == 0) && (WASM_ENABLE_JIT == 0)
                 if (local_offset < 0x80) {
                     *p_org++ = WASM_OP_TEE_LOCAL_FAST;
                     if (local_type == VALUE_TYPE_I32
@@ -3099,6 +3100,7 @@ handle_next_reachable_block:
                     while (p_org < p)
                         *p_org++ = WASM_OP_NOP;
                 }
+#endif
 
                 break;
             }
@@ -3554,5 +3556,7 @@ fail:
     (void)u32;
     (void)i32;
     (void)i64;
+    (void)local_offset;
+    (void)p_org;
     return return_value;
 }
