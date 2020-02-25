@@ -141,7 +141,7 @@ typedef struct AOTModule {
     /* is jit mode or not */
     bool is_jit_mode;
 
-#if WASM_ENABLE_JIT
+#if WASM_ENABLE_JIT != 0
     WASMModule *wasm_module;
     AOTCompContext *comp_ctx;
     AOTCompData *comp_data;
@@ -430,6 +430,13 @@ aot_enlarge_memory(AOTModuleInstance *module_inst, uint32 inc_page_count);
 bool
 aot_is_wasm_type_equal(AOTModuleInstance *module_inst,
                        uint32 type1_idx, uint32 type2_idx);
+
+/**
+ * Invoke native function from aot code
+ */
+void
+aot_invoke_native(WASMExecEnv *exec_env, uint32 func_idx,
+                  uint32 *frame_lp, uint32 argc, uint32 *argv_ret);
 
 uint32
 aot_get_plt_table_size();

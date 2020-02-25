@@ -389,7 +389,9 @@ static bool parse_args(int argc, char *argv[])
             { "uart",           required_argument, NULL, 'u' },
             { "baudrate",       required_argument, NULL, 'b' },
 #endif
+#if WASM_ENABLE_LIBC_WASI != 0
             { "wasi_root",      required_argument, NULL, 'w' },
+#endif
             { "help",           required_argument, NULL, 'h' },
             { 0, 0, 0, 0 }
         };
@@ -421,12 +423,14 @@ static bool parse_args(int argc, char *argv[])
                 printf("uart baudrate: %s\n", optarg);
                 break;
 #endif
+#if WASM_ENABLE_LIBC_WASI != 0
             case 'w':
                 if (!wasm_set_wasi_root_dir(optarg)) {
                     printf("Fail to set wasi root dir: %s\n", optarg);
                     return false;
                 }
                 break;
+#endif
             case 'h':
                 showUsage();
                 return false;
