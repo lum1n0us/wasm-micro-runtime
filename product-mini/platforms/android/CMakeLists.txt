@@ -11,7 +11,13 @@ set (ANDROID_ABI "armeabi-v7a")
 
 project (iwasm)
 
-set (WAMR_BUILD_PLATFORM "linux")
+set (WAMR_BUILD_PLATFORM      "android")
+set (WAMR_BUILD_TARGET        "ARMv7")
+set (WAMR_BUILD_TYPE          "Release")
+set (WAMR_BUILD_INTERP        1)
+set (WAMR_BUILD_AOT           1)
+set (WAMR_BUILD_LIBC_BUILTIN  1)
+set (WAMR_BUILD_LIBC_WASI     0)
 
 # Reset default linker flags
 set (CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
@@ -61,7 +67,6 @@ endif ()
 set (WAMR_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../..)
 
 include (${WAMR_ROOT_DIR}/build-scripts/runtime_lib.cmake)
-add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
 
 set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections -pie -fPIE")
 
@@ -82,17 +87,14 @@ endif ()
 #set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-strong --param ssp-buffer-size=4")
 #set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,-z,noexecstack,-z,relro,-z,now")
 
-add_executable (iwasm main.c ext_lib_export.c)
+add_library (libiwasm SHARED ${WAMR_RUNTIME_LIB_SOURCE} ext_lib_export.c)
+target_link_libraries (libiwasm ${LLVM_AVAILABLE_LIBS} -lm -ldl -landroid)
 
-install (TARGETS iwasm DESTINATION bin)
+set (distribution_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/distribution)
+set_target_properties (libiwasm PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${distribution_DIR}/wasm/lib")
 
-target_link_libraries (iwasm vmlib ${LLVM_AVAILABLE_LIBS} -lm -ldl -lpthread)
-
-add_library (libiwasm SHARED ${WAMR_RUNTIME_LIB_SOURCE})
-
-install (TARGETS libiwasm DESTINATION lib)
-
-set_target_properties (libiwasm PROPERTIES OUTPUT_NAME iwasm)
-
-target_link_libraries (libiwasm ${LLVM_AVAILABLE_LIBS} -lm -ldl -lpthread)
-
+add_custom_command (TARGET libiwasm POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory "${WAMR_ROOT_DIR}/core/shared/include" "${distribution_DIR}/wasm/include/"
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory "${WAMR_ROOT_DIR}/core/shared/platform/include" "${distribution_DIR}/wasm/include/platform/"
+        COMMAND "${CMAKE_COMMAND}" -E copy "${WAMR_ROOT_DIR}/core/shared/platform/linux/bh_platform.h" "${distribution_DIR}/wasm/include/platform/"
+        COMMENT "Copying wasm to output directory")

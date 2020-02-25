@@ -39,8 +39,8 @@ extern void DEBUGME(void);
 
 #define DIE do{bh_debug("Die here\n\n\n\n\n\n\n\n\n\n\n\n\n\n"); DEBUGME(void); while(1);}while(0)
 
-#ifndef BH_PLATFORM_LINUX
-#define BH_PLATFORM_LINUX
+#ifndef BH_PLATFORM_ANDROID
+#define BH_PLATFORM_ANDROID
 #endif
 
 /* NEED qsort */

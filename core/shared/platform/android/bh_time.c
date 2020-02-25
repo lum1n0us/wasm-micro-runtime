@@ -7,8 +7,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
-#include <sys/timeb.h>
-#include <time.h>
+#include <sys/time.h>
 
 /*
  * This function returns milliseconds per tick.
@@ -44,22 +43,24 @@ uint32 bh_get_tick_sec()
  */
 uint64 _bh_time_get_millisecond_from_1970()
 {
-    struct timeb tp;
-    ftime(&tp);
+    struct timeval tv;
+    struct timezone tz;
+    gettimeofday(&tv, &tz);
 
-    return ((uint64) tp.time) * 1000 + tp.millitm
-            - (tp.dstflag == 0 ? 0 : 60 * 60 * 1000)
-            + ((uint64)tp.timezone) * 60 * 1000;
+   return tv.tv_sec * 1000 + tv.tv_usec
+           - (tz.tz_dsttime == 0 ? 0 : 60 * 60 * 1000)
+           + tz.tz_minuteswest * 60 * 1000;
 }
 
 size_t _bh_time_strftime(char *s, size_t max, const char *format, int64 time)
 {
     time_t time_sec = (time_t)(time / 1000);
-    struct timeb tp;
+    struct timeval tv;
+    struct timezone tz;
     struct tm *ltp;
 
-    ftime(&tp);
-    time_sec -= tp.timezone * 60;
+    gettimeofday(&tv, &tz);
+    time_sec -= tz.tz_minuteswest * 60;
 
     ltp = localtime(&time_sec);
     if (ltp == NULL) {

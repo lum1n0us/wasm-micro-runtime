@@ -378,7 +378,7 @@ int _vm_cond_broadcast(korp_cond *cond)
 
 int _vm_thread_cancel(korp_tid thread)
 {
-    return pthread_cancel(thread);
+    return pthread_kill(thread, SIGABRT);
 }
 
 int _vm_thread_join(korp_tid thread, void **value_ptr, int mills)
