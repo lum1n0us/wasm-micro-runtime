@@ -44,6 +44,7 @@ Following platforms are supported:
 - [VxWorks](./doc/build_wamr.md#vxworks)
 - [AliOS-Things](./doc/build_wamr.md#alios-things)
 - [Intel Software Guard Extention (Linux)](./doc/build_wamr.md#linux-sgx-intel-software-guard-extention)
+- [Android](./doc/build_wamr.md#android)
 
 Refer to [WAMR porting guide](./doc/port_wamr.md) for how to port WAMR to a new platform.
 

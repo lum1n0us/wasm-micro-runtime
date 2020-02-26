@@ -5,8 +5,9 @@ cmake_minimum_required (VERSION 3.4.1)
 
 set (CMAKE_VERBOSE_MAKEFILE on)
 
-set (CMAKE_TOOLCHAIN_FILE "/opt/android/ndk/21.0.6113669/build/cmake/android.toolchain.cmake")
-set (ANDROID_NDK "/opt/android/ndk/21.0.6113669/")
+set (CMAKE_TOOLCHAIN_FILE "$ENV{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake")
+set (ANDROID_NDK $ENV{ANDROID_NDK_HOME})
+set (ANDROID_SDK $ENV{ANDROID_SDK_HOME})
 set (ANDROID_ABI "armeabi-v7a")
 
 project (iwasm)

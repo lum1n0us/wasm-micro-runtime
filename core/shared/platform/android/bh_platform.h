@@ -71,7 +71,7 @@ typedef void* (*thread_start_routine_t)(void*);
 #define wa_free bh_free
 #define wa_strdup bh_strdup
 
-#define bh_printf(...) ((void)__android_log_print(ANDROID_LOG_INFO, "wasm_runtime::", __VA_ARGS__))
+#define bh_printf(...) (__android_log_print(ANDROID_LOG_INFO, "wasm_runtime::", __VA_ARGS__))
 
 
 int snprintf(char *buffer, size_t count, const char *format, ...);

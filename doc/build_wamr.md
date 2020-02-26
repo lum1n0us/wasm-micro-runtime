@@ -215,6 +215,36 @@ AliOS-Things
    ```
    download the binary to developerkit board, check the output from serial port
 
+Android
+-------------------------
+support to compile wamr with Android NDK and generate Android compatible shared library.
+- need an [android SDK](https://developer.android.com/studio). Go and get the "Command line tools only"
+- look for a command named *sdkmanager* and download below components. version numbers might need to check and pick others
+   - "build-tools;29.0.3" 
+   - "cmake;3.10.2.4988404" 
+   - "ndk;21.0.6113669" 
+   - "patcher;v4"
+   - "platform-tools" 
+   - "platforms;android-29"
+- add downloaded cmake to $PATH
+- export ANDROID_SDK_HOME=/the/path/of/downloaded/sdk/
+- export ANDROID_NDK_HOME=/the/path/of/downloaded/sdk/ndk/
+- ready to go
+
+Use such commands, you are able to compile with default configurations. Any compiling requirement should be satisfied by modifying product-mini/platforms/android/CMakeList.txt
+
+``` shell
+$ cd product-mini/platforms/android/
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+$ # check output in distribution/wasm
+$ # include/ includes all necesary head files
+$ # lib includes libiwasm.so
+```
+
+
 Docker
 -------------------------
 [Docker](https://www.docker.com/) will download all the dependencies and build WAMR Core on your behalf.
