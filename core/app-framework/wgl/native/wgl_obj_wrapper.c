@@ -276,7 +276,7 @@ static void* lv_task_handler_thread_routine (void *arg)
 
     if (vm_sem_init(&sem, 1) != 0) {
         printf("Init semaphore for lvgl task handler thread fail!\n");
-	return NULL;
+        return NULL;
     }
 
     while (lv_task_handler_thread_run) {
