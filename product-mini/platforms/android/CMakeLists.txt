@@ -13,11 +13,12 @@ project (iwasm)
 
 set (WAMR_BUILD_PLATFORM      "android")
 set (WAMR_BUILD_TARGET        "ARMv7")
-set (WAMR_BUILD_TYPE          "Release")
+set (WAMR_BUILD_TYPE          Debug)
 set (WAMR_BUILD_INTERP        1)
 set (WAMR_BUILD_AOT           1)
 set (WAMR_BUILD_LIBC_BUILTIN  1)
 set (WAMR_BUILD_LIBC_WASI     0)
+set (CMAKE_BUILD_TYPE         Debug)
 
 # Reset default linker flags
 set (CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
@@ -87,14 +88,14 @@ endif ()
 #set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-strong --param ssp-buffer-size=4")
 #set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,-z,noexecstack,-z,relro,-z,now")
 
-add_library (libiwasm SHARED ${WAMR_RUNTIME_LIB_SOURCE} ext_lib_export.c)
-target_link_libraries (libiwasm ${LLVM_AVAILABLE_LIBS} -lm -ldl -landroid)
+add_library (iwasm SHARED ${WAMR_RUNTIME_LIB_SOURCE} ext_lib_export.c)
+target_link_libraries (iwasm ${LLVM_AVAILABLE_LIBS} -lm -ldl -landroid -llog)
 
 set (distribution_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/distribution)
-set_target_properties (libiwasm PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${distribution_DIR}/wasm/lib")
+set_target_properties (iwasm PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${distribution_DIR}/wasm/lib")
 
-add_custom_command (TARGET libiwasm POST_BUILD
+add_custom_command (TARGET iwasm POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy_directory "${WAMR_ROOT_DIR}/core/shared/include" "${distribution_DIR}/wasm/include/"
         COMMAND "${CMAKE_COMMAND}" -E copy_directory "${WAMR_ROOT_DIR}/core/shared/platform/include" "${distribution_DIR}/wasm/include/platform/"
-        COMMAND "${CMAKE_COMMAND}" -E copy "${WAMR_ROOT_DIR}/core/shared/platform/linux/bh_platform.h" "${distribution_DIR}/wasm/include/platform/"
-        COMMENT "Copying wasm to output directory")
+        COMMAND "${CMAKE_COMMAND}" -E copy "${WAMR_ROOT_DIR}/core/shared/platform/android/bh_platform.h" "${distribution_DIR}/wasm/include/platform/"
+        COMMENT "Copying iwasm to output directory")
