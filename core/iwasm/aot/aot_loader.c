@@ -1619,6 +1619,10 @@ load_from_sections(AOTModule *module, AOTSection *sections,
         return false;
     }
 
+    /* Flush data cache before executing AOT code,
+     * otherwise unpredictable behavior can occur. */
+    bh_dcache_flush();
+
     return true;
 }
 

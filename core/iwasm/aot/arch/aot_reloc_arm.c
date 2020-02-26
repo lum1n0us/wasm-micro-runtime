@@ -114,8 +114,8 @@ get_current_target(char *target_buf, uint32 target_buf_size)
 uint32
 get_plt_item_size()
 {
-    /* 20 bytes instructions and 4 bytes symbol address */
-    return 24;
+    /* 8 bytes instructions and 4 bytes symbol address */
+    return 12;
 }
 
 uint32
@@ -130,16 +130,10 @@ init_plt_table(uint8 *plt)
     uint32 i, num = sizeof(target_sym_map) / sizeof(SymbolMap);
     for (i = 0; i < num; i++) {
         uint32 *p = (uint32*)plt;
-        /* push {lr} */
-        *p++ = 0xe52de004;
-        /* ldr lr, [pc, #8] */
-        *p++ = 0xe59fe008;
-        /* blx lr */
-        *p++ = 0xe12fff3e;
-        /* pop {lr} */
-        *p++ = 0xe49de004;
-        /* bx lr */
-        *p++ = 0xe12fff1e;
+        /* ldr pc, [pc] */
+        *p++ = 0xe59ff000;
+        /* nop */
+        *p++ = 0xe1a00000;
         /* symbol addr */
         *p++ = (uint32)(uintptr_t)target_sym_map[i].symbol_addr;;
         plt += get_plt_item_size();
@@ -168,10 +162,76 @@ apply_relocation(AOTModule *module,
                  char *error_buf, uint32 error_buf_size)
 {
     switch (reloc_type) {
-        /* TODO: implement ARM relocation */
         case R_ARM_CALL:
         case R_ARM_JMP24:
+        {
+            intptr_t result;
+            int32 RESULT_MASK = 0x03FFFFFE;
+            int32 insn = *(int32*)(target_section_addr + reloc_offset);
+            /* Initial addend: sign_extend(insn[23:0] << 2) */
+            int32 initial_addend = ((insn & 0xFFFFFF) << 2)
+                                    | ((insn & 0x800000) ? 0xFC000000 : 0);
+
+            CHECK_RELOC_OFFSET(sizeof(int32));
+
+            if (symbol_index < 0) {
+                /* Symbol address itself is an AOT function.
+                 * Apply relocation with the symbol directly.
+                 * Suppose the symbol address is in +-32MB relative
+                 * to the relocation address.
+                 */
+                /* operation: ((S + A) | T) - P  where S is symbol address and T is 0 */
+                result = (intptr_t)
+                         ((uint8*)symbol_addr + reloc_addend
+                          - (target_section_addr + reloc_offset));
+            }
+            else {
+                if (reloc_addend > 0) {
+                     set_error_buf(error_buf, error_buf_size,
+                                   "AOT module load failed: relocate to plt table "
+                                   "with reloc addend larger than 0 is unsupported.");
+                     return false;
+                }
+
+                /* Symbol address is not an AOT function,
+                 * but a function of runtime or native. Its address is
+                 * beyond of the +-32MB space. Apply relocation with
+                 * the PLT which branch to the target symbol address.
+                 */
+                /* operation: ((S + A) | T) - P  where S is PLT address and T is 0 */
+                uint8 *plt = (uint8*)module->code + module->code_size - get_plt_table_size()
+                             + get_plt_item_size() * symbol_index;
+                result = (intptr_t)
+                         (plt + reloc_addend
+                          - (target_section_addr + reloc_offset));
+            }
+
+            result += initial_addend;
+
+            /* Check overflow: +-32MB */
+            if (result > (32 * BH_MB) || result < (-32 * BH_MB)) {
+                set_error_buf(error_buf, error_buf_size,
+                              "AOT module load failed: "
+                              "target address out of range.");
+                return false;
+            }
+
+            *(int32*)(target_section_addr + reloc_offset) =
+                (int32)
+                ((insn & 0xff000000)
+                 | (((int32)result & RESULT_MASK) >> 2));
+            break;
+        }
         case R_ARM_ABS32:
+        {
+            intptr_t initial_addend;
+            /* (S + A) | T where T is 0 */
+            CHECK_RELOC_OFFSET(sizeof(void*));
+            initial_addend = *(intptr_t*)(target_section_addr + (uint32)reloc_offset);
+            *(uint8**)(target_section_addr + reloc_offset)
+                = (uint8*)symbol_addr + initial_addend + reloc_addend;
+            break;
+        }
 
         default:
             if (error_buf != NULL)

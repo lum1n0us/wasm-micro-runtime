@@ -48,9 +48,7 @@ apply_relocation(AOTModule *module,
                  char *error_buf, uint32 error_buf_size)
 {
     switch (reloc_type) {
-        /* TODO: implement relocation for mips */
-        case R_MIPS_26:
-        case R_MIPS_32:
+        /* TODO: implement relocation for xtensa */
 
         default:
             if (error_buf != NULL)

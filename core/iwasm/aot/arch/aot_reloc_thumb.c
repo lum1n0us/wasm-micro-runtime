@@ -129,23 +129,24 @@ init_plt_table(uint8 *plt)
     uint32 i, num = sizeof(target_sym_map) / sizeof(SymbolMap);
     for (i = 0; i < num; i++) {
         uint16 *p = (uint16*)plt;
-        /* push {lr} */
-        *p++ = 0xb500;
-        /* push {r4, r5} */
-        *p++ = 0xb430;
+        /* nop */
+        *p++ = 0xbf00;
+        /* push {r4} */
+        *p++ = 0xb410;
         /* add  r4, pc, #8 */
         *p++ = 0xa402;
-        /* ldr  r5, [r4, #0] */
-        *p++ = 0x6825;
-        /* blx  r5 */
-        *p++ = 0x47a8;
-        /* pop  {r4, r5} */
-        *p++ = 0xbc30;
-        /* pop  {pc} */
-        *p++ = 0xbd00;
-        p++;
+        /* ldr  r4, [r4, #0] */
+        *p++ = 0x6824;
+        /* mov  ip, r4 */
+        *p++ = 0x46a4;
+        /* pop  {r4} */
+        *p++ = 0xbc10;
+        /* mov  pc, ip */
+        *p++ = 0x46e7;
+        /* nop */
+        *p++ = 0xbf00;
         /* symbol addr */
-        *(uint32*)p = (uint32)(uintptr_t)target_sym_map[i].symbol_addr;;
+        *(uint32*)p = (uint32)(uintptr_t)target_sym_map[i].symbol_addr;
         plt += get_plt_item_size();
     }
 }
@@ -172,9 +173,72 @@ apply_relocation(AOTModule *module,
                  char *error_buf, uint32 error_buf_size)
 {
     switch (reloc_type) {
-        /* TODO: implement THUMB relocation */
         case R_ARM_THM_CALL:
         case R_ARM_THM_JMP24:
+        {
+            int32 RESULT_MASK = 0x01FFFFFE;
+            int32 result, result_masked;
+            int16 *reloc_addr;
+            int32 initial_addend_0, initial_addend_1, initial_addend;
+            bool sign;
+
+            CHECK_RELOC_OFFSET(sizeof(int32));
+
+            reloc_addr = (int16*)(target_section_addr + reloc_offset);
+            initial_addend_0 = (*reloc_addr) & 0x7FF;
+            initial_addend_1 = (*(reloc_addr + 1)) & 0x7FF;
+            sign = (initial_addend_0 & 0x400) ? true : false;
+            initial_addend = (initial_addend_0 << 12) | (initial_addend_1 << 1)
+                             | (sign ? 0xFF800000 : 0);
+
+            if (symbol_index < 0) {
+                /* Symbol address itself is an AOT function.
+                 * Apply relocation with the symbol directly.
+                 * Suppose the symbol address is in +-4MB relative
+                 * to the relocation address.
+                 */
+                /* operation: ((S + A) | T) - P  where S is symbol address and T is 1 */
+                result = (int32)(((intptr_t)((uint8*)symbol_addr + reloc_addend) | 1)
+                                 - (intptr_t)(target_section_addr + reloc_offset));
+            }
+            else {
+                if (reloc_addend > 0) {
+                     set_error_buf(error_buf, error_buf_size,
+                                   "AOT module load failed: relocate to plt table "
+                                   "with reloc addend larger than 0 is unsupported.");
+                     return false;
+                }
+
+                /* Symbol address is not an AOT function,
+                 * but a function of runtime or native. Its address is
+                 * beyond of the +-4MB space. Apply relocation with
+                 * the PLT which branch to the target symbol address.
+                 */
+                /* operation: ((S + A) | T) - P  where S is PLT address and T is 1 */
+                uint8 *plt = (uint8*)module->code + module->code_size - get_plt_table_size()
+                             + get_plt_item_size() * symbol_index + 1;
+                result = (int32)(((intptr_t)plt | 1)
+                                 - (intptr_t)(target_section_addr + reloc_offset));
+            }
+
+            result += initial_addend;
+
+            /* Check overflow: +-4MB */
+            if (result > (4 * BH_MB) || result < (-4 * BH_MB)) {
+                set_error_buf(error_buf, error_buf_size,
+                              "AOT module load failed: "
+                              "target address out of range.");
+                return false;
+            }
+
+            result_masked = (int32)result & RESULT_MASK;
+            initial_addend_0 = (result_masked >> 12) & 0x7FF;
+            initial_addend_1 = (result_masked >> 1) & 0x7FF;
+
+            *reloc_addr = (*reloc_addr & ~0x7FF) | initial_addend_0;
+            *(reloc_addr + 1) = (*(reloc_addr + 1) & ~0x7FF) | initial_addend_1;
+            break;
+        }
 
         default:
             if (error_buf != NULL)

@@ -149,7 +149,7 @@ apply_relocation(AOTModule *module,
         }
         case R_X86_64_PLT32:
         {
-            uint8 *plt = module->code + module->code_size - get_plt_table_size()
+            uint8 *plt = (uint8*)module->code + module->code_size - get_plt_table_size()
                          + get_plt_item_size() * symbol_index;
             intptr_t target_addr = (intptr_t)   /* L + A - P */
                                    (plt + reloc_addend
