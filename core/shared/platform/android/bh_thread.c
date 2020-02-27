@@ -75,6 +75,7 @@ static void *vm_thread_wrapper(void *arg)
 int _vm_thread_create_with_prio(korp_tid *tid, thread_start_routine_t start,
                                 void *arg, unsigned int stack_size, int prio)
 {
+    (void)prio;
     pthread_attr_t tattr;
     thread_wrapper_arg *targ;
 
@@ -383,6 +384,7 @@ int _vm_thread_cancel(korp_tid thread)
 
 int _vm_thread_join(korp_tid thread, void **value_ptr, int mills)
 {
+    (void)mills;
     return pthread_join(thread, value_ptr);
 }
 

@@ -217,7 +217,7 @@ AliOS-Things
 
 Android
 -------------------------
-support to compile wamr with Android NDK and generate Android compatible shared library.
+able to generate a shared library support Android platform.
 - need an [android SDK](https://developer.android.com/studio). Go and get the "Command line tools only"
 - look for a command named *sdkmanager* and download below components. version numbers might need to check and pick others
    - "build-tools;29.0.3" 
@@ -226,12 +226,12 @@ support to compile wamr with Android NDK and generate Android compatible shared 
    - "patcher;v4"
    - "platform-tools" 
    - "platforms;android-29"
-- add downloaded cmake to $PATH
+- add bin/ of the downloaded cmake to $PATH
 - export ANDROID_SDK_HOME=/the/path/of/downloaded/sdk/
 - export ANDROID_NDK_HOME=/the/path/of/downloaded/sdk/ndk/
 - ready to go
 
-Use such commands, you are able to compile with default configurations. Any compiling requirement should be satisfied by modifying product-mini/platforms/android/CMakeList.txt
+Use such commands, you are able to compile with default configurations. Any compiling requirement should be satisfied by modifying product-mini/platforms/android/CMakeList.txt. For example, chaning ${WAMR_BUILD_TARGET} in CMakeList could get different libraries support different ABIs.
 
 ``` shell
 $ cd product-mini/platforms/android/
