@@ -32,7 +32,7 @@ iwasm VM core
 The iwasm supports following architectures:
 
 - X86-64, X86-32
-- ARM, THUMB
+- ARM, THUMB (ARMV7 Cortex-M7 and Cortex-A15 are tested)
 - MIPS
 - XTENSA
 
