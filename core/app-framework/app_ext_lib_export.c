@@ -1,7 +1,7 @@
 #include "lib_export.h"
 
 #ifdef APP_FRAMEWORK_SENSOR
-#include "sensor_native_api.h"
+    #include "sensor_native_api.h"
 #endif
 
 #ifdef APP_FRAMEWORK_CONNECTION
@@ -12,6 +12,7 @@
     #include "gui_native_api.h"
 #endif
 
+/* More header file here */
 
 static NativeSymbol extended_native_symbol_defs[] = {
 #ifdef APP_FRAMEWORK_SENSOR
@@ -19,12 +20,14 @@ static NativeSymbol extended_native_symbol_defs[] = {
 #endif
 
 #ifdef APP_FRAMEWORK_CONNECTION
-        #include "connection.inl"
+    #include "connection.inl"
 #endif
 
 #ifdef APP_FRAMEWORK_WGL
     #include "wamr_gui.inl"
 #endif
+
+/* More inl file here */
 };
 
 int
