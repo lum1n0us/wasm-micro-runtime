@@ -1,7 +1,12 @@
 # Copyright (C) 2019 Intel Corporation.  All rights reserved.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+
+add_definitions (-DWASM_ENABLE_APP_FRAMEWORK=1)
+
 set (APP_FRAMEWORK_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR})
+
+set (WASM_LIB_BASE_SOURCE ${CMAKE_CURRENT_LIST_DIR}/app_ext_lib_export.c)
 
 # app-native-shared and base are required
 include (${APP_FRAMEWORK_ROOT_DIR}/app-native-shared/native_interface.cmake)

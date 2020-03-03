@@ -90,7 +90,7 @@ endif ()
 #set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-strong --param ssp-buffer-size=4")
 #set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,-z,noexecstack,-z,relro,-z,now")
 
-add_library (iwasm SHARED ${WAMR_RUNTIME_LIB_SOURCE} ext_lib_export.c)
+add_library (iwasm SHARED ${WAMR_RUNTIME_LIB_SOURCE})
 if (CMAKE_BUILD_TYPE STREQUAL Release)
 target_link_libraries (iwasm ${LLVM_AVAILABLE_LIBS} -lm -ldl -landroid -llog -s)
 else()

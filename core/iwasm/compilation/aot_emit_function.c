@@ -131,6 +131,12 @@ call_aot_invoke_native_func(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
         }
     }
 
+    if (param_count > 64) {
+        aot_set_last_error("prepare native arguments failed: "
+                           "maximum 64 parameter cell number supported.");
+        return false;
+    }
+
     /* prepare frame_lp */
     if (!(struct_type = LLVMStructType(param_types, param_count, true))
         || !(struct_ptr_type = LLVMPointerType(struct_type, 0))) {

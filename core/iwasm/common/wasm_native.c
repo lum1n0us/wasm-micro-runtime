@@ -237,11 +237,13 @@ wasm_native_init()
         return false;
 #endif
 
+#if WASM_ENABLE_APP_FRAMEWORK != 0
     n_native_symbols = get_ext_lib_export_apis(&native_symbols);
     if (n_native_symbols > 0
         && !wasm_native_register_natives("env",
                                          native_symbols, n_native_symbols))
         return false;
+#endif
 
     return true;
 }

@@ -32,13 +32,13 @@ display_init(wasm_exec_env_t exec_env)
 void
 display_flush(wasm_exec_env_t exec_env,
               int32_t x1, int32_t y1, int32_t x2, int32_t y2,
-              lv_color_t *color_p)
+              lv_color_t *color)
 {
     wasm_module_inst_t module_inst = get_module_inst(exec_env);
     struct display_buffer_descriptor desc;
 
     if (!wasm_runtime_validate_native_addr(module_inst,
-                                           color_p, sizeof(lv_color_t))
+                                           color, sizeof(lv_color_t))
         return;
 
     u16_t w = x2 - x1 + 1;
@@ -48,7 +48,7 @@ display_flush(wasm_exec_env_t exec_env,
     desc.width = w;
     desc.pitch = w;
     desc.height = h;
-    display_write(NULL, x1, y1, &desc, (void *)color_p);
+    display_write(NULL, x1, y1, &desc, (void *)color);
 
     /*lv_flush_ready();*/
 }
@@ -56,14 +56,14 @@ display_flush(wasm_exec_env_t exec_env,
 void
 display_fill(wasm_exec_env_t exec_env,
              int32_t x1, int32_t y1, int32_t x2, int32_t y2,
-             lv_color_t color_p)
+             lv_color_t *color)
 {
 }
 
 void
 display_map(wasm_exec_env_t exec_env,
             int32_t x1, int32_t y1, int32_t x2, int32_t y2,
-            const lv_color_t *color_p)
+            const lv_color_t *color)
 {
 }
 
@@ -91,7 +91,7 @@ display_vdb_write(wasm_exec_env_t exec_env,
                   lv_color_t *color, lv_opa_t opa)
 {
     wasm_module_inst_t module_inst = get_module_inst(exec_env);
-    u8_t *buf_xy = buf + 3 * x + 3 * y * buf_w;
+    u8_t *buf_xy = (u8_t*)buf + 3 * x + 3 * y * buf_w;
 
     if (!wasm_runtime_validate_native_addr(module_inst,
                                            color, sizeof(lv_color_t)))
