@@ -293,8 +293,8 @@ wasm_runtime_get_custom_data(wasm_module_inst_t module_inst);
  *
  * @param module_inst the WASM module instance which contains heap
  * @param size the size bytes to allocate
- * @param p_native_addr output native address of the allocated memory
- *        if success and it is not NULL
+ * @param p_native_addr return native address of the allocated memory
+ *        if it is not NULL, and return NULL if memory malloc failed
  *
  * @return the allocated memory address, which is a relative offset to the
  *         base address of the module instance's memory space, the value range

@@ -557,12 +557,12 @@ aot_module_malloc(AOTModuleInstance *module_inst, uint32 size,
     uint8 *addr =
         mem_allocator_malloc(module_inst->heap_handle.ptr, size);
 
+    if (p_native_addr)
+        *p_native_addr = addr;
     if (!addr) {
         aot_set_exception(module_inst, "out of memory");
         return 0;
     }
-    if (p_native_addr)
-        *p_native_addr = addr;
     return (int32)(module_inst->heap_base_offset
                    + (addr - (uint8*)module_inst->heap_data.ptr));
 }
