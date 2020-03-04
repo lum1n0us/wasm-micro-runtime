@@ -2,6 +2,8 @@
 Export native API to WASM application
 =======================================================
 
+[TOC]
+
 
 
 Exporting native API steps
@@ -9,9 +11,11 @@ Exporting native API steps
 
 #### Step 1: Declare the function interface in WASM app
 
-Create a in a header file for WASM app and declare the function that is exported from native. In this example, we declare foo and foo2 as below in header file example.h
+Create a header file in a WASM app and declare the functions that are exported from native. In this example, we declare foo and foo2 as below in the header file example.h
 
 ```c
+/*** file name: example.h  ***/
+
 int  foo(int a, int b);
 void foo2(char * msg, char * buffer, int buf_len);
 ```
@@ -20,7 +24,7 @@ void foo2(char * msg, char * buffer, int buf_len);
 
 #### Step 2: Define the native API
 
-Define the native functions which are executed from the WASM app. The native function can be any name, for example **foo_native** and **foo2** here:
+Define the native functions which are executed from the WASM app in the runtime source file. The native function can be any name, for example **foo_native** and **foo2** here:
 
 ``` C
 int foo_native(wasm_exec_env_t exec_env , int a, int b)
@@ -34,15 +38,15 @@ void foo2(wasm_exec_env_t exec_env, char * msg, uint8 * buffer, int buf_len)
 }
 ```
 
-The first argument exec_env must be defined using type **wasm_exec_env_t** which is the calling convention for exporting native API by WAMR . 
+The first parameterexec_env must be defined using type **wasm_exec_env_t** which is the calling convention for exporting native API by WAMR . 
 
 The rest arguments should be in the same types as the arguments of WASM function foo(), but there are a few special cases that are explained in section "Buffer address conversion and boundary check".  Regarding to the augment names, they don't have to be same, but we would suggest using same names for easy maintainence.
 
 
 
-### Step 3: Register the native APIs
+#### Step 3: Register the native APIs
 
-Register the native APIs in the runtime, then everything is fine.
+Register the native APIs in the runtime, then everything is fine. It is ready to build the runtime software.
 
 ``` C
 // Define a array for the APIs to be exported. 
@@ -74,21 +78,32 @@ if (!wasm_runtime_register_natives("env",
 
 **Function signature**:
 
-The function signature is a string for describing the function prototype.  It is critical to ensure the function signaure is correctly mapping the native function interface.
+The function signature field in **NativeSymbol** structure is a string for describing the function prototype.  It is critical to ensure the function signaure is correctly mapping the native function interface.
 
-Each letter in the "()" represents a argument type, and the one following after ")" represents the return value type. The meanings of letters in function signature:
+Each letter in the "()" represents a parameter type, and the one following after ")" represents the return value type. The meaning of each letter:
 
 - 'i':  i32 
 - 'I': i64 
 - 'f': f32
 - 'F': f64
 - '*': the parameter is a buffer address in WASM application
-- '~': the parameter is the length of WASM buffer as referred by preceding arugment "\*". It must follow after '*', otherwise registeration will fail
+- '~': the parameter is the byte length of WASM buffer as referred by preceding arugment "\*". It must follow after '*', otherwise registeration will fail
 - '$': the parameter is a string in WASM application
 
+**Use EXPORT_WASM_API_WITH_SIG**
 
+The above foo2 NativeSymbol element can be also defined with macro EXPORT_WASM_API_WITH_SIG. This macro can be used when the native function name is same as the WASM symbol name.
 
-# Call exported API in wasm application
+```c
+static NativeSymbol native_symbols[] = 
+{
+	EXPORT_WASM_API_WITH_SIG(foo2, "($*~)")
+};
+```
+
+​    
+
+## Call exported API in wasm application
 
 Now we can call the exported native API in wasm application like this:
 ``` C
@@ -151,12 +166,70 @@ void foo2(wasm_exec_env_t exec_env,
 
 
 
-## Security attention
+## Sandbox security attention
 
 The runtime builder should ensure not broking the memory sandbox when exporting the native function to WASM. 
 
 A few key ground rules:
 
-- Never pass any structure pointer to native (do data serialization instead)
-- Do the pointer address conversion in the native API 
+- Never pass any structure/class object pointer to native (do data serialization instead)
+- Do the pointer address conversion in the native API if "$*" are not used for the pointer in the function signature 
 - Never pass function pointer to native 
+
+
+
+## Pass structured data or class object
+
+We must do data serialization for passing structured data or class object between the two worlds of WASM and native. There are two serilization methods available in WASM as below, and yet you can introduce more like json, cbor etc.
+
+- [attributes container](../core/app-framework/app-native-shared/attr_container.c)
+- [restful request/response](../core/app-framework/app-native-shared/restful_utils.c)
+
+Note the serilization library are separately compiled into WASM and runtime. And the source files are located in the folder "[core/app-framework/app-native-shared](../core/app-framework/app-native-shared)“ where all source files will be compiled into both worlds.
+
+
+
+The following sample code demostrates WASM app packes a response structure to buffer, then pass the buffer pointer to the native:
+
+```c
+/*** file name: core/app-framework/base/app/request.c ***/
+
+void api_response_send(response_t *response)
+{
+    int size;
+    char * buffer = pack_response(response, &size);
+    if (buffer == NULL)
+        return;
+
+    wasm_response_send(buffer, size); // calling exported native API
+    free_req_resp_packet(buffer);
+}
+```
+
+
+
+The following code demostrates the native API unpack the WASM buffer to local native data structure:
+
+```c
+/*** file name: core/app-framework/base/native/request_response.c  ***/
+
+bool
+wasm_response_send(wasm_exec_env_t exec_env, char *buffer, int size)
+{
+    if (buffer != NULL) {
+        response_t response[1];
+
+        if (NULL == unpack_response(buffer, size, response))
+            return false;
+
+        am_send_response(response);
+
+        return true;
+    }
+
+    return false;
+}
+```
+
+
+
