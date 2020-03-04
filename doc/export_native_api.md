@@ -38,9 +38,9 @@ void foo2(wasm_exec_env_t exec_env, char * msg, uint8 * buffer, int buf_len)
 }
 ```
 
-The first parameterexec_env must be defined using type **wasm_exec_env_t** which is the calling convention for exporting native API by WAMR . 
+The first parameter exec_env must be defined using type **wasm_exec_env_t** which is the calling convention for exporting native API by WAMR. 
 
-The rest arguments should be in the same types as the arguments of WASM function foo(), but there are a few special cases that are explained in section "Buffer address conversion and boundary check".  Regarding to the augment names, they don't have to be same, but we would suggest using same names for easy maintainence.
+The rest parameters should be in the same types as the parameters of WASM function foo(), but there are a few special cases that are explained in section "Buffer address conversion and boundary check".  Regarding the parameter names, they don't have to be the same, but we would suggest using the same names for easy maintenance.
 
 
 
@@ -49,7 +49,7 @@ The rest arguments should be in the same types as the arguments of WASM function
 Register the native APIs in the runtime, then everything is fine. It is ready to build the runtime software.
 
 ``` C
-// Define a array for the APIs to be exported. 
+// Define an array of NativeSymbol for the APIs to be exported. 
 // Note: the array must be static defined since runtime
 //       will keep it after registration
 static NativeSymbol native_symbols[] = 
@@ -78,21 +78,21 @@ if (!wasm_runtime_register_natives("env",
 
 **Function signature**:
 
-The function signature field in **NativeSymbol** structure is a string for describing the function prototype.  It is critical to ensure the function signaure is correctly mapping the native function interface.
+The function signature field in **NativeSymbol** structure is a string for describing the function prototype.  It is critical to ensure the function signature is correctly mapping the native function interface.
 
 Each letter in the "()" represents a parameter type, and the one following after ")" represents the return value type. The meaning of each letter:
 
-- 'i':  i32 
+- 'i': i32 
 - 'I': i64 
 - 'f': f32
 - 'F': f64
 - '*': the parameter is a buffer address in WASM application
-- '~': the parameter is the byte length of WASM buffer as referred by preceding arugment "\*". It must follow after '*', otherwise registeration will fail
+- '~': the parameter is the byte length of WASM buffer as referred by preceding argument "\*". It must follow after '*', otherwise, registration will fail
 - '$': the parameter is a string in WASM application
 
 **Use EXPORT_WASM_API_WITH_SIG**
 
-The above foo2 NativeSymbol element can be also defined with macro EXPORT_WASM_API_WITH_SIG. This macro can be used when the native function name is same as the WASM symbol name.
+The above foo2 NativeSymbol element can be also defined with macro EXPORT_WASM_API_WITH_SIG. This macro can be used when the native function name is the same as the WASM symbol name.
 
 ```c
 static NativeSymbol native_symbols[] = 
@@ -127,15 +127,15 @@ int main(int argc, char **argv)
 
 ## Buffer address conversion and boundary check
 
- A WebAssembly sandbox ensures applications only access to its own memory with a private address space. When passing a pointer address from WASM to native, address value must be converted to native address before the native function can access it. It is also the native world's responsibility to check the buffer length is not over its sandbox boundary. 
+ A WebAssembly sandbox ensures applications only access to its own memory with a private address space. When passing a pointer address from WASM to native, the address value must be converted to native address before the native function can access it. It is also the native world's responsibility to check the buffer length is not over its sandbox boundary. 
 
 
 
-The signature letter '$', '\*' and '~' help the runtime do automatic address conversion and buffer boundary check, so the native function directly use the string and buffer address. **Notes**:  if '*' is not followed by '~', the native function should not assume the lengh of buffer is more than 1 byte.
+The signature letter '$', '\*' and '~' help the runtime do automatic address conversion and buffer boundary check, so the native function directly uses the string and buffer address. **Notes**:  if '*' is not followed by '~', the native function should not assume the length of the buffer is more than 1 byte.
 
 
 
-As function parameters are always passed in 32 bits numbers, you can also use 'i' for the pointer type argument, then you must do all the address conversion and boundary checking in your native function. For example, if you change the foo2 signature  to "(iii)", then you will implement the native part as following:
+As function parameters are always passed in 32 bits numbers, you can also use 'i' for the pointer type argument, then you must do all the address conversion and boundary checking in your native function. For example, if you change the foo2 signature  to "(iii)", then you will implement the native part as the following sample:
 
 ```c
 void foo2(wasm_exec_env_t exec_env, 
@@ -148,15 +148,15 @@ void foo2(wasm_exec_env_t exec_env,
     char * msg ;
 
     // do boundary check
-    if (!validate_app_str_addr(msg_offset))
+    if (!wasm_runtime_validate_app_str_add(msg_offset))
         return 0;
     
-    if (!validate_app_addr(buffer_offset, buf_len))
+    if (!wasm_runtime_validate_app_addr(buffer_offset, buf_len))
         return;
 
     // do address conversion
-    buffer = addr_app_to_native(buffer_offset);
-    msg = addr_app_to_native(msg_offset);
+    buffer = wasm_runtime_addr_app_to_native(buffer_offset);
+    msg = wasm_runtime_addr_app_to_native(msg_offset);
 
     strncpy(buffer, msg, buf_len);
 }
@@ -173,23 +173,23 @@ The runtime builder should ensure not broking the memory sandbox when exporting 
 A few key ground rules:
 
 - Never pass any structure/class object pointer to native (do data serialization instead)
-- Do the pointer address conversion in the native API if "$*" are not used for the pointer in the function signature 
-- Never pass function pointer to native 
+- Do the pointer address conversion in the native API if "$*" is not used for the pointer in the function signature 
+- Never pass a function pointer to the native 
 
 
 
 ## Pass structured data or class object
 
-We must do data serialization for passing structured data or class object between the two worlds of WASM and native. There are two serilization methods available in WASM as below, and yet you can introduce more like json, cbor etc.
+We must do data serialization for passing structured data or class objects between the two worlds of WASM and native. There are two serialization methods available in WASM as below, and yet you can introduce more like json, cbor etc.
 
 - [attributes container](../core/app-framework/app-native-shared/attr_container.c)
 - [restful request/response](../core/app-framework/app-native-shared/restful_utils.c)
 
-Note the serilization library are separately compiled into WASM and runtime. And the source files are located in the folder "[core/app-framework/app-native-shared](../core/app-framework/app-native-shared)“ where all source files will be compiled into both worlds.
+Note the serialization library is separately compiled into WASM and runtime. And the source files are located in the folder "[core/app-framework/app-native-shared](../core/app-framework/app-native-shared)“ where all source files will be compiled into both worlds.
 
 
 
-The following sample code demostrates WASM app packes a response structure to buffer, then pass the buffer pointer to the native:
+The following sample code demonstrates WASM app packs a response structure to buffer, then pass the buffer pointer to the native:
 
 ```c
 /*** file name: core/app-framework/base/app/request.c ***/
