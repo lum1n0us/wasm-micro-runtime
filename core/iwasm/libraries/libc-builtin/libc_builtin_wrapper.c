@@ -41,8 +41,8 @@ wasm_runtime_set_llvm_stack(wasm_module_inst_t module, uint32 llvm_stack);
 #define addr_native_to_app(ptr) \
     wasm_runtime_addr_native_to_app(module_inst, ptr)
 
-#define module_malloc(size) \
-    wasm_runtime_module_malloc(module_inst, size)
+#define module_malloc(size, p_native_addr) \
+    wasm_runtime_module_malloc(module_inst, size, p_native_addr)
 
 #define module_free(offset) \
     wasm_runtime_module_free(module_inst, offset)
@@ -492,9 +492,8 @@ strdup_wrapper(wasm_exec_env_t exec_env, const char *str)
     if (str) {
         len = (uint32)strlen(str) + 1;
 
-        str_ret_offset = module_malloc(len);
+        str_ret_offset = module_malloc(len, (void**)&str_ret);
         if (str_ret_offset) {
-            str_ret = addr_app_to_native(str_ret_offset);
             bh_memcpy_s(str_ret, len, str, len);
         }
     }
@@ -643,7 +642,7 @@ static int32
 malloc_wrapper(wasm_exec_env_t exec_env, uint32 size)
 {
     wasm_module_inst_t module_inst = get_module_inst(exec_env);
-    return module_malloc(size);
+    return module_malloc(size, NULL);
 }
 
 static int32
@@ -657,9 +656,8 @@ calloc_wrapper(wasm_exec_env_t exec_env, uint32 nmemb, uint32 size)
     if (total_size >= UINT32_MAX)
         return 0;
 
-    ret_offset = module_malloc((uint32)total_size);
+    ret_offset = module_malloc((uint32)total_size, (void**)&ret_ptr);
     if (ret_offset) {
-        ret_ptr = addr_app_to_native(ret_offset);
         memset(ret_ptr, 0, (uint32) total_size);
     }
 
@@ -969,7 +967,7 @@ __cxa_allocate_exception_wrapper(wasm_exec_env_t exec_env,
                                  uint32 thrown_size)
 {
     wasm_module_inst_t module_inst = get_module_inst(exec_env);
-    int32 exception = module_malloc(thrown_size);
+    int32 exception = module_malloc(thrown_size, NULL);
     if (!exception)
         return 0;
 

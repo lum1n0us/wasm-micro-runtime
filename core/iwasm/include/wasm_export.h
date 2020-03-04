@@ -162,8 +162,7 @@ wasm_runtime_lookup_wasi_start_function(wasm_module_inst_t module_inst);
  *
  * @param module_inst the module instance
  * @param name the name of the function
- * @param signature the signature of the function, use "i32"/"i64"/"f32"/"f64"
- *        to represent the type of i32/i64/f32/f64, e.g. "(i32i64)" "(i32)f32"
+ * @param signature the signature of the function, ignored currently
  *
  * @return the function instance found
  */
@@ -294,6 +293,8 @@ wasm_runtime_get_custom_data(wasm_module_inst_t module_inst);
  *
  * @param module_inst the WASM module instance which contains heap
  * @param size the size bytes to allocate
+ * @param p_native_addr output native address of the allocated memory
+ *        if success and it is not NULL
  *
  * @return the allocated memory address, which is a relative offset to the
  *         base address of the module instance's memory space, the value range
@@ -301,7 +302,8 @@ wasm_runtime_get_custom_data(wasm_module_inst_t module_inst);
  *         Return non-zero if success, zero if failed.
  */
 int32_t
-wasm_runtime_module_malloc(wasm_module_inst_t module_inst, uint32_t size);
+wasm_runtime_module_malloc(wasm_module_inst_t module_inst, uint32_t size,
+                           void **p_native_addr);
 
 /**
  * Free memory to the heap of WASM module instance

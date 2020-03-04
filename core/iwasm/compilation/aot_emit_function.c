@@ -93,7 +93,7 @@ call_aot_invoke_native_func(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
     LLVMTypeRef func_type, func_ptr_type, func_param_types[5];
     LLVMTypeRef struct_type, struct_ptr_type, ret_ptr_type;
     LLVMValueRef func, struct_val, struct_elem_ptr, struct_ptr;
-    LLVMValueRef func_param_values[5], value_ret, value_ret_ptr;
+    LLVMValueRef func_param_values[5], value_ret, value_ret_ptr, res;
     char buf[32], *func_name = "aot_invoke_native";
     uint32 i;
 
@@ -158,11 +158,12 @@ call_aot_invoke_native_func(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
             return false;
         }
 
-        if (!LLVMBuildStore(comp_ctx->builder,
-                            param_values[i], struct_elem_ptr)) {
+        if (!(res = LLVMBuildStore(comp_ctx->builder,
+                                   param_values[i], struct_elem_ptr))) {
             aot_set_last_error("llvm build store failed.");
             return false;
         }
+        LLVMSetAlignment(res, 1);
     }
 
     /* convert to int32 pointer */

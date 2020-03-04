@@ -348,15 +348,18 @@ wasm_runtime_get_custom_data(WASMModuleInstanceCommon *module_inst)
 }
 
 int32
-wasm_runtime_module_malloc(WASMModuleInstanceCommon *module_inst, uint32 size)
+wasm_runtime_module_malloc(WASMModuleInstanceCommon *module_inst, uint32 size,
+                           void **p_native_addr)
 {
 #if WASM_ENABLE_INTERP != 0
     if (module_inst->module_type == Wasm_Module_Bytecode)
-        return wasm_module_malloc((WASMModuleInstance*)module_inst, size);
+        return wasm_module_malloc((WASMModuleInstance*)module_inst, size,
+                                  p_native_addr);
 #endif
 #if WASM_ENABLE_AOT != 0
     if (module_inst->module_type == Wasm_Module_AoT)
-        return aot_module_malloc((AOTModuleInstance*)module_inst, size);
+        return aot_module_malloc((AOTModuleInstance*)module_inst, size,
+                                 p_native_addr);
 #endif
     return 0;
 }
@@ -697,19 +700,16 @@ wasm_runtime_init_wasi(WASMModuleInstanceCommon *module_inst,
     total_size = sizeof(size_t) * (uint64)argc;
     if (total_size >= UINT32_MAX
         || !(offset_argv_offsets = wasm_runtime_module_malloc
-                                    (module_inst, (uint32)total_size))
+                                    (module_inst, (uint32)total_size,
+                                     (void**)&argv_offsets))
         || argv_buf_len >= UINT32_MAX
         || !(offset_argv_buf = wasm_runtime_module_malloc
-                                    (module_inst, (uint32)argv_buf_len))) {
+                                    (module_inst, (uint32)argv_buf_len,
+                                     (void**)&argv_buf))) {
         set_error_buf(error_buf, error_buf_size,
                       "Init wasi environment failed: allocate memory failed.");
         goto fail;
     }
-
-    argv_offsets = (size_t*)
-        wasm_runtime_addr_app_to_native(module_inst, offset_argv_offsets);
-    argv_buf = (char*)
-        wasm_runtime_addr_app_to_native(module_inst, offset_argv_buf);
 
     for (i = 0; i < argc; i++) {
         argv_offsets[i] = argv_buf_offset;
@@ -724,19 +724,16 @@ wasm_runtime_init_wasi(WASMModuleInstanceCommon *module_inst,
     total_size = sizeof(size_t) * (uint64)argc;
     if (total_size >= UINT32_MAX
         || !(offset_env_offsets = wasm_runtime_module_malloc
-                                    (module_inst, (uint32)total_size))
+                                    (module_inst, (uint32)total_size,
+                                     (void**)&env_offsets))
         || env_buf_len >= UINT32_MAX
         || !(offset_env_buf = wasm_runtime_module_malloc
-                                    (module_inst, (uint32)env_buf_len))) {
+                                    (module_inst, (uint32)env_buf_len,
+                                     (void**)&env_buf))) {
         set_error_buf(error_buf, error_buf_size,
                       "Init wasi environment failed: allocate memory failed.");
         goto fail;
     }
-
-    env_offsets = (size_t*)
-        wasm_runtime_addr_app_to_native(module_inst, offset_env_offsets);
-    env_buf = (char*)
-        wasm_runtime_addr_app_to_native(module_inst, offset_env_buf);
 
     for (i = 0; i < env_count; i++) {
         env_offsets[i] = env_buf_offset;
@@ -746,23 +743,16 @@ wasm_runtime_init_wasi(WASMModuleInstanceCommon *module_inst,
     }
 
     if (!(offset_curfds = wasm_runtime_module_malloc
-                (module_inst, sizeof(struct fd_table)))
+                (module_inst, sizeof(struct fd_table), (void**)&curfds))
         || !(offset_prestats = wasm_runtime_module_malloc
-                (module_inst, sizeof(struct fd_prestats)))
+                (module_inst, sizeof(struct fd_prestats), (void**)&prestats))
         || !(offset_argv_environ = wasm_runtime_module_malloc
-                (module_inst, sizeof(struct argv_environ_values)))) {
+                (module_inst, sizeof(struct argv_environ_values),
+                 (void**)&argv_environ))) {
         set_error_buf(error_buf, error_buf_size,
                       "Init wasi environment failed: allocate memory failed.");
         goto fail;
     }
-
-    curfds = wasi_ctx->curfds = (struct fd_table*)
-        wasm_runtime_addr_app_to_native(module_inst, offset_curfds);
-    prestats = wasi_ctx->prestats = (struct fd_prestats*)
-        wasm_runtime_addr_app_to_native(module_inst, offset_prestats);
-    argv_environ = wasi_ctx->argv_environ =
-        (struct argv_environ_values*)wasm_runtime_addr_app_to_native
-        (module_inst, offset_argv_environ);
 
     fd_table_init(curfds);
     fd_prestats_init(prestats);
@@ -1070,13 +1060,14 @@ wasm_application_execute_main(WASMModuleInstanceCommon *module_inst,
 
         if (total_size >= UINT32_MAX
             || !(argv_buf_offset =
-                    wasm_runtime_module_malloc(module_inst, (uint32)total_size))) {
+                    wasm_runtime_module_malloc(module_inst, (uint32)total_size,
+                                               (void**)&argv_buf))) {
             wasm_runtime_set_exception(module_inst,
                                        "allocate memory failed.");
             return false;
         }
 
-        argv_buf = p = wasm_runtime_addr_app_to_native(module_inst, argv_buf_offset);
+        p = argv_buf;
         argv_offsets = (int32*)(p + total_argv_size);
         p_end = p + total_size;
 

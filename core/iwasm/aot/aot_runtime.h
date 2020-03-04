@@ -379,7 +379,8 @@ void
 aot_clear_exception(AOTModuleInstance *module_inst);
 
 int32
-aot_module_malloc(AOTModuleInstance *module_inst, uint32 size);
+aot_module_malloc(AOTModuleInstance *module_inst, uint32 size,
+                  void **p_native_addr);
 
 void
 aot_module_free(AOTModuleInstance *module_inst, int32 ptr);

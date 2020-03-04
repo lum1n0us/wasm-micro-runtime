@@ -551,7 +551,8 @@ aot_clear_exception(AOTModuleInstance *module_inst)
 }
 
 int32
-aot_module_malloc(AOTModuleInstance *module_inst, uint32 size)
+aot_module_malloc(AOTModuleInstance *module_inst, uint32 size,
+                  void **p_native_addr)
 {
     uint8 *addr =
         mem_allocator_malloc(module_inst->heap_handle.ptr, size);
@@ -560,6 +561,8 @@ aot_module_malloc(AOTModuleInstance *module_inst, uint32 size)
         aot_set_exception(module_inst, "out of memory");
         return 0;
     }
+    if (p_native_addr)
+        *p_native_addr = addr;
     return (int32)(module_inst->heap_base_offset
                    + (addr - (uint8*)module_inst->heap_data.ptr));
 }
@@ -580,10 +583,11 @@ int32
 aot_module_dup_data(AOTModuleInstance *module_inst,
                     const char *src, uint32 size)
 {
-    int32 buffer_offset = aot_module_malloc(module_inst, size);
+    char *buffer;
+    int32 buffer_offset = aot_module_malloc(module_inst, size,
+                                            (void**)&buffer);
 
     if (buffer_offset != 0) {
-        char *buffer;
         buffer = aot_addr_app_to_native(module_inst, buffer_offset);
         memcpy(buffer, src, size);
     }

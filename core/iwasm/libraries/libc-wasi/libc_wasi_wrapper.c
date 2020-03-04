@@ -29,8 +29,8 @@ wasm_runtime_set_exception(wasm_module_inst_t module, const char *exception);
 #define addr_native_to_app(ptr) \
     wasm_runtime_addr_native_to_app(module_inst, ptr)
 
-#define module_malloc(size) \
-    wasm_runtime_module_malloc(module_inst, size)
+#define module_malloc(size, p_native_addr) \
+    wasm_runtime_module_malloc(module_inst, size, p_native_addr)
 
 #define module_free(offset) \
     wasm_runtime_module_free(module_inst, offset)
@@ -284,10 +284,10 @@ wasi_fd_pread(wasm_exec_env_t exec_env,
 
     total_size = sizeof(wasi_iovec_t) * (uint64)iovs_len;
     if (total_size >= UINT32_MAX
-        || !(mem = module_malloc((uint32)total_size)))
+        || !(mem = module_malloc((uint32)total_size, (void**)&iovec_begin)))
         return (wasi_errno_t)-1;
 
-    iovec = iovec_begin = (wasi_iovec_t*)addr_app_to_native(mem);
+    iovec = iovec_begin;
 
     for (i = 0; i < iovs_len; i++, iovec_app++, iovec++) {
         if (!validate_app_addr(iovec_app->buf_offset, iovec_app->buf_len)) {
@@ -335,10 +335,11 @@ wasi_fd_pwrite(wasm_exec_env_t exec_env,
 
     total_size = sizeof(wasi_ciovec_t) * (uint64)iovs_len;
     if (total_size >= UINT32_MAX
-        || !(mem = module_malloc((uint32)total_size)))
+        || !(mem = module_malloc((uint32)total_size, (void**)&ciovec_begin)))
         return (wasi_errno_t)-1;
 
-    ciovec_begin = ciovec = (wasi_ciovec_t*)addr_app_to_native(mem);
+    ciovec = ciovec_begin;
+
     for (i = 0; i < iovs_len; i++, iovec_app++, ciovec++) {
         if (!validate_app_addr(iovec_app->buf_offset, iovec_app->buf_len)) {
             err = (wasi_errno_t)-1;
@@ -385,10 +386,10 @@ wasi_fd_read(wasm_exec_env_t exec_env,
 
     total_size = sizeof(wasi_iovec_t) * (uint64)iovs_len;
     if (total_size >= UINT32_MAX
-        || !(mem = module_malloc((uint32)total_size)))
+        || !(mem = module_malloc((uint32)total_size, (void**)&iovec_begin)))
         return (wasi_errno_t)-1;
 
-    iovec = iovec_begin = (wasi_iovec_t*)addr_app_to_native(mem);
+    iovec = iovec_begin;
 
     for (i = 0; i < iovs_len; i++, iovec_app++, iovec++) {
         if (!validate_app_addr(iovec_app->buf_offset, iovec_app->buf_len)) {
@@ -526,10 +527,11 @@ wasi_fd_write(wasm_exec_env_t exec_env, wasi_fd_t fd,
 
     total_size = sizeof(wasi_ciovec_t) * (uint64)iovs_len;
     if (total_size >= UINT32_MAX
-        || !(mem = module_malloc((uint32)total_size)))
+        || !(mem = module_malloc((uint32)total_size, (void**)&ciovec_begin)))
         return (wasi_errno_t)-1;
 
-    ciovec_begin = ciovec = (wasi_ciovec_t*)addr_app_to_native(mem);
+    ciovec = ciovec_begin;
+
     for (i = 0; i < iovs_len; i++, iovec_app++, ciovec++) {
         if (!validate_app_addr(iovec_app->buf_offset, iovec_app->buf_len)) {
             err = (wasi_errno_t)-1;
@@ -878,10 +880,10 @@ wasi_sock_recv(wasm_exec_env_t exec_env,
 
     total_size = sizeof(wasi_iovec_t) * (uint64)ri_data_len;
     if (total_size >= UINT32_MAX
-        || !(mem = module_malloc((uint32)total_size)))
+        || !(mem = module_malloc((uint32)total_size, (void**)&iovec_begin)))
         return (wasi_errno_t)-1;
 
-    iovec = iovec_begin = (wasi_iovec_t*)addr_app_to_native(mem);
+    iovec = iovec_begin;
 
     for (i = 0; i < ri_data_len; i++, ri_data++, iovec++) {
         if (!validate_app_addr(ri_data->buf_offset, ri_data->buf_len)) {
@@ -933,10 +935,10 @@ wasi_sock_send(wasm_exec_env_t exec_env,
 
     total_size = sizeof(wasi_ciovec_t) * (uint64)si_data_len;
     if (total_size >= UINT32_MAX
-        || !(mem = module_malloc((uint32)total_size)))
+        || !(mem = module_malloc((uint32)total_size, (void**)&ciovec_begin)))
         return (wasi_errno_t)-1;
 
-    ciovec_begin = ciovec = (wasi_ciovec_t*)addr_app_to_native(mem);
+    ciovec = ciovec_begin;
 
     for (i = 0; i < si_data_len; i++, si_data++, ciovec++) {
         if (!validate_app_addr(si_data->buf_offset, si_data->buf_len)) {

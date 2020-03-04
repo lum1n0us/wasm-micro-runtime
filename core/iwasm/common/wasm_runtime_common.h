@@ -173,7 +173,8 @@ wasm_runtime_get_custom_data(WASMModuleInstanceCommon *module_inst);
 
 /* See wasm_export.h for description */
 int32
-wasm_runtime_module_malloc(WASMModuleInstanceCommon *module_inst, uint32 size);
+wasm_runtime_module_malloc(WASMModuleInstanceCommon *module_inst, uint32 size,
+                           void **p_native_addr);
 
 /* See wasm_export.h for description */
 void

@@ -912,7 +912,8 @@ wasm_get_exception(WASMModuleInstance *module_inst)
 }
 
 int32
-wasm_module_malloc(WASMModuleInstance *module_inst, uint32 size)
+wasm_module_malloc(WASMModuleInstance *module_inst, uint32 size,
+                   void **p_native_addr)
 {
     WASMMemoryInstance *memory = module_inst->default_memory;
     uint8 *addr = mem_allocator_malloc(memory->heap_handle, size);
@@ -920,6 +921,8 @@ wasm_module_malloc(WASMModuleInstance *module_inst, uint32 size)
         wasm_set_exception(module_inst, "out of memory");
         return 0;
     }
+    if (p_native_addr)
+        *p_native_addr = addr;
     return memory->heap_base_offset + (int32)(addr - memory->heap_data);
 }
 
@@ -938,9 +941,10 @@ int32
 wasm_module_dup_data(WASMModuleInstance *module_inst,
                      const char *src, uint32 size)
 {
-    int32 buffer_offset = wasm_module_malloc(module_inst, size);
+    char *buffer;
+    int32 buffer_offset = wasm_module_malloc(module_inst, size,
+                                             (void**)&buffer);
     if (buffer_offset != 0) {
-        char *buffer;
         buffer = wasm_addr_app_to_native(module_inst, buffer_offset);
         bh_memcpy_s(buffer, size, src, size);
     }
