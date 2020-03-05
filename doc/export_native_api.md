@@ -64,6 +64,10 @@ static NativeSymbol native_symbols[] =
     }    
 };
 
+// ensure the memory and runtime initialization is finsihed
+// before registering the native functions
+bh_memory_init_with_pool(global_heap_buf, sizeof(global_heap_buf));
+wasm_runtime_init();
 
 int n_native_symbols = sizeof(native_symbols) / sizeof(NativeSymbol);
 if (!wasm_runtime_register_natives("env",
@@ -71,6 +75,9 @@ if (!wasm_runtime_register_natives("env",
                                    n_native_symbols)) {
     goto fail1;
 }
+
+// natives registeration must be done before loading WASM modules
+module = wasm_runtime_load(buffer, size, error_buf, sizeof(error_buf));
 
 ```
 
