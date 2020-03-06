@@ -231,7 +231,7 @@ typedef struct WASIArguments {
     uint32 map_dir_count;
     const char **env;
     uint32 env_count;
-    const char **argv;
+    char **argv;
     uint32 argc;
 } WASIArguments;
 #endif

@@ -1781,7 +1781,7 @@ create_sections(const uint8 *buf, uint32 size,
 
             memset(section, 0, sizeof(WASMSection));
             section->section_type = section_type;
-            section->section_body = p;
+            section->section_body = (uint8*)p;
             section->section_body_size = section_size;
 
             if (!*p_section_list)
