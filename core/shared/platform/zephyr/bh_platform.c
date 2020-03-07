@@ -41,6 +41,12 @@ _stdout_hook_iwasm(int c)
 }
 
 int
+os_thread_sys_init();
+
+void
+os_thread_sys_destroy();
+
+int
 bh_platform_init()
 {
     extern void __stdout_hook_install(int (*hook)(int));
@@ -54,7 +60,13 @@ bh_platform_init()
 #endif
 #endif
 
-    return 0;
+    return os_thread_sys_init();
+}
+
+void
+bh_platform_destroy()
+{
+    os_thread_sys_destroy();
 }
 
 void *
@@ -74,26 +86,56 @@ os_free(void *ptr)
 {
 }
 
+struct out_context {
+    int count;
+};
+
+typedef int (*out_func_t)(int c, void *ctx);
+
+static int
+char_out(int c, void *ctx)
+{
+    struct out_context *out_ctx = (struct out_context*)ctx;
+    out_ctx->count++;
+    return _stdout_hook_iwasm(c);
+}
+
+int
+os_vprintf(const char *fmt, va_list ap)
+{
+    struct out_context ctx = { 0 };
+    z_vprintk(char_out, &ctx, fmt, ap);
+    return ctx.count;
+}
+
+void
+os_abort()
+{
+    int i = os_printf(" ");
+    /* divived by 0 to make it abort */
+    os_printf("%d\n", (uint32)os_abort / (i - 1));
+}
+
 void *
-bh_mmap(void *hint, unsigned int size, int prot, int flags)
+os_mmap(void *hint, unsigned int size, int prot, int flags)
 {
     return BH_MALLOC(size);
 }
 
 void
-bh_munmap(void *addr, uint32 size)
+os_munmap(void *addr, uint32 size)
 {
     return BH_FREE(addr);
 }
 
 int
-bh_mprotect(void *addr, uint32 size, int prot)
+os_mprotect(void *addr, uint32 size, int prot)
 {
     return 0;
 }
 
 void
-bh_dcache_flush()
+os_dcache_flush()
 {
 #if defined(CONFIG_CPU_CORTEX_M7) && defined(CONFIG_ARM_MPU)
     uint32 key;

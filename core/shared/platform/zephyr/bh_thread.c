@@ -3,18 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "bh_thread.h"
+#include "bh_platform.h"
 #include "bh_assert.h"
 #include "bh_log.h"
 
-typedef struct bh_thread_wait_node {
+typedef struct os_thread_wait_node {
     struct k_sem sem;
-    bh_thread_wait_list next;
-} bh_thread_wait_node;
+    os_thread_wait_list next;
+} os_thread_wait_node;
 
-typedef struct bh_thread_data {
+typedef struct os_thread_data {
     /* Next thread data */
-    struct bh_thread_data *next;
+    struct os_thread_data *next;
     /* Zephyr thread handle */
     korp_tid tid;
     /* Jeff thread local root */
@@ -22,46 +22,46 @@ typedef struct bh_thread_data {
     /* Lock for waiting list */
     struct k_mutex wait_list_lock;
     /* Waiting list of other threads who are joining this thread */
-    bh_thread_wait_list thread_wait_list;
+    os_thread_wait_list thread_wait_list;
     /* Thread stack size */
     unsigned stack_size;
     /* Thread stack */
     char stack[1];
-} bh_thread_data;
+} os_thread_data;
 
-typedef struct bh_thread_obj {
+typedef struct os_thread_obj {
     struct k_thread thread;
     /* Whether the thread is terminated and this thread object is to
      be freed in the future. */
     bool to_be_freed;
-    struct bh_thread_obj *next;
-} bh_thread_obj;
+    struct os_thread_obj *next;
+} os_thread_obj;
 
 static bool is_thread_sys_inited = false;
 
 /* Thread data of supervisor thread */
-static bh_thread_data supervisor_thread_data;
+static os_thread_data supervisor_thread_data;
 
 /* Lock for thread data list */
 static struct k_mutex thread_data_lock;
 
 /* Thread data list */
-static bh_thread_data *thread_data_list = NULL;
+static os_thread_data *thread_data_list = NULL;
 
 /* Lock for thread object list */
 static struct k_mutex thread_obj_lock;
 
 /* Thread object list */
-static bh_thread_obj *thread_obj_list = NULL;
+static os_thread_obj *thread_obj_list = NULL;
 
-static void thread_data_list_add(bh_thread_data *thread_data)
+static void thread_data_list_add(os_thread_data *thread_data)
 {
     k_mutex_lock(&thread_data_lock, K_FOREVER);
     if (!thread_data_list)
         thread_data_list = thread_data;
     else {
         /* If already in list, just return */
-        bh_thread_data *p = thread_data_list;
+        os_thread_data *p = thread_data_list;
         while (p) {
             if (p == thread_data) {
                 k_mutex_unlock(&thread_data_lock);
@@ -77,7 +77,7 @@ static void thread_data_list_add(bh_thread_data *thread_data)
     k_mutex_unlock(&thread_data_lock);
 }
 
-static void thread_data_list_remove(bh_thread_data *thread_data)
+static void thread_data_list_remove(os_thread_data *thread_data)
 {
     k_mutex_lock(&thread_data_lock, K_FOREVER);
     if (thread_data_list) {
@@ -85,7 +85,7 @@ static void thread_data_list_remove(bh_thread_data *thread_data)
             thread_data_list = thread_data_list->next;
         else {
             /* Search and remove it from list */
-            bh_thread_data *p = thread_data_list;
+            os_thread_data *p = thread_data_list;
             while (p && p->next != thread_data)
                 p = p->next;
             if (p && p->next == thread_data)
@@ -95,12 +95,12 @@ static void thread_data_list_remove(bh_thread_data *thread_data)
     k_mutex_unlock(&thread_data_lock);
 }
 
-static bh_thread_data *
+static os_thread_data *
 thread_data_list_lookup(k_tid_t tid)
 {
     k_mutex_lock(&thread_data_lock, K_FOREVER);
     if (thread_data_list) {
-        bh_thread_data *p = thread_data_list;
+        os_thread_data *p = thread_data_list;
         while (p) {
             if (p->tid == tid) {
                 /* Found */
@@ -114,7 +114,7 @@ thread_data_list_lookup(k_tid_t tid)
     return NULL;
 }
 
-static void thread_obj_list_add(bh_thread_obj *thread_obj)
+static void thread_obj_list_add(os_thread_obj *thread_obj)
 {
     k_mutex_lock(&thread_obj_lock, K_FOREVER);
     if (!thread_obj_list)
@@ -129,7 +129,7 @@ static void thread_obj_list_add(bh_thread_obj *thread_obj)
 
 static void thread_obj_list_reclaim()
 {
-    bh_thread_obj *p, *p_prev;
+    os_thread_obj *p, *p_prev;
     k_mutex_lock(&thread_obj_lock, K_FOREVER);
     p_prev = NULL;
     p = thread_obj_list;
@@ -152,7 +152,7 @@ static void thread_obj_list_reclaim()
     k_mutex_unlock(&thread_obj_lock);
 }
 
-int _vm_thread_sys_init()
+int os_thread_sys_init()
 {
     if (is_thread_sys_inited)
         return BHT_OK;
@@ -170,31 +170,31 @@ int _vm_thread_sys_init()
     return BHT_OK;
 }
 
-void vm_thread_sys_destroy(void)
+void os_thread_sys_destroy(void)
 {
     if (is_thread_sys_inited) {
         is_thread_sys_inited = false;
     }
 }
 
-static bh_thread_data *
+static os_thread_data *
 thread_data_current()
 {
     k_tid_t tid = k_current_get();
     return thread_data_list_lookup(tid);
 }
 
-static void vm_thread_cleanup(void)
+static void os_thread_cleanup(void)
 {
-    bh_thread_data *thread_data = thread_data_current();
+    os_thread_data *thread_data = thread_data_current();
 
     bh_assert(thread_data != NULL);
     k_mutex_lock(&thread_data->wait_list_lock, K_FOREVER);
     if (thread_data->thread_wait_list) {
         /* Signal each joining thread */
-        bh_thread_wait_list head = thread_data->thread_wait_list;
+        os_thread_wait_list head = thread_data->thread_wait_list;
         while (head) {
-            bh_thread_wait_list next = head->next;
+            os_thread_wait_list next = head->next;
             k_sem_give(&head->sem);
             /* head will be freed by joining thread */
             head = next;
@@ -206,32 +206,32 @@ static void vm_thread_cleanup(void)
     thread_data_list_remove(thread_data);
     /* Set flag to true for the next thread creating to
      free the thread object */
-    ((bh_thread_obj*) thread_data->tid)->to_be_freed = true;
+    ((os_thread_obj*) thread_data->tid)->to_be_freed = true;
     BH_FREE(thread_data);
 }
 
-static void vm_thread_wrapper(void *start, void *arg, void *thread_data)
+static void os_thread_wrapper(void *start, void *arg, void *thread_data)
 {
     /* Set thread custom data */
-    ((bh_thread_data*) thread_data)->tid = k_current_get();
+    ((os_thread_data*) thread_data)->tid = k_current_get();
     thread_data_list_add(thread_data);
 
     ((thread_start_routine_t) start)(arg);
-    vm_thread_cleanup();
+    os_thread_cleanup();
 }
 
-int _vm_thread_create(korp_tid *p_tid, thread_start_routine_t start, void *arg,
-        unsigned int stack_size)
+int os_thread_create(korp_tid *p_tid, thread_start_routine_t start, void *arg,
+                     unsigned int stack_size)
 {
-    return _vm_thread_create_with_prio(p_tid, start, arg, stack_size,
+    return os_thread_create_with_prio(p_tid, start, arg, stack_size,
     BH_THREAD_DEFAULT_PRIORITY);
 }
 
-int _vm_thread_create_with_prio(korp_tid *p_tid, thread_start_routine_t start,
-        void *arg, unsigned int stack_size, int prio)
+int os_thread_create_with_prio(korp_tid *p_tid, thread_start_routine_t start,
+                               void *arg, unsigned int stack_size, int prio)
 {
     korp_tid tid;
-    bh_thread_data *thread_data;
+    os_thread_data *thread_data;
     unsigned thread_data_size;
 
     if (!p_tid || !stack_size)
@@ -241,13 +241,13 @@ int _vm_thread_create_with_prio(korp_tid *p_tid, thread_start_routine_t start,
     thread_obj_list_reclaim();
 
     /* Create and initialize thread object */
-    if (!(tid = BH_MALLOC(sizeof(bh_thread_obj))))
+    if (!(tid = BH_MALLOC(sizeof(os_thread_obj))))
         return BHT_ERROR;
 
-    memset(tid, 0, sizeof(bh_thread_obj));
+    memset(tid, 0, sizeof(os_thread_obj));
 
     /* Create and initialize thread data */
-    thread_data_size = offsetof(bh_thread_data, stack) + stack_size;
+    thread_data_size = offsetof(os_thread_data, stack) + stack_size;
     if (!(thread_data = BH_MALLOC(thread_data_size))) {
         BH_FREE(tid);
         return BHT_ERROR;
@@ -260,7 +260,7 @@ int _vm_thread_create_with_prio(korp_tid *p_tid, thread_start_routine_t start,
 
     /* Create the thread */
     if (!((tid = k_thread_create(tid, (k_thread_stack_t *) thread_data->stack,
-            stack_size, vm_thread_wrapper, start, arg, thread_data, prio, 0,
+            stack_size, os_thread_wrapper, start, arg, thread_data, prio, 0,
             K_NO_WAIT)))) {
         BH_FREE(tid);
         BH_FREE(thread_data);
@@ -271,38 +271,24 @@ int _vm_thread_create_with_prio(korp_tid *p_tid, thread_start_routine_t start,
 
     /* Set thread custom data */
     thread_data_list_add(thread_data);
-    thread_obj_list_add((bh_thread_obj*) tid);
+    thread_obj_list_add((os_thread_obj*) tid);
     *p_tid = tid;
     return BHT_OK;
 }
 
-korp_tid _vm_self_thread()
+korp_tid os_self_thread()
 {
     return (korp_tid) k_current_get();
 }
 
-void vm_thread_exit(void * code)
-{
-    (void) code;
-    korp_tid self = vm_self_thread();
-    vm_thread_cleanup();
-    k_thread_abort((k_tid_t) self);
-}
-
-int _vm_thread_cancel(korp_tid thread)
-{
-    k_thread_abort((k_tid_t) thread);
-    return 0;
-}
-
-int _vm_thread_join(korp_tid thread, void **value_ptr, int mills)
+int os_thread_join(korp_tid thread, void **value_ptr)
 {
     (void) value_ptr;
-    bh_thread_data *thread_data;
-    bh_thread_wait_node *node;
+    os_thread_data *thread_data;
+    os_thread_wait_node *node;
 
     /* Create wait node and append it to wait list */
-    if (!(node = BH_MALLOC(sizeof(bh_thread_wait_node))))
+    if (!(node = BH_MALLOC(sizeof(os_thread_wait_node))))
         return BHT_ERROR;
 
     k_sem_init(&node->sem, 0, 1);
@@ -317,7 +303,7 @@ int _vm_thread_join(korp_tid thread, void **value_ptr, int mills)
         thread_data->thread_wait_list = node;
     else {
         /* Add to end of waiting list */
-        bh_thread_wait_node *p = thread_data->thread_wait_list;
+        os_thread_wait_node *p = thread_data->thread_wait_list;
         while (p->next)
             p = p->next;
         p->next = node;
@@ -325,7 +311,7 @@ int _vm_thread_join(korp_tid thread, void **value_ptr, int mills)
     k_mutex_unlock(&thread_data->wait_list_lock);
 
     /* Wait the sem */
-    k_sem_take(&node->sem, mills);
+    k_sem_take(&node->sem, K_FOREVER);
 
     /* Wait some time for the thread to be actually terminated */
     k_sleep(100);
@@ -335,118 +321,77 @@ int _vm_thread_join(korp_tid thread, void **value_ptr, int mills)
     return BHT_OK;
 }
 
-int _vm_thread_detach(korp_tid thread)
-{
-    (void) thread;
-    return BHT_OK;
-}
-
-void *_vm_tls_get(unsigned idx)
-{
-    (void) idx;
-    bh_thread_data *thread_data;
-
-    bh_assert(idx == 0);
-    thread_data = thread_data_current();
-
-    return thread_data ? thread_data->tlr : NULL;
-}
-
-int _vm_tls_put(unsigned idx, void * tls)
-{
-    bh_thread_data *thread_data;
-
-    (void) idx;
-    bh_assert(idx == 0);
-    thread_data = thread_data_current();
-    bh_assert(thread_data != NULL);
-
-    thread_data->tlr = tls;
-    return BHT_OK;
-}
-
-int _vm_mutex_init(korp_mutex *mutex)
+int os_mutex_init(korp_mutex *mutex)
 {
     (void) mutex;
     k_mutex_init(mutex);
     return BHT_OK;
 }
 
-int _vm_recursive_mutex_init(korp_mutex *mutex)
-{
-    k_mutex_init(mutex);
-    return BHT_OK;
-}
-
-int _vm_mutex_destroy(korp_mutex *mutex)
+int os_mutex_destroy(korp_mutex *mutex)
 {
     (void) mutex;
     return BHT_OK;
 }
 
-void vm_mutex_lock(korp_mutex *mutex)
+void os_mutex_lock(korp_mutex *mutex)
 {
     k_mutex_lock(mutex, K_FOREVER);
 }
 
-int vm_mutex_trylock(korp_mutex *mutex)
-{
-    return k_mutex_lock(mutex, K_NO_WAIT);
-}
-
-void vm_mutex_unlock(korp_mutex *mutex)
+void os_mutex_unlock(korp_mutex *mutex)
 {
     k_mutex_unlock(mutex);
 }
 
-int _vm_sem_init(korp_sem* sem, unsigned int c)
+int os_sem_init(korp_sem* sem, unsigned int c)
 {
     int ret = k_sem_init(sem, 0, c);
     return ret == 0 ? BHT_OK : BHT_ERROR;
 }
 
-int _vm_sem_destroy(korp_sem *sem)
+int os_sem_destroy(korp_sem *sem)
 {
     (void) sem;
     return BHT_OK;
 }
 
-int _vm_sem_wait(korp_sem *sem)
+int os_sem_wait(korp_sem *sem)
 {
     return k_sem_take(sem, K_FOREVER);
 }
 
-int _vm_sem_reltimedwait(korp_sem *sem, int mills)
+int os_sem_reltimedwait(korp_sem *sem, int mills)
 {
     return k_sem_take(sem, mills);
 }
 
-int _vm_sem_post(korp_sem *sem)
+int os_sem_post(korp_sem *sem)
 {
     k_sem_give(sem);
     return BHT_OK;
 }
 
-int _vm_cond_init(korp_cond *cond)
+int os_cond_init(korp_cond *cond)
 {
     k_mutex_init(&cond->wait_list_lock);
     cond->thread_wait_list = NULL;
     return BHT_OK;
 }
 
-int _vm_cond_destroy(korp_cond *cond)
+int os_cond_destroy(korp_cond *cond)
 {
     (void) cond;
     return BHT_OK;
 }
 
-static int _vm_cond_wait_internal(korp_cond *cond, korp_mutex *mutex,
-        bool timed, int mills)
+static int os_cond_wait_internal(korp_cond *cond, korp_mutex *mutex,
+                                 bool timed, int mills)
 {
-    bh_thread_wait_node *node;
+    os_thread_wait_node *node;
 
     /* Create wait node and append it to wait list */
-    if (!(node = BH_MALLOC(sizeof(bh_thread_wait_node))))
+    if (!(node = BH_MALLOC(sizeof(os_thread_wait_node))))
         return BHT_ERROR;
 
     k_sem_init(&node->sem, 0, 1);
@@ -457,7 +402,7 @@ static int _vm_cond_wait_internal(korp_cond *cond, korp_mutex *mutex,
         cond->thread_wait_list = node;
     else {
         /* Add to end of wait list */
-        bh_thread_wait_node *p = cond->thread_wait_list;
+        os_thread_wait_node *p = cond->thread_wait_list;
         while (p->next)
             p = p->next;
         p->next = node;
@@ -475,7 +420,7 @@ static int _vm_cond_wait_internal(korp_cond *cond, korp_mutex *mutex,
         cond->thread_wait_list = node->next;
     else {
         /* Remove from the wait list */
-        bh_thread_wait_node *p = cond->thread_wait_list;
+        os_thread_wait_node *p = cond->thread_wait_list;
         while (p->next != node)
             p = p->next;
         p->next = node->next;
@@ -486,38 +431,22 @@ static int _vm_cond_wait_internal(korp_cond *cond, korp_mutex *mutex,
     return BHT_OK;
 }
 
-int _vm_cond_wait(korp_cond *cond, korp_mutex *mutex)
+int os_cond_wait(korp_cond *cond, korp_mutex *mutex)
 {
-    return _vm_cond_wait_internal(cond, mutex, false, 0);
+    return os_cond_wait_internal(cond, mutex, false, 0);
 }
 
-int _vm_cond_reltimedwait(korp_cond *cond, korp_mutex *mutex, int mills)
+int os_cond_reltimedwait(korp_cond *cond, korp_mutex *mutex, int mills)
 {
-    return _vm_cond_wait_internal(cond, mutex, true, mills);
+    return os_cond_wait_internal(cond, mutex, true, mills);
 }
 
-int _vm_cond_signal(korp_cond *cond)
+int os_cond_signal(korp_cond *cond)
 {
     /* Signal the head wait node of wait list */
     k_mutex_lock(&cond->wait_list_lock, K_FOREVER);
     if (cond->thread_wait_list)
         k_sem_give(&cond->thread_wait_list->sem);
-    k_mutex_unlock(&cond->wait_list_lock);
-
-    return BHT_OK;
-}
-
-int _vm_cond_broadcast(korp_cond *cond)
-{
-    /* Signal each wait node of wait list */
-    k_mutex_lock(&cond->wait_list_lock, K_FOREVER);
-    if (cond->thread_wait_list) {
-        bh_thread_wait_node *p = cond->thread_wait_list;
-        while (p) {
-            k_sem_give(&p->sem);
-            p = p->next;
-        }
-    }
     k_mutex_unlock(&cond->wait_list_lock);
 
     return BHT_OK;

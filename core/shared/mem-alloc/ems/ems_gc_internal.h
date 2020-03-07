@@ -11,8 +11,6 @@ extern "C" {
 #endif
 
 #include "bh_platform.h"
-#include "bh_thread.h"
-#include "bh_assert.h"
 #include "ems_gc.h"
 
 /* basic block managed by EMS gc is the so-called HMU (heap memory unit)*/
@@ -254,10 +252,10 @@ extern int (*gct_vm_begin_rootset_enumeration)(void* heap);
 extern int (*gct_vm_gc_finished)(void);
 #else
 #define gct_vm_get_java_object_ref_list             bh_get_java_object_ref_list
-#define gct_vm_mutex_init                           vm_mutex_init
-#define gct_vm_mutex_destroy                        vm_mutex_destroy
-#define gct_vm_mutex_lock                           vm_mutex_lock
-#define gct_vm_mutex_unlock                         vm_mutex_unlock
+#define gct_vm_mutex_init                           os_mutex_init
+#define gct_vm_mutex_destroy                        os_mutex_destroy
+#define gct_vm_mutex_lock                           os_mutex_lock
+#define gct_vm_mutex_unlock                         os_mutex_unlock
 #define gct_vm_get_gc_handle_for_current_instance   app_manager_get_cur_applet_heap
 #define gct_vm_begin_rootset_enumeration            vm_begin_rootset_enumeration
 #define gct_vm_gc_finished                          jeff_runtime_gc_finished

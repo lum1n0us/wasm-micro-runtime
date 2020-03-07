@@ -3,20 +3,25 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "bh_common.h"
 #include "bh_platform.h"
+#include "bh_common.h"
 
-#include <unistd.h>
 #if WASM_ENABLE_AOT != 0
 #include "sgx_rsrv_mem_mngr.h"
 #endif
 
 #define FIXED_BUFFER_SIZE (1<<9)
-static bh_print_function_t print_function = NULL;
+
+static os_print_function_t print_function = NULL;
 
 int bh_platform_init()
 {
     return 0;
+}
+
+void
+bh_platform_destroy()
+{
 }
 
 void *
@@ -47,12 +52,12 @@ int puts(const char *s)
     return 0;
 }
 
-void bh_set_print_function(bh_print_function_t pf)
+void os_set_print_function(os_print_function_t pf)
 {
     print_function = pf;
 }
 
-int bh_printf_sgx(const char *message, ...)
+int os_printf(const char *message, ...)
 {
     if (print_function != NULL) {
         char msg[FIXED_BUFFER_SIZE] = { '\0' };
@@ -66,7 +71,7 @@ int bh_printf_sgx(const char *message, ...)
     return 0;
 }
 
-int bh_vprintf_sgx(const char * format, va_list arg)
+int os_vprintf(const char * format, va_list arg)
 {
     if (print_function != NULL) {
         char msg[FIXED_BUFFER_SIZE] = { '\0' };
@@ -77,7 +82,7 @@ int bh_vprintf_sgx(const char * format, va_list arg)
     return 0;
 }
 
-void* bh_mmap(void *hint, unsigned int size, int prot, int flags)
+void* os_mmap(void *hint, unsigned int size, int prot, int flags)
 {
 #if WASM_ENABLE_AOT != 0
     int mprot = 0;
@@ -87,7 +92,7 @@ void* bh_mmap(void *hint, unsigned int size, int prot, int flags)
 
     ret = sgx_alloc_rsrv_mem(alignedSize);
     if (ret == NULL) {
-        bh_printf_sgx("bh_mmap(size=%d, alignedSize=%d, prot=0x%x) failed.",size, alignedSize, prot);
+        os_printf_sgx("os_mmap(size=%d, alignedSize=%d, prot=0x%x) failed.",size, alignedSize, prot);
         return NULL;
     }
     if (prot & MMAP_PROT_READ)
@@ -98,7 +103,7 @@ void* bh_mmap(void *hint, unsigned int size, int prot, int flags)
         mprot |= SGX_PROT_EXEC;
     st = sgx_tprotect_rsrv_mem(ret, alignedSize, mprot);
     if (st != SGX_SUCCESS){
-	bh_printf_sgx("bh_mmap(size=%d,prot=0x%x) failed to set protect.",size, prot);
+	os_printf_sgx("os_mmap(size=%d,prot=0x%x) failed to set protect.",size, prot);
         sgx_free_rsrv_mem(ret, alignedSize);
         return NULL;
     }
@@ -109,14 +114,14 @@ void* bh_mmap(void *hint, unsigned int size, int prot, int flags)
 #endif
 }
 
-void bh_munmap(void *addr, uint32 size)
+void os_munmap(void *addr, uint32 size)
 {
 #if WASM_ENABLE_AOT != 0
     sgx_free_rsrv_mem(addr, size);
 #endif
 }
 
-int bh_mprotect(void *addr, uint32 size, int prot)
+int os_mprotect(void *addr, uint32 size, int prot)
 {
 #if WASM_ENABLE_AOT != 0
     int mprot = 0;
@@ -129,10 +134,16 @@ int bh_mprotect(void *addr, uint32 size, int prot)
     if (prot & MMAP_PROT_EXEC)
         mprot |= SGX_PROT_EXEC;
     st = sgx_tprotect_rsrv_mem(addr, size, mprot);
-    if (st != SGX_SUCCESS) bh_printf_sgx("bh_mprotect(addr=0x%lx,size=%d,prot=0x%x) failed.", addr, size, prot);
+    if (st != SGX_SUCCESS) os_printf_sgx("os_mprotect(addr=0x%lx,size=%d,prot=0x%x) failed.", addr, size, prot);
 
     return (st == SGX_SUCCESS? 0:-1);
 #else
     return -1;
 #endif
 }
+
+void
+os_dcache_flush(void)
+{
+}
+

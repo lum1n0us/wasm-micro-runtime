@@ -79,7 +79,7 @@ static void cleanup_object_list(uint32 module_id)
 {
     object_node_t *elem;
 
-    vm_mutex_lock(&g_object_list_mutex);
+    os_mutex_lock(&g_object_list_mutex);
 
     while (true) {
         bool found = false;
@@ -104,7 +104,7 @@ static void cleanup_object_list(uint32 module_id)
             break;
     }
 
-    vm_mutex_unlock(&g_object_list_mutex);
+    os_mutex_unlock(&g_object_list_mutex);
 }
 
 static bool init_object_event_callback_framework()
@@ -128,20 +128,20 @@ bool wgl_native_validate_object(int32 obj_id, lv_obj_t **obj)
 {
     object_node_t *elem;
 
-    vm_mutex_lock(&g_object_list_mutex);
+    os_mutex_lock(&g_object_list_mutex);
 
     elem = (object_node_t *)bh_list_first_elem(&g_object_list);
     while (elem) {
         if (obj_id == elem->obj_id) {
             if (obj != NULL)
                 *obj = elem->obj;
-            vm_mutex_unlock(&g_object_list_mutex);
+            os_mutex_unlock(&g_object_list_mutex);
             return true;
         }
         elem = (object_node_t *) bh_list_elem_next(elem);
     }
 
-    vm_mutex_unlock(&g_object_list_mutex);
+    os_mutex_unlock(&g_object_list_mutex);
 
     return false;
 }
@@ -165,9 +165,9 @@ bool wgl_native_add_object(lv_obj_t *obj, uint32 module_id, uint32 *obj_id)
     node->obj_id = g_obj_id_max;
     node->module_id = module_id;
 
-    vm_mutex_lock(&g_object_list_mutex);
+    os_mutex_lock(&g_object_list_mutex);
     bh_list_insert(&g_object_list, node);
-    vm_mutex_unlock(&g_object_list_mutex);
+    os_mutex_unlock(&g_object_list_mutex);
 
     if (obj_id != NULL)
         *obj_id = node->obj_id;
@@ -194,20 +194,20 @@ static void _obj_del_recursive(lv_obj_t *obj)
         i = i_next;
     }
 
-    vm_mutex_lock(&g_object_list_mutex);
+    os_mutex_lock(&g_object_list_mutex);
 
     elem = (object_node_t *)bh_list_first_elem(&g_object_list);
     while (elem) {
         if (obj == elem->obj) {
             bh_list_remove(&g_object_list, elem);
             wasm_runtime_free(elem);
-            vm_mutex_unlock(&g_object_list_mutex);
+            os_mutex_unlock(&g_object_list_mutex);
             return;
         }
         elem = (object_node_t *) bh_list_elem_next(elem);
     }
 
-    vm_mutex_unlock(&g_object_list_mutex);
+    os_mutex_unlock(&g_object_list_mutex);
 }
 
 static void _obj_clean_recursive(lv_obj_t *obj)
@@ -255,36 +255,36 @@ static void internal_lv_obj_event_cb(lv_obj_t *obj, lv_event_t event)
 {
     object_node_t *elem;
 
-    vm_mutex_lock(&g_object_list_mutex);
+    os_mutex_lock(&g_object_list_mutex);
 
     elem = (object_node_t *)bh_list_first_elem(&g_object_list);
     while (elem) {
         if (obj == elem->obj) {
             post_widget_msg_to_module(elem, event);
-            vm_mutex_unlock(&g_object_list_mutex);
+            os_mutex_unlock(&g_object_list_mutex);
             return;
         }
         elem = (object_node_t *) bh_list_elem_next(elem);
     }
 
-    vm_mutex_unlock(&g_object_list_mutex);
+    os_mutex_unlock(&g_object_list_mutex);
 }
 
 static void* lv_task_handler_thread_routine (void *arg)
 {
     korp_sem sem;
 
-    if (vm_sem_init(&sem, 1) != 0) {
+    if (os_sem_init(&sem, 1) != 0) {
         printf("Init semaphore for lvgl task handler thread fail!\n");
         return NULL;
     }
 
     while (lv_task_handler_thread_run) {
-        vm_sem_reltimedwait(&sem, 100);
+        os_sem_reltimedwait(&sem, 100);
         lv_task_handler();
     }
 
-    vm_sem_destroy(&sem);
+    os_sem_destroy(&sem);
 
     return NULL;
 }
@@ -296,11 +296,11 @@ void wgl_init(void)
     lv_init();
 
     bh_list_init(&g_object_list);
-    vm_recursive_mutex_init(&g_object_list_mutex);
+    os_recursive_mutex_init(&g_object_list_mutex);
     init_object_event_callback_framework();
 
     /* new a thread, call lv_task_handler periodically */
-    vm_thread_create(&tid,
+    os_thread_create(&tid,
                      lv_task_handler_thread_routine,
                      NULL,
                      BH_APPLET_PRESERVED_STACK_SIZE);

@@ -4,8 +4,6 @@
  */
 
 #include "runtime_timer.h"
-#include "bh_thread.h"
-#include "bh_time.h"
 
 #define PRINT(...)
 //#define PRINT printf
@@ -38,9 +36,9 @@ uint32 bh_get_elpased_ms(uint32 * last_system_clock)
 {
     uint32 elpased_ms;
 
-    // attention: the bh_get_tick_ms() return 64 bits integer.
+    // attention: the os_time_get_boot_millisecond() return 64 bits integer.
     // but the bh_get_elpased_ms() is designed to use 32 bits clock count.
-    uint32 now = (uint32) bh_get_tick_ms();
+    uint32 now = (uint32)os_time_get_boot_millisecond();
 
     // system clock overrun
     if (now < *last_system_clock) {
@@ -57,7 +55,7 @@ uint32 bh_get_elpased_ms(uint32 * last_system_clock)
 static app_timer_t * remove_timer_from(timer_ctx_t ctx, uint32 timer_id,
                                        bool active_list)
 {
-    vm_mutex_lock(&ctx->mutex);
+    os_mutex_lock(&ctx->mutex);
     app_timer_t ** head;
     if (active_list)
         head = &ctx->g_app_timers;
@@ -76,7 +74,7 @@ static app_timer_t * remove_timer_from(timer_ctx_t ctx, uint32 timer_id,
                 prev->next = t->next;
                 PRINT("removed timer [%d] after [%d] from list %d\n", t->id, prev->id, active_list);
             }
-            vm_mutex_unlock(&ctx->mutex);
+            os_mutex_unlock(&ctx->mutex);
 
             if (active_list && prev == NULL && ctx->refresh_checker)
                 ctx->refresh_checker(ctx);
@@ -88,7 +86,7 @@ static app_timer_t * remove_timer_from(timer_ctx_t ctx, uint32 timer_id,
         }
     }
 
-    vm_mutex_unlock(&ctx->mutex);
+    os_mutex_unlock(&ctx->mutex);
 
     return NULL;
 }
@@ -111,12 +109,12 @@ static app_timer_t * remove_timer(timer_ctx_t ctx, uint32 timer_id,
 static void reschedule_timer(timer_ctx_t ctx, app_timer_t * timer)
 {
 
-    vm_mutex_lock(&ctx->mutex);
+    os_mutex_lock(&ctx->mutex);
     app_timer_t * t = ctx->g_app_timers;
     app_timer_t * prev = NULL;
 
     timer->next = NULL;
-    timer->expiry = bh_get_tick_ms() + timer->interval;
+    timer->expiry = os_time_get_boot_millisecond() + timer->interval;
 
     while (t) {
         if (timer->expiry < t->expiry) {
@@ -130,7 +128,7 @@ static void reschedule_timer(timer_ctx_t ctx, app_timer_t * timer)
                 PRINT("rescheduled timer [%d] after [%d]\n", timer->id, prev->id);
             }
 
-            vm_mutex_unlock(&ctx->mutex);
+            os_mutex_unlock(&ctx->mutex);
 
             // ensure the refresh_checker() is called out of the lock
             if (prev == NULL && ctx->refresh_checker)
@@ -154,7 +152,7 @@ static void reschedule_timer(timer_ctx_t ctx, app_timer_t * timer)
         PRINT("rescheduled timer [%d] as first\n", timer->id);
     }
 
-    vm_mutex_unlock(&ctx->mutex);
+    os_mutex_unlock(&ctx->mutex);
 
     // ensure the refresh_checker() is called out of the lock
     if (prev == NULL && ctx->refresh_checker)
@@ -165,11 +163,11 @@ static void reschedule_timer(timer_ctx_t ctx, app_timer_t * timer)
 static void release_timer(timer_ctx_t ctx, app_timer_t * t)
 {
     if (ctx->pre_allocated) {
-        vm_mutex_lock(&ctx->mutex);
+        os_mutex_lock(&ctx->mutex);
         t->next = ctx->free_timers;
         ctx->free_timers = t;
         PRINT("recycle timer :%d\n", t->id);
-        vm_mutex_unlock(&ctx->mutex);
+        os_mutex_unlock(&ctx->mutex);
     } else {
         PRINT("destroy timer :%d\n", t->id);
         BH_FREE(t);
@@ -220,8 +218,8 @@ timer_ctx_t create_timer_ctx(timer_callback_f timer_handler,
         prealloc_num--;
     }
 
-    vm_cond_init(&ctx->cond);
-    vm_mutex_init(&ctx->mutex);
+    os_cond_init(&ctx->cond);
+    os_mutex_init(&ctx->mutex);
 
     PRINT("timer ctx created. pre-alloc: %d\n", ctx->pre_allocated);
 
@@ -247,8 +245,8 @@ void destroy_timer_ctx(timer_ctx_t ctx)
 
     cleanup_app_timers(ctx);
 
-    vm_cond_destroy(&ctx->cond);
-    vm_mutex_destroy(&ctx->mutex);
+    os_cond_destroy(&ctx->cond);
+    os_mutex_destroy(&ctx->mutex);
     BH_FREE(ctx);
 }
 
@@ -259,10 +257,10 @@ unsigned int timer_ctx_get_owner(timer_ctx_t ctx)
 
 void add_idle_timer(timer_ctx_t ctx, app_timer_t * timer)
 {
-    vm_mutex_lock(&ctx->mutex);
+    os_mutex_lock(&ctx->mutex);
     timer->next = ctx->idle_timers;
     ctx->idle_timers = timer;
-    vm_mutex_unlock(&ctx->mutex);
+    os_mutex_unlock(&ctx->mutex);
 }
 
 uint32 sys_create_timer(timer_ctx_t ctx, int interval, bool is_period,
@@ -374,28 +372,28 @@ static void handle_expired_timers(timer_ctx_t ctx, app_timer_t * expired)
 int get_expiry_ms(timer_ctx_t ctx)
 {
     int ms_to_next_expiry;
-    uint64 now = bh_get_tick_ms();
+    uint64 now = os_time_get_boot_millisecond();
 
-    vm_mutex_lock(&ctx->mutex);
+    os_mutex_lock(&ctx->mutex);
     if (ctx->g_app_timers == NULL)
         ms_to_next_expiry = 7 * 24 * 60 * 60 * 1000; // 1 week
     else if (ctx->g_app_timers->expiry >= now)
         ms_to_next_expiry = (int)(ctx->g_app_timers->expiry - now);
     else
         ms_to_next_expiry = 0;
-    vm_mutex_unlock(&ctx->mutex);
+    os_mutex_unlock(&ctx->mutex);
 
     return ms_to_next_expiry;
 }
 
 int check_app_timers(timer_ctx_t ctx)
 {
-    vm_mutex_lock(&ctx->mutex);
+    os_mutex_lock(&ctx->mutex);
 
     app_timer_t * t = ctx->g_app_timers;
     app_timer_t * expired = NULL;
 
-    uint64 now = bh_get_tick_ms();
+    uint64 now = os_time_get_boot_millisecond();
 
     while (t) {
         if (now >= t->expiry) {
@@ -409,7 +407,7 @@ int check_app_timers(timer_ctx_t ctx)
             break;
         }
     }
-    vm_mutex_unlock(&ctx->mutex);
+    os_mutex_unlock(&ctx->mutex);
 
     handle_expired_timers(ctx, expired);
 
@@ -418,11 +416,11 @@ int check_app_timers(timer_ctx_t ctx)
 
 void cleanup_app_timers(timer_ctx_t ctx)
 {
-    vm_mutex_lock(&ctx->mutex);
+    os_mutex_lock(&ctx->mutex);
 
     release_timer_list(&ctx->g_app_timers);
     release_timer_list(&ctx->idle_timers);
 
-    vm_mutex_unlock(&ctx->mutex);
+    os_mutex_unlock(&ctx->mutex);
 }
 

@@ -5,13 +5,23 @@
 
 #include "bh_platform.h"
 #include "bh_common.h"
-#include <stdlib.h>
-#include <string.h>
+
+int
+os_thread_sys_init();
+
+void
+os_thread_sys_destroy();
 
 int
 bh_platform_init()
 {
-    return 0;
+    return os_thread_sys_init();
+}
+
+void
+bh_platform_destroy()
+{
+    os_thread_sys_destroy();
 }
 
 void *
@@ -32,24 +42,24 @@ os_free(void *ptr)
 }
 
 void *
-bh_mmap(void *hint, unsigned int size, int prot, int flags)
+os_mmap(void *hint, unsigned int size, int prot, int flags)
 {
     return BH_MALLOC(size);
 }
 
 void
-bh_munmap(void *addr, uint32 size)
+os_munmap(void *addr, uint32 size)
 {
     return BH_FREE(addr);
 }
 
 int
-bh_mprotect(void *addr, uint32 size, int prot)
+os_mprotect(void *addr, uint32 size, int prot)
 {
     return 0;
 }
 
 void
-bh_dcache_flush()
+os_dcache_flush()
 {
 }

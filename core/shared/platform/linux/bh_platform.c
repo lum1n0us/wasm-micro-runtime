@@ -7,15 +7,15 @@
 #include "bh_common.h"
 #include "bh_assert.h"
 
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/mman.h>
-
 int
 bh_platform_init()
 {
     return 0;
+}
+
+void
+bh_platform_destroy()
+{
 }
 
 void *
@@ -36,55 +36,8 @@ os_free(void *ptr)
     free(ptr);
 }
 
-char*
-bh_read_file_to_buffer(const char *filename, uint32 *ret_size)
-{
-    char *buffer;
-    int file;
-    uint32 file_size, read_size;
-    struct stat stat_buf;
-
-    if (!filename || !ret_size) {
-        printf("Read file to buffer failed: invalid filename or ret size.\n");
-        return NULL;
-    }
-
-    if ((file = open(filename, O_RDONLY, 0)) == -1) {
-        printf("Read file to buffer failed: open file %s failed.\n",
-               filename);
-        return NULL;
-    }
-
-    if (fstat(file, &stat_buf) != 0) {
-        printf("Read file to buffer failed: fstat file %s failed.\n",
-               filename);
-        close(file);
-        return NULL;
-    }
-
-    file_size = (uint32)stat_buf.st_size;
-
-    if (!(buffer = BH_MALLOC(file_size))) {
-        printf("Read file to buffer failed: alloc memory failed.\n");
-        close(file);
-        return NULL;
-    }
-
-    read_size = (uint32)read(file, buffer, file_size);
-    close(file);
-
-    if (read_size < file_size) {
-        printf("Read file to buffer failed: read file content failed.\n");
-        BH_FREE(buffer);
-        return NULL;
-    }
-
-    *ret_size = file_size;
-    return buffer;
-}
-
 void *
-bh_mmap(void *hint, uint32 size, int prot, int flags)
+os_mmap(void *hint, uint32 size, int prot, int flags)
 {
     int map_prot = PROT_NONE;
     int map_flags = MAP_ANONYMOUS | MAP_PRIVATE;
@@ -154,14 +107,14 @@ bh_mmap(void *hint, uint32 size, int prot, int flags)
 }
 
 void
-bh_munmap(void *addr, uint32 size)
+os_munmap(void *addr, uint32 size)
 {
     if (addr)
         munmap(addr, size);
 }
 
 int
-bh_mprotect(void *addr, uint32 size, int prot)
+os_mprotect(void *addr, uint32 size, int prot)
 {
     int map_prot = PROT_NONE;
 
@@ -178,5 +131,10 @@ bh_mprotect(void *addr, uint32 size, int prot)
         map_prot |= PROT_EXEC;
 
     return mprotect(addr, size, map_prot);
+}
+
+void
+os_dcache_flush(void)
+{
 }
 

@@ -3,35 +3,24 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "bh_time.h"
+#include "bh_platform.h"
 
-/*
- * This function returns milliseconds per tick.
- * @return milliseconds per tick.
- */
-uint64 _bh_time_get_tick_millisecond()
+uint64
+os_time_get_boot_millisecond()
 {
-  return aos_get_hz() / 1000;
+    return (uint64)aos_now_ms();
 }
 
-/*
- * This function returns milliseconds after boot.
- * @return milliseconds after boot.
- */
-uint64 _bh_time_get_boot_millisecond()
+uint64
+os_time_get_millisecond_from_1970()
 {
-  return (uint64)aos_now_ms();
-}
-
-uint64 _bh_time_get_millisecond_from_1970()
-{
-  return (uint64)aos_now_ms();
+    return (uint64)aos_now_ms();
 }
 
 size_t
-_bh_time_strftime (char *str, size_t max, const char *format, int64 time)
+os_time_strftime(char *str, size_t max, const char *format, uint64 time)
 {
-  str = aos_now_time_str(str, max);
-  return str ? strlen(str) + 1 : 0;
+    str = aos_now_time_str(str, max);
+    return str ? strlen(str) + 1 : 0;
 }
 

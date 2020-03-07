@@ -53,6 +53,10 @@ else ()
    message (FATAL_ERROR "-- WAMR build target isn't set")
 endif ()
 
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_definitions(-DBH_DEBUG=1)
+endif ()
+
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   if (WAMR_BUILD_TARGET STREQUAL "X86_64" OR WAMR_BUILD_TARGET STREQUAL "AMD_64")
     # Add -fPIC flag if build as 64-bit
