@@ -91,6 +91,10 @@ The parameters are transferred in an array of 32 bits elements. For parameters t
   memcpy(&argv[4], &arg4, sizeof(arg4));
   //
   // attention: the arg number is 6 here since both
+  //            arg3 and arg4 each takes 2 elements
+  //
+  wasm_runtime_call_wasm(exec_env, func, 6, argv);
+  
   // if the return value is type of 8 bytes, it takes
   // the first two array elements
   memcpy(&ret, &argv[0], sizeof(ret));
