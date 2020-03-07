@@ -382,7 +382,7 @@ wasm_runtime_get_custom_data(WASMModuleInstanceCommon *module_inst)
 #if WASM_ENABLE_INTERP != 0
     if (module_inst->module_type == Wasm_Module_Bytecode)
         return ((WASMModuleInstance*)module_inst)->custom_data;
-#endif  
+#endif
 #if WASM_ENABLE_AOT != 0
     if (module_inst->module_type == Wasm_Module_AoT)
         return ((AOTModuleInstance*)module_inst)->custom_data.ptr;

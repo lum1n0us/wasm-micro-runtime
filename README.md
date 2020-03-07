@@ -25,7 +25,7 @@ iwasm VM core
 - Near to native speed by AoT
 - Unique AoT support for embedded systems which have no system loaders
 - Choices of WASM application libc support: the built-in libc subset for the embedded environment or [WASI](https://github.com/WebAssembly/WASI) for standard libc
-- [The mechanism for exporting native API's to WASM applications](./doc/export_native_api.md)  
+- [The mechanism for exporting native API's to WASM applications](./doc/export_native_api.md)
 
 ### Supported architectures and platforms
 
@@ -87,10 +87,10 @@ WAMR SDK
 
 Usually there are two tasks for integrating the WAMR into a particular project:
 
-- Select what WAMR components (vmcore, libc, app-mgr, app-framework components) to be integrated, and get the associated source files added into the project building configuration  
+- Select what WAMR components (vmcore, libc, app-mgr, app-framework components) to be integrated, and get the associated source files added into the project building configuration
 - Generate the APP SDK for developing the WASM apps on the selected libc and framework components
 
-The **[WAMR SDK](./wamr-sdk)** tools is helpful to finish the two tasks quickly. It supports menu configuration for selecting WAMR components and builds the WAMR to a SDK package that includes **runtime SDK** and **APP SDK**. The runtime SDK is used for building the native application and the APP SDK should be shipped to WASM application developers. 
+The **[WAMR SDK](./wamr-sdk)** tools is helpful to finish the two tasks quickly. It supports menu configuration for selecting WAMR components and builds the WAMR to a SDK package that includes **runtime SDK** and **APP SDK**. The runtime SDK is used for building the native application and the APP SDK should be shipped to WASM application developers.
 
 
 Samples
