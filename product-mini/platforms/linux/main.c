@@ -11,7 +11,6 @@
 #include "bh_platform.h"
 #include "bh_assert.h"
 #include "bh_log.h"
-#include "bh_memory.h"
 #include "wasm_export.h"
 
 static int app_argc;
@@ -233,15 +232,16 @@ int main(int argc, char *argv[])
 
 #if USE_GLOBAL_HEAP_BUF != 0
     init_args.mem_alloc_type = Alloc_With_Pool;
-    init_args.mem_alloc.pool.heap_buf = global_heap_buf;
-    init_args.mem_alloc.pool.heap_size = sizeof(global_heap_buf);
+    init_args.mem_alloc_option.pool.heap_buf = global_heap_buf;
+    init_args.mem_alloc_option.pool.heap_size = sizeof(global_heap_buf);
 #else
     init_args.mem_alloc_type = Alloc_With_Allocator;
-    init_args.mem_alloc.allocator.malloc_func = malloc;
-    init_args.mem_alloc.allocator.realloc_func = realloc;
-    init_args.mem_alloc.allocator.free_func = free;
+    init_args.mem_alloc_option.allocator.malloc_func = malloc;
+    init_args.mem_alloc_option.allocator.realloc_func = realloc;
+    init_args.mem_alloc_option.allocator.free_func = free;
 #endif
 
+    /* initialize runtime environment */
     if (!wasm_runtime_full_init(&init_args)) {
         bh_printf("Init runtime environment failed.\n");
         return -1;
@@ -295,11 +295,11 @@ fail3:
 
 fail2:
     /* free the file buffer */
-    bh_free(wasm_file_buf);
+    wasm_runtime_free(wasm_file_buf);
 
 fail1:
     /* destroy runtime environment */
-    wasm_runtime_full_destroy();
+    wasm_runtime_destroy();
     return 0;
 }
 
