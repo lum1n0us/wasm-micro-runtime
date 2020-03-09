@@ -4300,7 +4300,8 @@ handle_next_reachable_block:
 #if WASM_ENABLE_FAST_INTERP != 0
                 skip_label();
                 disable_emit = true;
-                f64 = *(float64 *)p_org;
+                /* Some MCU may require 8-byte align */
+                memcpy((uint8*)&f64, p_org, sizeof(float64));
                 GET_CONST_F64_OFFSET(VALUE_TYPE_F64, f64);
 #endif
                 PUSH_F64();

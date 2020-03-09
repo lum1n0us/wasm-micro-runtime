@@ -541,6 +541,7 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
     val2 = (src_type2)GET_##src_op_type##_FROM_ADDR(frame_ip);              \
     val1 operation##= val2;                                                 \
     PUT_##src_op_type##_TO_ADDR(frame_ip + 4, val1);                        \
+    frame_ip += 6;                                                          \
   } while (0)
 #endif
 
