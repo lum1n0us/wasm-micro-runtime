@@ -26,8 +26,8 @@ static int print_help()
     bh_printf("  -v=n                   Set log verbose level (0 to 5, default is 2),\n"
               "                         larger level with more log\n");
 #endif
-    bh_printf("  --stack-size=n         Set maximum stack size, default is 16 KB\n");
-    bh_printf("  --heap-size=n          Set maximum heap size, default is 16 KB\n");
+    bh_printf("  --stack-size=n         Set maximum stack size in bytes, default is 16 KB\n");
+    bh_printf("  --heap-size=n          Set maximum heap size in bytes, default is 16 KB\n");
     bh_printf("  --repl                 Start a very simple REPL (read-eval-print-loop) mode\n"
               "                         that runs commands in the form of `FUNC ARG...`\n");
 #if WASM_ENABLE_LIBC_WASI != 0
