@@ -3054,7 +3054,8 @@ wasm_loader_get_const_offset(WASMLoaderContext *ctx, uint8 type,
         }
         c->slot_index = operand_offset;
         ctx->num_const ++;
-        LOG_OP("#### new const [%d]: %ld\n", num_const, (int64)val);
+        LOG_OP("#### new const [%d]: %ld\n",
+            ctx->num_const, (int64)c->value.i64);
     }
     /* use negetive index for const */
     operand_offset = -(operand_offset + 1);
