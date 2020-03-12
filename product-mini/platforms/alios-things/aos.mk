@@ -77,10 +77,10 @@ ifeq (${WAMR_BUILD_AOT}, 1)
 GLOBAL_INCLUDES += ${IWASM_ROOT}/aot
 endif
 
-$(NAME)_SOURCES := ${SHARED_ROOT}/platform/alios/bh_math.c \
-                   ${SHARED_ROOT}/platform/alios/bh_platform.c \
-                   ${SHARED_ROOT}/platform/alios/bh_thread.c \
-                   ${SHARED_ROOT}/platform/alios/bh_time.c \
+$(NAME)_SOURCES := ${SHARED_ROOT}/platform/alios/alios_math.c \
+                   ${SHARED_ROOT}/platform/alios/alios_platform.c \
+                   ${SHARED_ROOT}/platform/alios/alios_thread.c \
+                   ${SHARED_ROOT}/platform/alios/alios_time.c \
                    ${SHARED_ROOT}/mem-alloc/mem_alloc.c \
                    ${SHARED_ROOT}/mem-alloc/ems/ems_kfc.c \
                    ${SHARED_ROOT}/mem-alloc/ems/ems_alloc.c \

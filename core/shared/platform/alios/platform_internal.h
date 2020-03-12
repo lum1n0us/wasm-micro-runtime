@@ -50,7 +50,6 @@ typedef void* (*thread_start_routine_t)(void*);
 
 #define os_printf  printf
 #define os_vprintf vprintf
-#define os_abort aos_reboot
 
 /* math functions which are not provided by os*/
 double sqrt(double x);

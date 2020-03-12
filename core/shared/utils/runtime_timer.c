@@ -32,13 +32,18 @@ struct _timer_ctx {
     check_timer_expiry_f refresh_checker;
 };
 
+uint64 bh_get_tick_ms()
+{
+    return os_time_get_boot_microsecond() / 1000;
+}
+
 uint32 bh_get_elpased_ms(uint32 * last_system_clock)
 {
     uint32 elpased_ms;
 
-    // attention: the os_time_get_boot_millisecond() return 64 bits integer.
+    // attention: the bh_get_tick_ms() return 64 bits integer.
     // but the bh_get_elpased_ms() is designed to use 32 bits clock count.
-    uint32 now = (uint32)os_time_get_boot_millisecond();
+    uint32 now = (uint32)bh_get_tick_ms();
 
     // system clock overrun
     if (now < *last_system_clock) {
@@ -114,7 +119,7 @@ static void reschedule_timer(timer_ctx_t ctx, app_timer_t * timer)
     app_timer_t * prev = NULL;
 
     timer->next = NULL;
-    timer->expiry = os_time_get_boot_millisecond() + timer->interval;
+    timer->expiry = bh_get_tick_ms() + timer->interval;
 
     while (t) {
         if (timer->expiry < t->expiry) {
@@ -372,7 +377,7 @@ static void handle_expired_timers(timer_ctx_t ctx, app_timer_t * expired)
 int get_expiry_ms(timer_ctx_t ctx)
 {
     int ms_to_next_expiry;
-    uint64 now = os_time_get_boot_millisecond();
+    uint64 now = bh_get_tick_ms();
 
     os_mutex_lock(&ctx->mutex);
     if (ctx->g_app_timers == NULL)
@@ -393,7 +398,7 @@ int check_app_timers(timer_ctx_t ctx)
     app_timer_t * t = ctx->g_app_timers;
     app_timer_t * expired = NULL;
 
-    uint64 now = os_time_get_boot_millisecond();
+    uint64 now = bh_get_tick_ms();
 
     while (t) {
         if (now >= t->expiry) {

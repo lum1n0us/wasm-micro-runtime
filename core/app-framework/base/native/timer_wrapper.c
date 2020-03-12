@@ -61,7 +61,7 @@ void * thread_modulers_timer_check(void * arg)
             ms_to_expiry = 60 * 1000;
         os_mutex_lock(&g_timer_ctx_list_mutex);
         os_cond_reltimedwait(&g_timer_ctx_list_cond, &g_timer_ctx_list_mutex,
-                             ms_to_expiry);
+                             ms_to_expiry * 1000);
         os_mutex_unlock(&g_timer_ctx_list_mutex);
     }
 
@@ -82,7 +82,7 @@ void init_wasm_timer()
 
     os_cond_init(&g_timer_ctx_list_cond);
     /* temp solution for: thread_modulers_timer_check thread would recursive lock the mutex */
-    os_mutex_init(&g_timer_ctx_list_mutex);
+    os_recursive_mutex_init(&g_timer_ctx_list_mutex);
 
     os_thread_create(&tm_tid, thread_modulers_timer_check,
                      NULL, BH_APPLET_PRESERVED_STACK_SIZE);
@@ -189,6 +189,6 @@ extern uint32 get_sys_tick_ms();
 uint32
 wasm_get_sys_tick_ms(wasm_exec_env_t exec_env)
 {
-    return (uint32)os_time_get_boot_millisecond();
+    return (uint32)bh_get_tick_ms();
 }
 

@@ -4,8 +4,6 @@
  */
 
 #include "bh_platform.h"
-#include "bh_assert.h"
-#include "bh_log.h"
 
 typedef struct {
     thread_start_routine_t start;
@@ -80,6 +78,24 @@ korp_tid os_self_thread()
 int os_mutex_init(korp_mutex *mutex)
 {
     return pthread_mutex_init(mutex, NULL) == 0 ? BHT_OK : BHT_ERROR;
+}
+
+int os_recursive_mutex_init(korp_mutex *mutex)
+{
+    int ret;
+
+    pthread_mutexattr_t mattr;
+
+    bh_assert(mutex);
+    ret = pthread_mutexattr_init(&mattr);
+    if (ret)
+        return BHT_ERROR;
+
+    pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_RECURSIVE);
+    ret = pthread_mutex_init(mutex, &mattr);
+    pthread_mutexattr_destroy(&mattr);
+
+    return ret == 0 ? BHT_OK : BHT_ERROR;
 }
 
 int os_mutex_destroy(korp_mutex *mutex)
@@ -227,14 +243,14 @@ int os_cond_wait(korp_cond *cond, korp_mutex *mutex)
     return BHT_OK;
 }
 
-static void msec_nsec_to_abstime(struct timespec *ts, int64 msec, int32 nsec)
+static void msec_nsec_to_abstime(struct timespec *ts, int usec)
 {
     struct timeval tv;
 
     gettimeofday(&tv, NULL);
 
-    ts->tv_sec = (long int)(tv.tv_sec + msec / 1000);
-    ts->tv_nsec = (long int)(tv.tv_usec * 1000 + (msec % 1000) * 1000000 + nsec);
+    ts->tv_sec = (long int)(tv.tv_sec + usec / 1000000);
+    ts->tv_nsec = (long int)(tv.tv_usec * 1000 + (usec % 1000000) * 1000);
 
     if (ts->tv_nsec >= 1000000000L) {
         ts->tv_sec++;
@@ -242,15 +258,15 @@ static void msec_nsec_to_abstime(struct timespec *ts, int64 msec, int32 nsec)
     }
 }
 
-int os_cond_reltimedwait(korp_cond *cond, korp_mutex *mutex, int mills)
+int os_cond_reltimedwait(korp_cond *cond, korp_mutex *mutex, int useconds)
 {
     int ret;
     struct timespec abstime;
 
-    if (mills == (int)BHT_WAIT_FOREVER)
+    if (useconds == (int)BHT_WAIT_FOREVER)
         ret = pthread_cond_wait(cond, mutex);
     else {
-        msec_nsec_to_abstime(&abstime, mills, 0);
+        msec_nsec_to_abstime(&abstime, useconds);
         ret = pthread_cond_timedwait(cond, mutex, &abstime);
     }
 

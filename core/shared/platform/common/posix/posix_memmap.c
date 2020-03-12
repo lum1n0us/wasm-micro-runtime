@@ -4,37 +4,6 @@
  */
 
 #include "bh_platform.h"
-#include "bh_common.h"
-#include "bh_assert.h"
-
-int
-bh_platform_init()
-{
-    return 0;
-}
-
-void
-bh_platform_destroy()
-{
-}
-
-void *
-os_malloc(unsigned size)
-{
-    return malloc(size);
-}
-
-void *
-os_realloc(void *ptr, unsigned size)
-{
-    return realloc(ptr, size);
-}
-
-void
-os_free(void *ptr)
-{
-    free(ptr);
-}
 
 void *
 os_mmap(void *hint, uint32 size, int prot, int flags)
@@ -63,8 +32,10 @@ os_mmap(void *hint, uint32 size, int prot, int flags)
         map_prot |= PROT_EXEC;
 
 #if defined(BUILD_TARGET_X86_64) || defined(BUILD_TARGET_AMD_64)
+#ifndef __APPLE__
     if (flags & MMAP_MAP_32BIT)
         map_flags |= MAP_32BIT;
+#endif
 #endif
 
     if (flags & MMAP_MAP_FIXED)
@@ -96,12 +67,14 @@ os_mmap(void *hint, uint32 size, int prot, int flags)
         request_size -= size;
     }
 
+#ifndef __APPLE__
     if (size >= 2 * 1024 * 1024) {
         /* Try to use huge page to improve performance */
         if (!madvise(addr, size, MADV_HUGEPAGE))
             /* make huge page become effective */
             memset(addr, 0, size);
     }
+#endif
 
     return addr_aligned;
 }
@@ -137,4 +110,3 @@ void
 os_dcache_flush(void)
 {
 }
-

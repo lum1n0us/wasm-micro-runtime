@@ -62,7 +62,6 @@ typedef void* (*thread_start_routine_t)(void*);
 
 #define os_printf printf
 #define os_vprintf vprintf
-#define os_abort abort
 
 #ifdef __cplusplus
 }

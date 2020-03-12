@@ -12,7 +12,8 @@
 extern "C" {
 #endif
 
-uint32 bh_get_elpased_ms(uint32 * last_system_clock);
+uint64 bh_get_tick_ms();
+uint32 bh_get_elpased_ms(uint32 *last_system_clock);
 
 struct _timer_ctx;
 typedef struct _timer_ctx * timer_ctx_t;

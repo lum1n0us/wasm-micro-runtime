@@ -148,7 +148,7 @@ enum {
 /* Default min/max heap size of each app */
 #define APP_HEAP_SIZE_DEFAULT (8 * 1024)
 #define APP_HEAP_SIZE_MIN (2 * 1024)
-#define APP_HEAP_SIZE_MAX (1024 * 1024)
+#define APP_HEAP_SIZE_MAX (512 * 1024 * 1024)
 
 /* Default wasm stack size of each app */
 #if defined(BUILD_TARGET_X86_64) || defined(BUILD_TARGET_AMD_64)

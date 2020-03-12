@@ -343,9 +343,9 @@ os_cond_wait(korp_cond *cond, korp_mutex *mutex)
 }
 
 int
-os_cond_reltimedwait(korp_cond *cond, korp_mutex *mutex, int mills)
+os_cond_reltimedwait(korp_cond *cond, korp_mutex *mutex, int useconds)
 {
-    return os_cond_wait_internal(cond, mutex, true, mills);
+    return os_cond_wait_internal(cond, mutex, true, useconds / 1000);
 }
 
 int

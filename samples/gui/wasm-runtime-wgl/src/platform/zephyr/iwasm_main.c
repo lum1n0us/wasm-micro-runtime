@@ -156,7 +156,7 @@ int iwasm_main()
 
     /* initialize runtime environment */
     if (!wasm_runtime_full_init(&init_args)) {
-        bh_printf("Init runtime environment failed.\n");
+        printf("Init runtime environment failed.\n");
         return -1;
     }
 

@@ -323,7 +323,12 @@ int os_thread_join(korp_tid thread, void **value_ptr)
 
 int os_mutex_init(korp_mutex *mutex)
 {
-    (void) mutex;
+    k_mutex_init(mutex);
+    return BHT_OK;
+}
+
+int os_recursive_mutex_init(korp_mutex *mutex)
+{
     k_mutex_init(mutex);
     return BHT_OK;
 }
@@ -436,9 +441,9 @@ int os_cond_wait(korp_cond *cond, korp_mutex *mutex)
     return os_cond_wait_internal(cond, mutex, false, 0);
 }
 
-int os_cond_reltimedwait(korp_cond *cond, korp_mutex *mutex, int mills)
+int os_cond_reltimedwait(korp_cond *cond, korp_mutex *mutex, int useconds)
 {
-    return os_cond_wait_internal(cond, mutex, true, mills);
+    return os_cond_wait_internal(cond, mutex, true, useconds / 1000);
 }
 
 int os_cond_signal(korp_cond *cond)

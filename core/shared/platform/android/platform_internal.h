@@ -61,10 +61,10 @@ typedef pthread_t korp_thread;
 typedef void* (*thread_start_routine_t)(void*);
 
 #define os_printf(...) (__android_log_print(ANDROID_LOG_INFO, "wasm_runtime::", __VA_ARGS__))
-#define os_abort abort
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif /* end of _PLATFORM_INTERNAL_H */
+

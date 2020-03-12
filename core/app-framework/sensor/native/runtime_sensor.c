@@ -363,7 +363,7 @@ sensor_client_t *find_sensor_client(sys_sensor_t * sensor,
 int check_sensor_timers()
 {
     int ms_to_next_check = -1;
-    uint32 now = (uint32)os_time_get_boot_millisecond();
+    uint32 now = (uint32)bh_get_tick_ms();
 
     sys_sensor_t * s = g_sys_sensors;
     while (s) {

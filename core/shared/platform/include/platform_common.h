@@ -10,12 +10,10 @@
 extern "C" {
 #endif
 
-/* core/config.h */
 #include "../../../config.h"
 #include "platform_internal.h"
 
 #define BH_MAX_THREAD 32
-#define BH_MAX_TLS_NUM 2
 
 #define BHT_ERROR (-1)
 #define BHT_TIMED_OUT (1)
@@ -69,12 +67,12 @@ extern "C" {
 #define offsetof(Type, field) ((size_t)(&((Type *)0)->field))
 #endif
 
-typedef unsigned char uint8;
-typedef char int8;
-typedef unsigned short uint16;
-typedef short int16;
-typedef unsigned int uint32;
-typedef int int32;
+typedef uint8_t uint8;
+typedef int8_t int8;
+typedef uint16_t uint16;
+typedef int16_t int16;
+typedef uint32_t uint32;
+typedef int32_t int32;
 typedef float float32;
 typedef double float64;
 typedef uint64_t uint64;

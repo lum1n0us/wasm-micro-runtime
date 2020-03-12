@@ -6,122 +6,84 @@
 #ifndef _PLATFORM_API_VMCORE_H
 #define _PLATFORM_API_VMCORE_H
 
+#include "platform_common.h"
+#include "platform_internal.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**
- * Section one: basic interfaces required by runtime.
- */
+/****************************************************
+ *                     Section 1                    *
+ *        Interfaces required by the runtime        *
+ ****************************************************/
 
 /**
- * Initialize platform
+ * Initialize the platform internal resources if needed,
+ * this function is called by wasm_runtime_init() and
+ * wasm_runtime_full_init()
  *
  * @return 0 if success
  */
 int bh_platform_init();
 
 /**
- * Destroy platform
+ * Destroy the platform internal resources if needed,
+ * this function is called by wasm_runtime_destroy()
  */
 void bh_platform_destroy();
 
 /**
- * Memory related interfaces, which are used when init runtime with
- * system memory allocator, or Alloc_With_System_Allocator flag is set.
- * Return NULL or leave them empty if init runtime with other memory
- * allocators
+ ******** memory allocator APIs **********
  */
+
 void *os_malloc(unsigned size);
+
 void *os_realloc(void *ptr, unsigned size);
+
 void os_free(void *ptr);
 
+/**
+ * Note: the above APIs can simply return NULL if wasm runtime
+ *       isn't initialized with Alloc_With_System_Allocator.
+ *       Refer to wasm_runtime_full_init().
+ */
+
+
 int os_printf(const char *format, ...);
+
 int os_vprintf(const char *format, va_list ap);
-int os_snprintf(const char *str, uint32 size,
-                const char *format, va_list ap);
-void os_abort(void);
-
-/*
- * Get milliseconds after boot.
- *
- * @return milliseconds after boot.
- */
-uint64 os_time_get_boot_millisecond(void);
-
-/*
- * Get GMT milliseconds since from 1970.1.1, AKA UNIX time.
- * @return milliseconds since from 1970.1.1.
- */
-uint64 os_time_get_millisecond_from_1970(void);
 
 /**
- * Format the time to a string, it is only used to output log,
- * not a critical interface. If not easy to implement,
- * just return 0.
+ * Get microseconds after boot.
  */
-size_t os_time_strftime(char *s, size_t max,
-                        const char *format, uint64 time);
+uint64 os_time_get_boot_microsecond(void);
 
 /**
- * Thread related interfaces, they are only required by multi-thread
- * support, if we just want to enable vmcore, we can just return 0 or
- * leave them empty.
- */
-
-/**
- * Get current thread id, if multi-thread isn't required, it is only
- * used to output log, not a critical interface. If not easy to
- * implement, just return 0.
- *
- * @return current thread id
+ * Get current thread id.
+ * Implementation optional: Used by runtime for logging only.
  */
 korp_tid os_self_thread(void);
 
 /**
- * Creates a mutex, if multi-thread isn't required,
- * just return 0
- *
- * @param mutex [OUTPUT] pointer to mutex initialized.
- *
- * @return 0 if success
+ ************** mutext APIs ***********
+ *  vmcore:  Not required until pthread is supported by runtime
+ *  app-mgr: Must be implemented
  */
+
 int os_mutex_init(korp_mutex *mutex);
 
-/**
- * Destroys a mutex, , if multi-thread isn't required,
- * just return 0
- *
- * @param mutex pointer to mutex need destroy
- *
- * @return 0 if success
- */
 int os_mutex_destroy(korp_mutex *mutex);
 
-/**
- * Lock the mutex, , if multi-thread isn't required,
- * just return 0
- *
- * @param mutex pointer to mutex need lock
- *
- * @return Void
- */
 void os_mutex_lock(korp_mutex *mutex);
 
-/**
- * Unlock the mutex, , if multi-thread isn't required,
- * just return 0
- *
- * @param mutex pointer to mutex need unlock
- *
- * @return Void
- */
 void os_mutex_unlock(korp_mutex *mutex);
 
-/**
- * Section 2: AOT related interfaces, implement them if we want to
- * enable AOT.
- */
+
+/**************************************************
+ *                    Section 2                   *
+ *            APIs required by WAMR AOT           *
+ **************************************************/
 
 /* Memory map modes */
 enum {

@@ -108,14 +108,6 @@ os_vprintf(const char *fmt, va_list ap)
     return ctx.count;
 }
 
-void
-os_abort()
-{
-    int i = os_printf(" ");
-    /* divived by 0 to make it abort */
-    os_printf("%d\n", (uint32)os_abort / (i - 1));
-}
-
 void *
 os_mmap(void *hint, unsigned int size, int prot, int flags)
 {

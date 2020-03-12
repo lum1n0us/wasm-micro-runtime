@@ -55,8 +55,6 @@ typedef sgx_thread_cond_t korp_cond;
 typedef void (*os_print_function_t)(const char* message);
 void os_set_print_function(os_print_function_t pf);
 
-#define os_abort abort
-
 #ifdef __cplusplus
 }
 #endif

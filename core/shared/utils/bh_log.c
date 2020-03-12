@@ -23,14 +23,23 @@ bh_log(LogLevel log_level, const char *file, int line, const char *fmt, ...)
     va_list ap;
     korp_tid self;
     char buf[32] = { 0 };
+    uint64 usec;
+    uint32 t, h, m, s, mills;
 
     if (log_level > log_verbose_level)
         return;
 
     self = os_self_thread();
 
-    os_time_strftime(buf, 32, "%Y-%m-%d %H:%M:%S",
-                     (int64)os_time_get_millisecond_from_1970());
+    usec = os_time_get_boot_microsecond();
+    t = (uint32)(usec / 1000000) % (24 * 60 * 60);
+    h = t / (60 * 60);
+    t = t % (60 * 60);
+    m = t / 60;
+    s = t % 60;
+    mills = (uint32)(usec % 1000);
+
+    snprintf(buf, sizeof(buf), "%02u:%02u:%02u:%03u", h, m, s, mills);
 
     os_printf("[%s - %X]: ", buf, (uint32)self);
 

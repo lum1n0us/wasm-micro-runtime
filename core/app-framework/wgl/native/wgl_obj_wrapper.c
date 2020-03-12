@@ -6,8 +6,7 @@
 #include "lvgl.h"
 #include "app_manager_export.h"
 #include "module_wasm_app.h"
-#include "bh_list.h"
-#include "bh_thread.h"
+#include "bh_platform.h"
 #include "wgl_native_utils.h"
 #include "wgl.h"
 

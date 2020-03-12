@@ -90,7 +90,7 @@ static void thread_sensor_check(void * arg)
         if (ms_to_expiry == -1)
             ms_to_expiry = 5000;
         os_mutex_lock(&mutex);
-        os_cond_reltimedwait(&cond, &mutex, ms_to_expiry);
+        os_cond_reltimedwait(&cond, &mutex, ms_to_expiry * 1000);
         os_mutex_unlock(&mutex);
     }
 }
