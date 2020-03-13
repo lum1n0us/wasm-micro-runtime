@@ -5,8 +5,7 @@
 
 #include <stdlib.h>
 #include "bh_platform.h"
-#include "bh_assert.h"
-#include "bh_log.h"
+#include "bh_read_file.h"
 #include "wasm_export.h"
 #include "aot_export.h"
 
