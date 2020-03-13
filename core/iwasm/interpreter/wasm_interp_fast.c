@@ -729,7 +729,7 @@ wasm_interp_call_func_native(WASMModuleInstance *module_inst,
 #endif  /* end of WASM_ENABLE_LABELS_AS_VALUES */
 
 #if WASM_ENABLE_FAST_INTERP != 0
-static void *global_handle_table[WASM_INSTRUCTION_NUM] = { 0 };
+static void **global_handle_table;
 #endif
 
 static void
@@ -769,8 +769,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
   #undef HANDLE_OPCODE
 #if WASM_ENABLE_FAST_INTERP != 0
   if (exec_env == NULL) {
-      bh_memcpy_s(global_handle_table, sizeof(void*) * WASM_INSTRUCTION_NUM,
-                  handle_table, sizeof(void*) * WASM_INSTRUCTION_NUM);
+      global_handle_table = (void **)handle_table;
       return;
   }
 #endif
