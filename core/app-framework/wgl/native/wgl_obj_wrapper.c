@@ -38,6 +38,10 @@ static korp_mutex g_object_list_mutex;
 
 static bool lv_task_handler_thread_run = true;
 
+static korp_mutex task_handler_lock;
+
+static korp_cond task_handler_cond;
+
 static void app_mgr_object_event_callback(module_data *m_data, bh_message_t msg)
 {
     uint32 argv[2];
@@ -271,26 +275,29 @@ static void internal_lv_obj_event_cb(lv_obj_t *obj, lv_event_t event)
 
 static void* lv_task_handler_thread_routine (void *arg)
 {
-    korp_sem sem;
-
-    if (os_sem_init(&sem, 1) != 0) {
-        printf("Init semaphore for lvgl task handler thread fail!\n");
-        return NULL;
-    }
+    os_mutex_lock(&task_handler_lock);
 
     while (lv_task_handler_thread_run) {
-        os_sem_reltimedwait(&sem, 100);
+        os_cond_reltimedwait(&task_handler_cond, &task_handler_lock,
+                             100 * 1000);
         lv_task_handler();
     }
 
-    os_sem_destroy(&sem);
-
+    os_mutex_unlock(&task_handler_lock);
     return NULL;
 }
 
 void wgl_init(void)
 {
     korp_thread tid;
+
+    if (os_mutex_init(&task_handler_lock) != 0)
+        return;
+
+    if (os_cond_init(&task_handler_cond) != 0) {
+        os_mutex_destroy(&task_handler_lock);
+        return;
+    }
 
     lv_init();
 
@@ -308,6 +315,8 @@ void wgl_init(void)
 void wgl_exit(void)
 {
     lv_task_handler_thread_run = false;
+    os_cond_destroy(&task_handler_cond);
+    os_mutex_destroy(&task_handler_lock);
 }
 
 /* -------------------------------------------------------------------------

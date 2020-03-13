@@ -133,16 +133,6 @@ int os_cond_reltimedwait(korp_cond *cond, korp_mutex *mutex, int useconds);
  */
 int os_cond_signal(korp_cond *cond);
 
-int os_sem_init(korp_sem* sem, unsigned int c);
-
-int os_sem_destroy(korp_sem *sem);
-
-int os_sem_wait(korp_sem *sem);
-
-int os_sem_reltimedwait(korp_sem *sem, int mills);
-
-int os_sem_post(korp_sem *sem);
-
 #ifdef __cplusplus
 }
 #endif

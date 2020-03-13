@@ -23,19 +23,12 @@ typedef void (*bh_queue_handle_msg_callback)(void *message, void *arg);
 #define bh_queue_free BH_FREE
 
 #define bh_queue_mutex korp_mutex
-#define bh_queue_sem korp_sem
 #define bh_queue_cond korp_cond
 
 #define bh_queue_mutex_init os_mutex_init
 #define bh_queue_mutex_destroy os_mutex_destroy
 #define bh_queue_mutex_lock os_mutex_lock
 #define bh_queue_mutex_unlock os_mutex_unlock
-
-#define bh_queue_sem_init os_sem_init
-#define bh_queue_sem_destroy os_sem_destroy
-#define bh_queue_sem_wait os_sem_wait
-#define bh_queue_sem_reltimedwait os_sem_reltimedwait
-#define bh_queue_sem_post os_sem_post
 
 #define bh_queue_cond_init os_cond_init
 #define bh_queue_cond_destroy os_cond_destroy
@@ -57,10 +50,10 @@ uint32 bh_message_payload_len(bh_message_t message);
 int bh_message_type(bh_message_t message);
 
 bh_message_t bh_new_msg(unsigned short tag, void *body, unsigned int len,
-        void * handler);
+                        void * handler);
 void bh_free_msg(bh_message_t msg);
 bool bh_post_msg(bh_queue *queue, unsigned short tag, void *body,
-        unsigned int len);
+                 unsigned int len);
 bool bh_post_msg2(bh_queue *queue, bh_message_t msg);
 
 bh_message_t bh_get_msg(bh_queue *queue, int timeout);
