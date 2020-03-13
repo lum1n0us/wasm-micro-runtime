@@ -88,8 +88,6 @@ static NativeSymbol native_symbols[] = {
 int iwasm_main()
 {
     RuntimeInitArgs init_args;
-    korp_thread tid, tm_tid;
-    uint32 n_native_symbols;
 
     host_init();
 

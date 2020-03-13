@@ -9,7 +9,6 @@
 #include "board_config.h"
 #include "bh_common.h"
 #include "bh_queue.h"
-#include "bh_thread.h"
 #include "runtime_sensor.h"
 #include "bi-inc/attr_container.h"
 #include "module_wasm_app.h"
