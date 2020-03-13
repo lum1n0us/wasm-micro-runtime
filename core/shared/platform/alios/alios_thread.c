@@ -247,38 +247,6 @@ os_mutex_unlock(korp_mutex *mutex)
 }
 
 int
-os_sem_init(korp_sem* sem, unsigned int c)
-{
-    return aos_sem_new(sem, c) == 0 ? BHT_OK : BHT_ERROR;
-}
-
-int
-os_sem_destroy(korp_sem *sem)
-{
-    aos_sem_free(sem);
-    return BHT_OK;
-}
-
-int
-os_sem_wait(korp_sem *sem)
-{
-    return aos_sem_wait(sem, AOS_WAIT_FOREVER);
-}
-
-int
-os_sem_reltimedwait(korp_sem *sem, int mills)
-{
-    return aos_sem_wait(sem, mills);
-}
-
-int
-os_sem_post(korp_sem *sem)
-{
-    aos_sem_signal(sem);
-    return BHT_OK;
-}
-
-int
 os_cond_init(korp_cond *cond)
 {
     if (aos_mutex_new(&cond->wait_list_lock) != 0)
