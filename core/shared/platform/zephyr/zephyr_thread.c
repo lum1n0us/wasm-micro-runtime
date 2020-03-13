@@ -349,34 +349,6 @@ void os_mutex_unlock(korp_mutex *mutex)
     k_mutex_unlock(mutex);
 }
 
-int os_sem_init(korp_sem* sem, unsigned int c)
-{
-    int ret = k_sem_init(sem, 0, c);
-    return ret == 0 ? BHT_OK : BHT_ERROR;
-}
-
-int os_sem_destroy(korp_sem *sem)
-{
-    (void) sem;
-    return BHT_OK;
-}
-
-int os_sem_wait(korp_sem *sem)
-{
-    return k_sem_take(sem, K_FOREVER);
-}
-
-int os_sem_reltimedwait(korp_sem *sem, int mills)
-{
-    return k_sem_take(sem, mills);
-}
-
-int os_sem_post(korp_sem *sem)
-{
-    k_sem_give(sem);
-    return BHT_OK;
-}
-
 int os_cond_init(korp_cond *cond)
 {
     k_mutex_init(&cond->wait_list_lock);
