@@ -43,13 +43,9 @@ extern "C" {
 
 #define BH_WAIT_FOREVER 0xFFFFFFFF
 
-#define INVALID_THREAD_ID 0xFFffFFff
-
-typedef int korp_sem;
-typedef void* (*thread_start_routine_t)(void*);
-typedef sgx_thread_mutex_t korp_mutex;
-typedef sgx_thread_t korp_tid;
 typedef sgx_thread_t korp_thread;
+typedef sgx_thread_t korp_tid;
+typedef sgx_thread_mutex_t korp_mutex;
 typedef sgx_thread_cond_t korp_cond;
 
 typedef void (*os_print_function_t)(const char* message);

@@ -41,13 +41,9 @@
 
 #define BH_WAIT_FOREVER K_FOREVER
 
-/* Invalid thread tid */
-#define INVALID_THREAD_ID NULL
-
 typedef struct k_thread korp_thread;
 typedef korp_thread *korp_tid;
 typedef struct k_mutex korp_mutex;
-typedef struct k_sem korp_sem;
 
 struct os_thread_wait_node;
 typedef struct os_thread_wait_node *os_thread_wait_list;
@@ -55,8 +51,6 @@ typedef struct korp_cond {
     struct k_mutex wait_list_lock;
     os_thread_wait_list thread_wait_list;
 } korp_cond;
-
-typedef void* (*thread_start_routine_t)(void*);
 
 #define os_printf printf
 

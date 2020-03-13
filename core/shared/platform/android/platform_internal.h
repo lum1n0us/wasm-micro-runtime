@@ -51,16 +51,10 @@ extern "C" {
 
 #define BH_WAIT_FOREVER 0xFFFFFFFF
 
-#define INVALID_THREAD_ID 0xFFffFFff
-
 typedef pthread_t korp_tid;
 typedef pthread_mutex_t korp_mutex;
-typedef sem_t korp_sem;
 typedef pthread_cond_t korp_cond;
 typedef pthread_t korp_thread;
-typedef void* (*thread_start_routine_t)(void*);
-
-#define os_printf(...) (__android_log_print(ANDROID_LOG_INFO, "wasm_runtime::", __VA_ARGS__))
 
 #ifdef __cplusplus
 }

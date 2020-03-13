@@ -2311,7 +2311,7 @@ wasm_loader_find_block_addr(BlockAddr *block_addr_cache,
 #if WASM_ENABLE_FAST_INTERP != 0
 
 #if WASM_DEBUG_PREPROCESSOR != 0
-#define LOG_OP(...)       bh_printf(__VA_ARGS__)
+#define LOG_OP(...)       os_printf(__VA_ARGS__)
 #else
 #define LOG_OP(...)
 #endif

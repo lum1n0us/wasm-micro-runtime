@@ -32,8 +32,6 @@ int os_thread_create_with_prio(korp_tid *tid, thread_start_routine_t start,
     bh_assert(tid);
     bh_assert(start);
 
-    *tid = INVALID_THREAD_ID;
-
     pthread_attr_init(&tattr);
     pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_JOINABLE);
     if (pthread_attr_setstacksize(&tattr, stack_size) != 0) {

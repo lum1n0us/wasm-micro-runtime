@@ -78,6 +78,8 @@ typedef double float64;
 typedef uint64_t uint64;
 typedef int64_t int64;
 
+typedef void* (*thread_start_routine_t)(void*);
+
 void *wasm_runtime_malloc(unsigned int size);
 void wasm_runtime_free(void *ptr);
 
