@@ -3,24 +3,6 @@
 
 string(TOUPPER ${WAMR_BUILD_TARGET} WAMR_BUILD_TARGET)
 
-# Add definitions for the build platform
-if (WAMR_BUILD_PLATFORM STREQUAL "linux")
-  add_definitions(-DBH_PLATFORM_LINUX)
-elseif (WAMR_BUILD_PLATFORM STREQUAL "linux-sgx")
-  add_definitions(-DBH_PLATFORM_LINUX_SGX)
-elseif (WAMR_BUILD_PLATFORM STREQUAL "zephyr")
-  add_definitions(-DBH_PLATFORM_ZEPHYR)
-elseif (WAMR_BUILD_PLATFORM STREQUAL "vxworks")
-  add_definitions(-DBH_PLATFORM_VXWORKS)
-elseif (WAMR_BUILD_PLATFORM STREQUAL "darwin")
-  add_definitions(-DBH_PLATFORM_DARWIN)
-elseif (WAMR_BUILD_PLATFORM STREQUAL "alios-things")
-  add_definitions(-DBH_PLATFORM_ALIOS_THINGS)
-elseif (WAMR_BUILD_PLATFORM STREQUAL "android")
-  add_definitions(-DBH_PLATFORM_ANDROID)
-else ()
-  message (WARNING "-- WAMR build platform isn't set")
-endif ()
 
 # Add definitions for the build target
 if (WAMR_BUILD_TARGET STREQUAL "X86_64")

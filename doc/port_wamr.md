@@ -13,11 +13,14 @@ This document describes how to port WAMR to a new platform "**super-os**"
 Firstly create the folder **`core/shared/platform/super-os`** for platform API layer implementations. In the folder you just created, you must provide the following files:
 
 - `platform_internal.h`: It can be used for any platform specific definitions such as macros, data types and internal APIs.
-- `shared_platform.cmake`: the cmake file will be included by the building script
 
+- `shared_platform.cmake`: the cmake file will be included by the building script. It is recommended to add a definition for your platform:
 
+  - ```cmake
+    add_definitions(-DBH_PLATFORM_YOUR_NAME)
+    ```
 
-Then go to mplement the APIs defined in following header files for the platform abstraction layer:
+Then go to implement the APIs defined in following header files for the platform abstraction layer:
 
 - [`platform_api_vmcore.h`](../core/shared/platform/include/platform_api_vmcore.h):   mandatory for building mini-product (vmcore only). Part of APIs are needed only for Ahead of Time compilation support. 
 - [`platform_api_extension.h`](../core/shared/platform/include/platform_api_extension.h): mandatory for app-mgr and app-framework. Given that the app-mgr and app-framework are not required for your target platform, you won't have to implement the API defined in the `platform_api_extension.h`.
@@ -43,11 +46,21 @@ You can build a mini WAMR product which is only the vmcore for you platform. Nor
 
 
 
-Firstly create folder **product-mini/platforms/super-os** for the platform mini product build, then refer to the linux platform mini-product for the implementation.
+Firstly create folder **product-mini/platforms/super-os** for the platform mini product build, then refer to the linux platform mini-product for creating the CMakeList.txt and the C implementations.
 
 
 
-Refer to [build_wamr.md](./build_wamr.md) for the building tools and parameters.
+You should set cmake variable `WAMR_BUILD_PLATFORM` to your platform name while building the mini product. It can be done in the mini product CMakeList.txt file, or pass  arguments to cmake command line like:
+
+```
+mkdir build
+cd build
+cmake .. -DWAMR_BUILD_PLATFORM=new-os 
+```
+
+
+
+Refer to [build_wamr.md](./build_wamr.md) for the building configurations and parameters.
 
 
 

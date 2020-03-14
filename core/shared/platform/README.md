@@ -2,7 +2,7 @@ This folder contains the platform abstract layer for multiple platforms.  To sup
 
 
 
-Refer to [port_wamr.md](../../doc/port_wamr.md) for how to port WAMR to a target platform.
+Refer to [port_wamr.md](../../../doc/port_wamr.md) for how to port WAMR to a target platform.
 
 
 
