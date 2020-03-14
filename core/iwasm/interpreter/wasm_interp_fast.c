@@ -2034,19 +2034,20 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
       HANDLE_OP (WASM_OP_TEE_LOCAL):
         {
           GET_LOCAL_INDEX_TYPE_AND_OFFSET();
+          addr1 = GET_OFFSET();
 
-          switch (local_type) {
-            case VALUE_TYPE_I32:
-            case VALUE_TYPE_F32:
-              *(int32*)(frame_lp + local_offset) = GET_OPERAND(uint32, 0);
-              break;
-            case VALUE_TYPE_I64:
-            case VALUE_TYPE_F64:
-              PUT_I64_TO_ADDR((uint32*)(frame_lp + local_offset), GET_OPERAND(uint64, 0));
-              break;
-            default:
-              wasm_set_exception(module, "invalid local type");
-              goto got_exception;
+          if (local_type == VALUE_TYPE_I32
+              || local_type == VALUE_TYPE_F32) {
+            *(int32*)(frame_lp + local_offset) = frame_lp[addr1];
+          }
+          else if (local_type == VALUE_TYPE_I32
+              || local_type == VALUE_TYPE_F32) {
+            PUT_I64_TO_ADDR((uint32*)(frame_lp + local_offset),
+                  GET_I64_FROM_ADDR(frame_lp + addr1));
+          }
+          else {
+            wasm_set_exception(module, "invalid local type");
+            goto got_exception;
           }
 
           HANDLE_OP_END ();
