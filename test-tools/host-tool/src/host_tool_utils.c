@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <bh_platform.h>
 
 typedef union jvalue {
     bool z;
@@ -23,14 +24,7 @@ typedef union jvalue {
     double d;
 } jvalue;
 
-#ifndef bh_memcpy_s
-int b_memcpy_s(void * s1, unsigned int s1max,
-               const void * s2, unsigned int n);
-#define bh_memcpy_s(dest, dlen, src, slen) do {                         \
-    int _ret = slen == 0 ? 0 : b_memcpy_s (dest, dlen, src, slen);      \
-    (void)_ret;                                                         \
-  } while (0)
-#endif
+
 
 static inline int16_t get_int16(const char *buf)
 {
