@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "bh_platform.h"
-#include "bh_common.h"
+#include "platform_api_vmcore.h"
+#include "platform_api_extension.h"
 
 #if WASM_ENABLE_AOT != 0
 #include "sgx_rsrv_mem_mngr.h"

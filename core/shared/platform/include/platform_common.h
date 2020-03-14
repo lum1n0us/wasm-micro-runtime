@@ -34,23 +34,6 @@ extern "C" {
 #define BH_FREE os_free
 #endif
 
-/**
- * WA_MALLOC/WA_FREE are macros called by app-framework's
- * shared source code for native and wasm app.
- * They are defined as malloc/free by default for wasm app,
- * and if they ared called by native, they should be re-defined
- * to wasm_runtime_malloc/free.
- */
-
-#ifndef WA_MALLOC
-#include <stdlib.h>
-#define WA_MALLOC malloc
-#endif
-
-#ifndef WA_FREE
-#include <stdlib.h>
-#define WA_FREE free
-#endif
 
 #ifndef NULL
 #define NULL (void*)0
@@ -80,8 +63,6 @@ typedef int64_t int64;
 
 typedef void* (*thread_start_routine_t)(void*);
 
-void *wasm_runtime_malloc(unsigned int size);
-void wasm_runtime_free(void *ptr);
 
 #ifdef __cplusplus
 }

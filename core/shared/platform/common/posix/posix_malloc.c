@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "bh_platform.h"
+#include "platform_api_vmcore.h"
 
 void *
 os_malloc(unsigned size)

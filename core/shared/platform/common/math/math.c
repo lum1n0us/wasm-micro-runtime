@@ -28,7 +28,7 @@
  * $FreeBSD$
  */
 
-#include "bh_platform.h"
+#include "platform_common.h"
 
 #define __FDLIBM_STDC__
 

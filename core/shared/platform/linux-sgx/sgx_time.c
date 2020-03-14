@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "bh_platform.h"
+#include "platform_api_vmcore.h"
 
 uint64
 os_time_get_boot_microsecond()

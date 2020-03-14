@@ -28,6 +28,11 @@
 #include <net/net_core.h>
 #include <net/net_context.h>
 
+#ifdef CONFIG_ARM_MPU
+#include <arch/arm/aarch32/cortex_m/cmsis.h>
+#endif
+
+
 #ifndef BH_PLATFORM_ZEPHYR
 #define BH_PLATFORM_ZEPHYR
 #endif

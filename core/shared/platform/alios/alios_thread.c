@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "bh_platform.h"
-#include "bh_assert.h"
-#include "bh_log.h"
+#include "platform_api_vmcore.h"
+#include "platform_api_extension.h"
+
 
 struct os_thread_data;
 typedef struct os_thread_wait_node {

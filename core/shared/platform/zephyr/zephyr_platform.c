@@ -3,13 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "bh_platform.h"
-#include "bh_common.h"
-#include <stdlib.h>
-#include <string.h>
-#ifdef CONFIG_ARM_MPU
-#include <arch/arm/aarch32/cortex_m/cmsis.h>
-#endif
+#include "platform_api_vmcore.h"
+#include "platform_api_extension.h"
 
 #ifdef CONFIG_ARM_MPU
 /**

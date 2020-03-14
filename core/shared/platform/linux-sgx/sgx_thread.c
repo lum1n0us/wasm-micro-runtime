@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "bh_platform.h"
-#include "bh_assert.h"
+#include "platform_api_vmcore.h"
+#include "platform_api_extension.h"
 
 korp_tid os_self_thread()
 {
