@@ -6,6 +6,14 @@
 #include "platform_api_vmcore.h"
 #include "platform_api_extension.h"
 
+#define bh_assert(v) do {                                   \
+     if (!(v)) {                                            \
+       printf("\nASSERTION FAILED: %s, at %s, line %d\n",   \
+              #v, __FILE__, __LINE__);                      \
+       aos_reboot();                                        \
+       while (1);                                           \
+     }                                                      \
+  } while (0)
 
 struct os_thread_data;
 typedef struct os_thread_wait_node {

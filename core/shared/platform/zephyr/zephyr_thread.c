@@ -6,6 +6,18 @@
 #include "platform_api_vmcore.h"
 #include "platform_api_extension.h"
 
+#define bh_assert(v) do {                                   \
+    if (!(v)) {                                             \
+        int _count;                                         \
+        printf("\nASSERTION FAILED: %s, at %s, line %d\n",  \
+               #v, __FILE__, __LINE__);                     \
+        _count = printf(" ");                               \
+        /* divived by 0 to make it abort */                 \
+        printf("%d\n", _count / (_count - 1));              \
+        while (1);                                          \
+    }                                                       \
+  } while (0)
+
 typedef struct os_thread_wait_node {
     struct k_sem sem;
     os_thread_wait_list next;

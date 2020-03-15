@@ -16,7 +16,7 @@ typedef struct {
 static void *os_thread_wrapper(void *arg)
 {
     thread_wrapper_arg * targ = arg;
-    LOG_VERBOSE("THREAD CREATE 0x%08x\n", &targ);
+    printf("THREAD CREATE %p\n", &targ);
     targ->stack = (void *)((uintptr_t)(&arg) & (uintptr_t)~0xfff);
     targ->start(targ->arg);
     BH_FREE(targ);
@@ -29,15 +29,15 @@ int os_thread_create_with_prio(korp_tid *tid, thread_start_routine_t start,
     pthread_attr_t tattr;
     thread_wrapper_arg *targ;
 
-    bh_assert(stack_size > 0);
-    bh_assert(tid);
-    bh_assert(start);
+    assert(stack_size > 0);
+    assert(tid);
+    assert(start);
 
     pthread_attr_init(&tattr);
     pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_JOINABLE);
     if (pthread_attr_setstacksize(&tattr, stack_size) != 0) {
-        LOG_ERROR("Invalid thread stack size %u. Min stack size on Linux = %u",
-                  stack_size, PTHREAD_STACK_MIN);
+        printf("Invalid thread stack size %u. Min stack size on Linux = %u",
+               stack_size, PTHREAD_STACK_MIN);
         pthread_attr_destroy(&tattr);
         return BHT_ERROR;
     }
@@ -85,7 +85,7 @@ int os_recursive_mutex_init(korp_mutex *mutex)
 
     pthread_mutexattr_t mattr;
 
-    bh_assert(mutex);
+    assert(mutex);
     ret = pthread_mutexattr_init(&mattr);
     if (ret)
         return BHT_ERROR;
@@ -101,7 +101,7 @@ int os_mutex_destroy(korp_mutex *mutex)
 {
     int ret;
 
-    bh_assert(mutex);
+    assert(mutex);
     ret = pthread_mutex_destroy(mutex);
 
     return ret == 0 ? BHT_OK : BHT_ERROR;
@@ -115,7 +115,7 @@ void os_mutex_lock(korp_mutex *mutex)
 {
     int ret;
 
-    bh_assert(mutex);
+    assert(mutex);
     ret = pthread_mutex_lock(mutex);
     if (0 != ret) {
         printf("vm mutex lock failed (ret=%d)!\n", ret);
@@ -131,7 +131,7 @@ void os_mutex_unlock(korp_mutex *mutex)
 {
     int ret;
 
-    bh_assert(mutex);
+    assert(mutex);
     ret = pthread_mutex_unlock(mutex);
     if (0 != ret) {
         printf("vm mutex unlock failed (ret=%d)!\n", ret);
@@ -141,7 +141,7 @@ void os_mutex_unlock(korp_mutex *mutex)
 
 int os_cond_init(korp_cond *cond)
 {
-    bh_assert(cond);
+    assert(cond);
 
     if (pthread_cond_init(cond, NULL) != BHT_OK)
         return BHT_ERROR;
@@ -151,7 +151,7 @@ int os_cond_init(korp_cond *cond)
 
 int os_cond_destroy(korp_cond *cond)
 {
-    bh_assert(cond);
+    assert(cond);
 
     if (pthread_cond_destroy(cond) != BHT_OK)
         return BHT_ERROR;
@@ -161,8 +161,8 @@ int os_cond_destroy(korp_cond *cond)
 
 int os_cond_wait(korp_cond *cond, korp_mutex *mutex)
 {
-    bh_assert(cond);
-    bh_assert(mutex);
+    assert(cond);
+    assert(mutex);
 
     if (pthread_cond_wait(cond, mutex) != BHT_OK)
         return BHT_ERROR;
@@ -205,7 +205,7 @@ int os_cond_reltimedwait(korp_cond *cond, korp_mutex *mutex, int useconds)
 
 int os_cond_signal(korp_cond *cond)
 {
-    bh_assert(cond);
+    assert(cond);
 
     if (pthread_cond_signal(cond) != BHT_OK)
         return BHT_ERROR;

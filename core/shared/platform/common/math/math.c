@@ -123,8 +123,8 @@ static union {
 
 #define __HIL(x) *(1+pdouble2pint(&x))
 #define __LOL(x) *(pdouble2pint(&x))
-#define __HIB(x) *(int*)&x
-#define __LOB(x) *(1+(int*)&x)
+#define __HIB(x) *(pdouble2pint(&x))
+#define __LOB(x) *(1+pdouble2pint(&x))
 
 /* Get two 32 bit ints from a double.  */
 

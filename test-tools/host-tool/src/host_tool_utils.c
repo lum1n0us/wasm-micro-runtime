@@ -5,13 +5,13 @@
 
 #include "host_tool_utils.h"
 #include "bi-inc/shared_utils.h"
+#include "bh_platform.h"
 
 #include <time.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <bh_platform.h>
 
 typedef union jvalue {
     bool z;

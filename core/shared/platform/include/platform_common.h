@@ -34,6 +34,8 @@ extern "C" {
 #define BH_FREE os_free
 #endif
 
+void *BH_MALLOC(unsigned int size);
+void BH_FREE(void *ptr);
 
 #ifndef NULL
 #define NULL (void*)0
