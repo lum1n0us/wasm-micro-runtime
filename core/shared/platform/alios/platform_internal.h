@@ -26,10 +26,6 @@
 /* Default thread priority */
 #define BH_THREAD_DEFAULT_PRIORITY 30
 
-#define BH_ROUTINE_MODIFIER
-
-#define BH_WAIT_FOREVER AOS_WAIT_FOREVER
-
 typedef aos_task_t korp_thread;
 typedef korp_thread *korp_tid;
 typedef aos_task_t *aos_tid_t;

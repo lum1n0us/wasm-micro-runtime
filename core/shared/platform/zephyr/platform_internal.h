@@ -42,10 +42,6 @@
 /* Default thread priority */
 #define BH_THREAD_DEFAULT_PRIORITY 7
 
-#define BH_ROUTINE_MODIFIER
-
-#define BH_WAIT_FOREVER K_FOREVER
-
 typedef struct k_thread korp_thread;
 typedef korp_thread *korp_tid;
 typedef struct k_mutex korp_mutex;
