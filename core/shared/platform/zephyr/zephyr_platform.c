@@ -6,6 +6,7 @@
 #include "platform_api_vmcore.h"
 #include "platform_api_extension.h"
 
+#if WASM_ENABLE_AOT != 0
 #ifdef CONFIG_ARM_MPU
 /**
  * This function will allow execute from sram region.
@@ -27,6 +28,7 @@ disable_mpu_rasr_xn(void)
 
 }
 #endif  /* end of CONFIG_ARM_MPU */
+#endif
 
 static int
 _stdout_hook_iwasm(int c)

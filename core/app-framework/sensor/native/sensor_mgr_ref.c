@@ -121,7 +121,7 @@ void init_sensor_framework()
 
 void start_sensor_framework()
 {
-    korp_thread tid;
+    korp_tid tid;
 
     os_thread_create(&tid,
             (void *)thread_sensor_check,

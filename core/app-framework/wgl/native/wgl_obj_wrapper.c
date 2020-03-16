@@ -289,7 +289,7 @@ static void* lv_task_handler_thread_routine (void *arg)
 
 void wgl_init(void)
 {
-    korp_thread tid;
+    korp_tid tid;
 
     if (os_mutex_init(&task_handler_lock) != 0)
         return;

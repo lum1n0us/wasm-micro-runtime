@@ -464,7 +464,7 @@ static void hal_init(void)
 int iwasm_main(int argc, char *argv[])
 {
     RuntimeInitArgs init_args;
-    korp_thread tid;
+    korp_tid tid;
 
     if (!parse_args(argc, argv))
         return -1;

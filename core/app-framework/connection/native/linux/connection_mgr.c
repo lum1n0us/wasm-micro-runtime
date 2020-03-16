@@ -544,7 +544,7 @@ void app_mgr_connection_event_callback(module_data *m_data, bh_message_t msg)
 
 bool init_connection_framework()
 {
-    korp_thread tid;
+    korp_tid tid;
 
     epollfd = epoll_create(MAX_EVENTS);
     if (epollfd == -1)
