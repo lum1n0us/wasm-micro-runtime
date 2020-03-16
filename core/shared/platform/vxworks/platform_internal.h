@@ -44,12 +44,6 @@ extern "C" {
 /* Default thread priority */
 #define BH_THREAD_DEFAULT_PRIORITY 0
 
-#define BH_ROUTINE_MODIFIER
-
-#define BHT_TIMEDOUT ETIMEDOUT
-
-#define BH_WAIT_FOREVER 0xFFFFFFFF
-
 typedef pthread_t korp_tid;
 typedef pthread_mutex_t korp_mutex;
 typedef pthread_cond_t korp_cond;

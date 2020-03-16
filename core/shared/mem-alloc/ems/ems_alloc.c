@@ -353,11 +353,14 @@ gc_object_t _gc_alloc_vo_i_heap(void *vheap,
     gc_heap_t* heap = (gc_heap_t*) vheap;
     hmu_t *hmu = NULL;
     gc_object_t ret = (gc_object_t) NULL;
-    gc_size_t tot_size = 0;
+    gc_size_t tot_size = 0, tot_size_unaligned;
 
-    /* align size*/
-    tot_size = GC_ALIGN_8(size + HMU_SIZE + OBJ_PREFIX_SIZE + OBJ_SUFFIX_SIZE); /* hmu header, prefix, suffix*/
+    /* hmu header + prefix + obj + suffix */
+    tot_size_unaligned = HMU_SIZE + OBJ_PREFIX_SIZE + size + OBJ_SUFFIX_SIZE;
+    /* aligned size*/
+    tot_size = GC_ALIGN_8(tot_size_unaligned);
     if (tot_size < size)
+        /* integer overflow */
         return NULL;
 
     gct_vm_mutex_lock(&heap->lock);
@@ -376,6 +379,9 @@ gc_object_t _gc_alloc_vo_i_heap(void *vheap,
 #endif
 
     ret = hmu_to_obj(hmu);
+    if (tot_size > tot_size_unaligned)
+        /* clear buffer appended by GC_ALIGN_8() */
+        memset((uint8*)ret + size, 0, tot_size - tot_size_unaligned);
 
 #if BH_ENABLE_MEMORY_PROFILING != 0
     os_printf("HEAP.ALLOC: heap: %p, size: %u", heap, size);
@@ -393,22 +399,24 @@ gc_object_t _gc_realloc_vo_i_heap(void *vheap, void *ptr,
     gc_heap_t* heap = (gc_heap_t*) vheap;
     hmu_t *hmu = NULL, *hmu_old = NULL;
     gc_object_t ret = (gc_object_t) NULL, obj_old = (gc_object_t)ptr;
-    gc_size_t tot_size = 0, size_old = 0;
+    gc_size_t tot_size, tot_size_unaligned, tot_size_old = 0;
+    gc_size_t obj_size, obj_size_old;
+
+    /* hmu header + prefix + obj + suffix */
+    tot_size_unaligned = HMU_SIZE + OBJ_PREFIX_SIZE + size + OBJ_SUFFIX_SIZE;
+    /* aligned size*/
+    tot_size = GC_ALIGN_8(tot_size_unaligned);
+    if (tot_size < size)
+        /* integer overflow */
+        return NULL;
 
     if (obj_old) {
         hmu_old = obj_to_hmu(obj_old);
-        size_old = hmu_get_size(hmu_old);
-        size_old -= HMU_SIZE + OBJ_PREFIX_SIZE + OBJ_SUFFIX_SIZE;
-        if (size < size_old)
-            return NULL;
-        if (size == size_old)
+        tot_size_old = hmu_get_size(hmu_old);
+        if (tot_size <= tot_size_old)
+            /* current node alreay meets requirement */
             return obj_old;
     }
-
-    /* align size*/
-    tot_size = GC_ALIGN_8(size + HMU_SIZE + OBJ_PREFIX_SIZE + OBJ_SUFFIX_SIZE); /* hmu header, prefix, suffix*/
-    if (tot_size < size)
-        return NULL;
 
     gct_vm_mutex_lock(&heap->lock);
 
@@ -435,53 +443,15 @@ FINISH:
     gct_vm_mutex_unlock(&heap->lock);
 
     if (ret) {
-        memset(ret, 0, size);
+        obj_size = tot_size - HMU_SIZE - OBJ_PREFIX_SIZE - OBJ_SUFFIX_SIZE;
+        memset(ret, 0, obj_size);
         if (obj_old) {
-            memcpy(ret, obj_old, size_old);
+            obj_size_old = tot_size_old - HMU_SIZE
+                           - OBJ_PREFIX_SIZE - OBJ_SUFFIX_SIZE;
+            bh_memcpy_s(ret, obj_size, obj_old, obj_size_old);
             gc_free_h(vheap, obj_old);
         }
     }
-
-    return ret;
-}
-
-/* see ems_gc.h for description*/
-gc_object_t _gc_alloc_jo_i_heap(void *vheap,
-        gc_size_t size ALLOC_EXTRA_PARAMETERS)
-{
-    gc_heap_t* heap = (gc_heap_t*) vheap;
-    gc_object_t ret = (gc_object_t) NULL;
-    hmu_t *hmu = NULL;
-    gc_size_t tot_size = 0;
-
-    bh_assert(gci_is_heap_valid(heap));
-
-    /* align size*/
-    tot_size = GC_ALIGN_8(size + HMU_SIZE + OBJ_PREFIX_SIZE + OBJ_SUFFIX_SIZE); /* hmu header, prefix, suffix*/
-    if (tot_size < size)
-        return NULL;
-
-    hmu = alloc_hmu_ex(heap, tot_size);
-    if (!hmu)
-        goto FINISH;
-
-    /* reset all fields*/
-    memset((char*) hmu + sizeof(*hmu), 0, tot_size - sizeof(*hmu));
-
-    /* hmu->header = 0; */
-    hmu_set_ut(hmu, HMU_JO);
-    hmu_unmark_jo(hmu);
-
-#if defined(GC_VERIFY)
-    hmu_init_prefix_and_suffix(hmu, tot_size, file_name, line_number);
-#endif
-    ret = hmu_to_obj(hmu);
-
-#if BH_ENABLE_MEMORY_PROFILING != 0
-    os_printf("HEAP.ALLOC: heap: %p, size: %u", heap, size);
-#endif
-
-    FINISH:
 
     return ret;
 }

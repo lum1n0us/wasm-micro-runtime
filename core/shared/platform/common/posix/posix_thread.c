@@ -197,7 +197,7 @@ int os_cond_reltimedwait(korp_cond *cond, korp_mutex *mutex, int useconds)
         ret = pthread_cond_timedwait(cond, mutex, &abstime);
     }
 
-    if (ret != BHT_OK && ret != BHT_TIMEDOUT)
+    if (ret != BHT_OK && ret != ETIMEDOUT)
         return BHT_ERROR;
 
     return BHT_OK;

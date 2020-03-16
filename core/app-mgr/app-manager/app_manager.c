@@ -369,9 +369,11 @@ void app_manager_startup(host_interface *interface)
     /* Enter loop run */
     bh_queue_enter_loop_run(g_app_mgr_queue, app_manager_queue_callback, NULL);
 
-    fail2: module_data_list_destroy();
+fail2:
+    module_data_list_destroy();
 
-    fail1: bh_queue_destroy(g_app_mgr_queue);
+fail1:
+    bh_queue_destroy(g_app_mgr_queue);
 }
 
 #include "module_config.h"
