@@ -917,6 +917,8 @@ aot_create_comp_context(AOTCompData *comp_data,
             goto fail;
         }
         comp_ctx->is_jit_mode = true;
+        comp_ctx->target_machine =
+                LLVMGetExecutionEngineTargetMachine(comp_ctx->exec_engine);
     }
     else {
         /* Create LLVM target machine */
@@ -1155,7 +1157,7 @@ aot_destroy_comp_context(AOTCompContext *comp_ctx)
     if (comp_ctx->pass_mgr)
         LLVMDisposePassManager(comp_ctx->pass_mgr);
 
-    if (comp_ctx->target_machine)
+    if (comp_ctx->target_machine && !comp_ctx->is_jit_mode)
         LLVMDisposeTargetMachine(comp_ctx->target_machine);
 
     if (comp_ctx->builder)
