@@ -144,8 +144,35 @@ extern void hmu_verify(hmu_t *hmu);
 typedef struct _hmu_normal_node
 {
     hmu_t hmu_header;
+#if defined(BUILD_TARGET_X86_64) || defined(BUILD_TARGET_AMD_64)
+    struct {
+        uint32 parts[2];
+    } next;
+#else
     struct _hmu_normal_node *next;
-}hmu_normal_node_t;
+#endif
+} hmu_normal_node_t;
+
+#if defined(BUILD_TARGET_X86_64) || defined(BUILD_TARGET_AMD_64)
+static inline hmu_normal_node_t *
+get_hmu_normal_node_next(hmu_normal_node_t *node)
+{
+    hmu_normal_node_t *next;
+    bh_memcpy_s(&next, (uint32)sizeof(hmu_normal_node_t *),
+                &node->next.parts, (uint32)sizeof(uint32) * 2);
+    return next;
+}
+
+static inline void
+set_hmu_normal_node_next(hmu_normal_node_t *node, hmu_normal_node_t *next)
+{
+    bh_memcpy_s(&node->next.parts, (uint32)sizeof(uint32) * 2,
+                &next, (uint32)sizeof(hmu_normal_node_t *));
+}
+#else
+#define get_hmu_normal_node_next(node) (node)->next
+#define set_hmu_normal_node_next(node, _next) (node)->next = _next
+#endif
 
 typedef struct _hmu_tree_node
 {
@@ -154,7 +181,7 @@ typedef struct _hmu_tree_node
     struct _hmu_tree_node *left;
     struct _hmu_tree_node *right;
     struct _hmu_tree_node *parent;
-}hmu_tree_node_t;
+} hmu_tree_node_t;
 
 typedef struct _gc_heap_struct
 {
@@ -191,7 +218,7 @@ typedef struct _gc_heap_struct
     gc_size_t gc_threshold_factor;
     gc_int64 total_gc_time;
 #endif
-}gc_heap_t;
+} gc_heap_t;
 
 /*////// MISC internal used APIs*/
 

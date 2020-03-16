@@ -92,15 +92,16 @@ static void unlink_hmu(gc_heap_t *heap, hmu_t *hmu)
 
     if (HMU_IS_FC_NORMAL(size)) {
         uint32 node_idx = size >> 3;
-        hmu_normal_node_t* node = heap->kfc_normal_list[node_idx].next;
-        hmu_normal_node_t** p = &(heap->kfc_normal_list[node_idx].next);
+        hmu_normal_node_t *node_prev = &heap->kfc_normal_list[node_idx];
+        hmu_normal_node_t *node =
+            get_hmu_normal_node_next(&heap->kfc_normal_list[node_idx]);
         while (node) {
             if ((hmu_t*) node == hmu) {
-                *p = node->next;
+                set_hmu_normal_node_next(node_prev, get_hmu_normal_node_next(node));
                 break;
             }
-            p = &(node->next);
-            node = node->next;
+            node_prev = node;
+            node = get_hmu_normal_node_next(node);
         }
 
         if (!node) {
@@ -154,7 +155,7 @@ void gci_add_fc(gc_heap_t *heap, hmu_t *hmu, gc_size_t size)
 
         node_idx = size >> 3;
         np->next = heap->kfc_normal_list[node_idx].next;
-        heap->kfc_normal_list[node_idx].next = np;
+        set_hmu_normal_node_next(&heap->kfc_normal_list[node_idx], np);
         return;
     }
 
@@ -217,7 +218,7 @@ static hmu_t *alloc_hmu(gc_heap_t *heap, gc_size_t size)
         for (node_idx = init_node_idx; node_idx < HMU_NORMAL_NODE_CNT;
                 node_idx++) {
             node = heap->kfc_normal_list + node_idx;
-            if (node->next)
+            if (get_hmu_normal_node_next(node))
                 break;
             node = NULL;
         }
@@ -226,7 +227,7 @@ static hmu_t *alloc_hmu(gc_heap_t *heap, gc_size_t size)
         if (node) {
             bh_assert(node_idx >= init_node_idx);
 
-            p = node->next;
+            p = get_hmu_normal_node_next(node);
             node->next = p->next;
             bh_assert(((gc_int32)(uintptr_t)hmu_to_obj(p) & 7) == 0);
 
