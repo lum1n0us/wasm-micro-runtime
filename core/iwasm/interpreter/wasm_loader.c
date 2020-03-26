@@ -1620,9 +1620,9 @@ load_from_sections(WASMModule *module, WASMSection *sections,
 
                 if (llvm_data_end_global && llvm_heap_base_global) {
                     if ((data_end_global_index == heap_base_global_index + 1
-                         && data_end_global_index > 0)
+                         && (int32)data_end_global_index > 1)
                         || (heap_base_global_index == data_end_global_index + 1
-                            && heap_base_global_index > 0)) {
+                            && (int32)heap_base_global_index > 1)) {
                         global_index =
                             data_end_global_index < heap_base_global_index
                             ? data_end_global_index - 1 : heap_base_global_index - 1;
