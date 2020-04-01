@@ -29,6 +29,11 @@ typedef struct NativeSymbol {
 #define EXPORT_WASM_API_WITH_SIG2(symbol, signature) \
                                  {#symbol, (void*)symbol##_wrapper, signature, NULL}
 
+#define EXPORT_WASM_API_WITH_ATT(symbol, signature, attachment) \
+                                 {#symbol, (void*)symbol, signature, attachment}
+#define EXPORT_WASM_API_WITH_ATT2(symbol, signature, attachment) \
+                                 {#symbol, (void*)symbol##_wrapper, signature, attachment}
+
 /**
  * Get the exported APIs of base lib
  *
