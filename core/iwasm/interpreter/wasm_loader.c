@@ -2377,6 +2377,9 @@ typedef struct WASMLoaderContext {
     int16 start_dynamic_offset;
     int16 max_dynamic_offset;
 
+    /* preserved local offset */
+    int16 preserved_local_offset;
+
     /* const buffer */
     uint8 *const_buf;
     uint16 num_const;
@@ -2873,6 +2876,9 @@ wasm_loader_ctx_reinit(WASMLoaderContext *ctx)
     ctx->frame_offset = ctx->frame_offset_bottom;
     ctx->dynamic_offset = ctx->start_dynamic_offset;
 
+    /* init preserved local offsets */
+    ctx->preserved_local_offset = ctx->max_dynamic_offset;
+
     /* const buf is reserved */
     return true;
 }
@@ -2950,19 +2956,21 @@ preserve_referenced_local(WASMLoaderContext *loader_ctx, uint8 opcode,
                 skip_label();
                 if (local_type == VALUE_TYPE_I32
                     || local_type == VALUE_TYPE_F32) {
-                    preserved_offset = loader_ctx->dynamic_offset++;
+                    preserved_offset = loader_ctx->preserved_local_offset;
+                    /* Only increase preserve offset in the second traversal */
+                    if (loader_ctx->p_code_compiled)
+                        loader_ctx->preserved_local_offset++;
                     emit_label(EXT_OP_COPY_STACK_TOP);
                 }
                 else {
-                    preserved_offset = loader_ctx->dynamic_offset;
-                    loader_ctx->dynamic_offset += 2;
+                    preserved_offset = loader_ctx->preserved_local_offset;
+                    if (loader_ctx->p_code_compiled)
+                        loader_ctx->preserved_local_offset += 2;
                     emit_label(EXT_OP_COPY_STACK_TOP_I64);
                 }
                 emit_operand(loader_ctx, local_index);
                 emit_operand(loader_ctx, preserved_offset);
                 emit_label(opcode);
-                if (loader_ctx->dynamic_offset > loader_ctx->max_dynamic_offset)
-                    loader_ctx->max_dynamic_offset = loader_ctx->dynamic_offset;
             }
             loader_ctx->frame_offset_bottom[i] = preserved_offset;
         }
@@ -3116,12 +3124,14 @@ wasm_loader_pop_frame_offset(WASMLoaderContext *ctx, uint8 type,
 
     if (type == VALUE_TYPE_I32 || type == VALUE_TYPE_F32) {
         ctx->frame_offset -= 1;
-        if (*(ctx->frame_offset) > ctx->start_dynamic_offset)
+        if ((*(ctx->frame_offset) > ctx->start_dynamic_offset)
+            && (*(ctx->frame_offset) < ctx->max_dynamic_offset))
             ctx->dynamic_offset -= 1;
     }
     else {
         ctx->frame_offset -= 2;
-        if (*(ctx->frame_offset) > ctx->start_dynamic_offset)
+        if ((*(ctx->frame_offset) > ctx->start_dynamic_offset)
+            && (*(ctx->frame_offset) < ctx->max_dynamic_offset))
             ctx->dynamic_offset -= 2;
     }
     emit_operand(ctx, *(ctx->frame_offset));
@@ -4682,7 +4692,7 @@ handle_next_reachable_block:
         }
     }
 
-    func->max_stack_cell_num = loader_ctx->max_dynamic_offset -
+    func->max_stack_cell_num = loader_ctx->preserved_local_offset -
                                     loader_ctx->start_dynamic_offset + 1;
 #else
     func->max_stack_cell_num = loader_ctx->max_stack_cell_num;
