@@ -1392,15 +1392,19 @@ wasm_application_execute_func(WASMModuleInstanceCommon *module_inst,
             break;
         case VALUE_TYPE_I64:
         {
-            char buf[16];
             union { uint64 val; uint32 parts[2]; } u;
             u.parts[0] = argv1[0];
             u.parts[1] = argv1[1];
+#ifdef PRIx64
+            os_printf("0x%"PRIx64":i64", u.val);
+#else
+            char buf[16];
             if (sizeof(long) == 4)
                 snprintf(buf, sizeof(buf), "%s", "0x%llx:i64");
             else
                 snprintf(buf, sizeof(buf), "%s", "0x%lx:i64");
             os_printf(buf, u.val);
+#endif
             break;
         }
         case VALUE_TYPE_F32:
