@@ -675,9 +675,11 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
         p = p_old;
 
-        /* insert "env" and "wasi_unstable" to const str list */
+        /* insert "env", "wasi_unstable" and "wasi_snapshot_preview1" to const str list */
         if (!const_str_list_insert((uint8*)"env", 3, module, error_buf, error_buf_size)
             || !const_str_list_insert((uint8*)"wasi_unstable", 13, module,
+                                     error_buf, error_buf_size)
+            || !const_str_list_insert((uint8*)"wasi_snapshot_preview1", 22, module,
                                      error_buf, error_buf_size)) {
             return false;
         }
@@ -797,7 +799,8 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 #if WASM_ENABLE_LIBC_WASI != 0
         import = module->import_functions;
         for (i = 0; i < module->import_function_count; i++, import++) {
-            if (!strcmp(import->u.names.module_name, "wasi_unstable")) {
+            if (!strcmp(import->u.names.module_name, "wasi_unstable")
+                || !strcmp(import->u.names.module_name, "wasi_snapshot_preview1")) {
                 module->is_wasi_module = true;
                 break;
             }
