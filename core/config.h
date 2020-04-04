@@ -147,9 +147,6 @@ enum {
 /* Default watchdog interval in ms */
 #define DEFAULT_WATCHDOG_INTERVAL (3 * 60 * 1000)
 
-/* Support memory.grow opcode and enlargeMemory function */
-#define WASM_ENABLE_MEMORY_GROW 1
-
 /* The max percentage of global heap that app memory space can grow */
 #define APP_MEMORY_MAX_GLOBAL_HEAP_PERCENT 1 / 3
 
@@ -182,6 +179,10 @@ enum {
 /* Default wasm block address cache size and conflict list size */
 #define BLOCK_ADDR_CACHE_SIZE 64
 #define BLOCK_ADDR_CONFLICT_SIZE 2
+
+#ifndef WASM_ENABLE_SPEC_TEST
+#define WASM_ENABLE_SPEC_TEST 0
+#endif
 
 #endif /* end of _CONFIG_H_ */
 

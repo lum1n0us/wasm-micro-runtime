@@ -200,19 +200,27 @@ typedef struct AOTModuleInstance {
     /* WASI context */
     AOTPointer wasi_ctx;
 
+    /* total memory size: heap and linear memory */
+    uint32 total_mem_size;
+
+    /* boundary check constants for aot code */
+    uint32 mem_bound_check_1byte;
+    uint32 mem_bound_check_2bytes;
+    uint32 mem_bound_check_4bytes;
+    uint32 mem_bound_check_8bytes;
+
     /* others */
     int32 temp_ret;
     uint32 llvm_stack;
-    int32 DYNAMICTOP_PTR_offset;
     uint32 default_wasm_stack_size;
 
     /* reserved */
-    uint32 reserved[16];
+    uint32 reserved[12];
 
     union {
         uint64 _make_it_8_byte_aligned_;
         uint8 bytes[1];
-    } global_table_heap_data;
+    } global_table_data;
 } AOTModuleInstance;
 
 typedef AOTExportFunc AOTFunctionInstance;
