@@ -69,23 +69,25 @@ int get_pow(wasm_exec_env_t exec_env, int x, int y) {
     return (int)pow(x, y);
 }
 
-int32_t calculate_native(wasm_exec_env_t exec_env, int32_t n,
-                         int32_t func1, int32_t func2) {
-    printf ("calling into native function: %s, n=%d, func1=%d, func2=%d\n",
-            __FUNCTION__, n, func1, func2);
+int32_t
+calculate_native(wasm_exec_env_t exec_env, int32_t n, int32_t func1,
+                 int32_t func2)
+{
+    printf("calling into native function: %s, n=%d, func1=%d, func2=%d\n",
+           __FUNCTION__, n, func1, func2);
 
-    uint32_t argv[] = {n};
+    uint32_t argv[] = { n };
     if (!wasm_runtime_call_indirect(exec_env, func1, 1, argv)) {
-      printf("call func1 failed\n");
-      return 0xDEAD;
+        printf("call func1 failed\n");
+        return 0xDEAD;
     }
 
     uint32_t n1 = argv[0];
     printf("call func1 and return n1=%d\n", n1);
 
     if (!wasm_runtime_call_indirect(exec_env, func2, 1, argv)) {
-      printf("call func2 failed\n");
-      return 0xDEAD;
+        printf("call func2 failed\n");
+        return 0xDEAD;
     }
 
     uint32_t n2 = argv[0];
