@@ -855,7 +855,8 @@ aot_invoke_native(WASMExecEnv *exec_env, uint32 func_idx,
 
 bool
 aot_call_indirect(WASMExecEnv *exec_env,
-                  uint32 func_type_idx, uint32 table_elem_idx,
+                  bool check_func_type, uint32 func_type_idx,
+                  uint32 table_elem_idx,
                   uint32 *frame_lp, uint32 argc, uint32 *argv_ret)
 {
     AOTModuleInstance *module_inst = (AOTModuleInstance*)
@@ -863,7 +864,8 @@ aot_call_indirect(WASMExecEnv *exec_env,
     AOTModule *aot_module = (AOTModule*)module_inst->aot_module.ptr;
     uint32 *func_type_indexes = (uint32*)module_inst->func_type_indexes.ptr;
     uint32 *table_data = (uint32*)module_inst->table_data.ptr;
-    AOTFuncType *func_type = aot_module->func_types[func_type_idx];;
+    AOTFuncType *func_type = check_func_type ?
+            aot_module->func_types[func_type_idx] : NULL;
     void **func_ptrs = (void**)module_inst->func_ptrs.ptr, *func_ptr;
     uint32 table_size = module_inst->table_size;
     uint32 func_idx, func_type_idx1;
@@ -884,8 +886,11 @@ aot_call_indirect(WASMExecEnv *exec_env,
     }
 
     func_type_idx1 = func_type_indexes[func_idx];
-    if (!aot_is_wasm_type_equal(module_inst, func_type_idx, func_type_idx1)) {
-        aot_set_exception_with_id(module_inst, EXCE_INVALID_FUNCTION_TYPE_INDEX);
+    if (check_func_type &&
+            !aot_is_wasm_type_equal(module_inst, func_type_idx,
+                                    func_type_idx1)) {
+        aot_set_exception_with_id(module_inst,
+                                  EXCE_INVALID_FUNCTION_TYPE_INDEX);
         return false;
     }
 
@@ -906,7 +911,8 @@ aot_call_indirect(WASMExecEnv *exec_env,
         if (import_func->call_conv_raw) {
             attachment = import_func->attachment;
             return wasm_runtime_invoke_native_raw(exec_env, func_ptr,
-                                                  func_type, signature, attachment,
+                                                  func_type, signature,
+                                                  attachment,
                                                   frame_lp, argc, argv_ret);
         }
     }
@@ -915,4 +921,3 @@ aot_call_indirect(WASMExecEnv *exec_env,
                                       func_type, signature, attachment,
                                       frame_lp, argc, argv_ret);
 }
-
