@@ -813,7 +813,7 @@ aot_is_wasm_type_equal(AOTModuleInstance *module_inst,
 
 bool
 aot_invoke_native(WASMExecEnv *exec_env, uint32 func_idx,
-                  uint32 *frame_lp, uint32 argc, uint32 *argv_ret)
+                  uint32 argc, uint32 *argv)
 {
     AOTModuleInstance *module_inst = (AOTModuleInstance*)
                             wasm_runtime_get_module_inst(exec_env);
@@ -844,12 +844,12 @@ aot_invoke_native(WASMExecEnv *exec_env, uint32 func_idx,
     if (!import_func->call_conv_raw) {
         return wasm_runtime_invoke_native(exec_env, func_ptr,
                                           func_type, signature, attachment,
-                                          frame_lp, argc, argv_ret);
+                                          argv, argc, argv);
     }
     else {
         return wasm_runtime_invoke_native_raw(exec_env, func_ptr,
                                               func_type, signature, attachment,
-                                              frame_lp, argc, argv_ret);
+                                              argv, argc, argv);
     }
 }
 
@@ -857,7 +857,7 @@ bool
 aot_call_indirect(WASMExecEnv *exec_env,
                   bool check_func_type, uint32 func_type_idx,
                   uint32 table_elem_idx,
-                  uint32 *frame_lp, uint32 argc, uint32 *argv_ret)
+                  uint32 argc, uint32 *argv)
 {
     AOTModuleInstance *module_inst = (AOTModuleInstance*)
                                      wasm_runtime_get_module_inst(exec_env);
@@ -913,11 +913,11 @@ aot_call_indirect(WASMExecEnv *exec_env,
             return wasm_runtime_invoke_native_raw(exec_env, func_ptr,
                                                   func_type, signature,
                                                   attachment,
-                                                  frame_lp, argc, argv_ret);
+                                                  argv, argc, argv);
         }
     }
 
     return wasm_runtime_invoke_native(exec_env, func_ptr,
                                       func_type, signature, attachment,
-                                      frame_lp, argc, argv_ret);
+                                      argv, argc, argv);
 }

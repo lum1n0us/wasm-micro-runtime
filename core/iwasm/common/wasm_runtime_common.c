@@ -2141,8 +2141,7 @@ wasm_runtime_call_indirect(WASMExecEnv *exec_env,
 #if WASM_ENABLE_AOT != 0
     if (exec_env->module_inst->module_type == Wasm_Module_AoT)
         return aot_call_indirect(exec_env, false, 0,
-                                 element_indices,
-                                 argv, argc, argv);
+                                 element_indices, argc, argv);
 #endif
     return false;
 }
