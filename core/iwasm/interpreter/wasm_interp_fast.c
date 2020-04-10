@@ -490,11 +490,18 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
     frame_ip += 6;                                                          \
   } while (0)
 
+#if defined(BUILD_TARGET_X86_32)
 #define DEF_OP_REINTERPRET(src_type) do {                                   \
     void *src = frame_lp + GET_OFFSET();                                    \
     void *dst = frame_lp + GET_OFFSET();                                    \
     bh_memcpy_s(dst, sizeof(src_type), src, sizeof(src_type));              \
   } while (0)
+#else
+#define DEF_OP_REINTERPRET(src_type) do {                                   \
+    SET_OPERAND(src_type, 2, GET_OPERAND(src_type, 0));                     \
+    frame_ip += 4;                                                          \
+  } while (0)
+#endif
 
 #if WASM_CPU_SUPPORTS_UNALIGNED_64BIT_ACCESS != 0
 #define DEF_OP_NUMERIC_64 DEF_OP_NUMERIC
@@ -921,14 +928,22 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
           addr_ret = GET_OFFSET();
 
           if (!cond) {
+#if defined(BUILD_TARGET_X86_32)
             if (addr_ret != addr1)
               bh_memcpy_s(frame_lp + addr_ret, sizeof(int32),
                           frame_lp + addr1, sizeof(int32));
+#else
+            frame_lp[addr_ret] = frame_lp[addr1];
+#endif
           }
           else {
+#if defined(BUILD_TARGET_X86_32)
             if (addr_ret != addr2)
               bh_memcpy_s(frame_lp + addr_ret, sizeof(int32),
                           frame_lp + addr2, sizeof(int32));
+#else
+            frame_lp[addr_ret] = frame_lp[addr2];
+#endif
           }
           HANDLE_OP_END ();
         }
@@ -941,14 +956,22 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
           addr_ret = GET_OFFSET();
 
           if (!cond) {
+#if defined(BUILD_TARGET_X86_32)
             if (addr_ret != addr1)
               bh_memcpy_s(frame_lp + addr_ret, sizeof(int64),
                           frame_lp + addr1, sizeof(int64));
+#else
+            *(int64*)(frame_lp + addr_ret) = *(int64*)(frame_lp + addr1);
+#endif
           }
           else {
+#if defined(BUILD_TARGET_X86_32)
             if (addr_ret != addr2)
               bh_memcpy_s(frame_lp + addr_ret, sizeof(int64),
                           frame_lp + addr2, sizeof(int64));
+#else
+            *(int64*)(frame_lp + addr_ret) = *(int64*)(frame_lp + addr2);
+#endif
           }
           HANDLE_OP_END ();
         }
@@ -2065,15 +2088,23 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
       HANDLE_OP (EXT_OP_COPY_STACK_TOP):
         addr1 = GET_OFFSET();
         addr2 = GET_OFFSET();
+#if defined(BUILD_TARGET_X86_32)
         bh_memcpy_s(frame_lp + addr2, sizeof(int32),
                     frame_lp + addr1, sizeof(int32));
+#else
+        frame_lp[addr2] = frame_lp[addr1];
+#endif
         HANDLE_OP_END ();
 
       HANDLE_OP (EXT_OP_COPY_STACK_TOP_I64):
         addr1 = GET_OFFSET();
         addr2 = GET_OFFSET();
+#if defined(BUILD_TARGET_X86_32)
         bh_memcpy_s(frame_lp + addr2, sizeof(int64),
                     frame_lp + addr1, sizeof(int64));
+#else
+        *(float64*)(frame_lp + addr2) = *(float64*)(frame_lp + addr1);
+#endif
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_SET_LOCAL):
