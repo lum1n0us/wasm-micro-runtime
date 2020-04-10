@@ -18,9 +18,6 @@
 extern "C" {
 #endif
 
-#define AOT_MAGIC_NUMBER 0x746f6100
-#define AOT_CURRENT_VERSION 1
-
 typedef enum AOTExceptionID {
     EXCE_UNREACHABLE = 0,
     EXCE_OUT_OF_MEMORY,
