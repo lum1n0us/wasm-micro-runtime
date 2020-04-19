@@ -629,6 +629,7 @@ aot_destroy_func_contexts(AOTFuncContext **func_ctxes, uint32 count)
             if (func_ctxes[i]->exception_blocks)
                 wasm_runtime_free(func_ctxes[i]->exception_blocks);
             aot_block_stack_destroy(&func_ctxes[i]->block_stack);
+            aot_checked_addr_list_destroy(func_ctxes[i]);
             wasm_runtime_free(func_ctxes[i]);
         }
     wasm_runtime_free(func_ctxes);
@@ -1298,3 +1299,80 @@ aot_block_destroy(AOTBlock *block)
     aot_value_stack_destroy(&block->value_stack);
     wasm_runtime_free(block);
 }
+
+bool
+aot_checked_addr_list_add(AOTFuncContext *func_ctx,
+                          uint32 local_idx, uint32 offset, uint32 bytes)
+{
+    AOTCheckedAddr *node = func_ctx->checked_addr_list;
+
+    if (!(node = wasm_runtime_malloc(sizeof(AOTCheckedAddr)))) {
+        aot_set_last_error("allocate memory failed.");
+        return false;
+    }
+
+    node->local_idx = local_idx;
+    node->offset = offset;
+    node->bytes = bytes;
+
+    node->next = func_ctx->checked_addr_list;
+    func_ctx->checked_addr_list = node;
+    return true;
+}
+
+void
+aot_checked_addr_list_del(AOTFuncContext *func_ctx, uint32 local_idx)
+{
+    AOTCheckedAddr *node = func_ctx->checked_addr_list;
+    AOTCheckedAddr *node_prev = NULL, *node_next;
+
+    while (node) {
+        node_next = node->next;
+
+        if (node->local_idx == local_idx) {
+            if (!node_prev)
+                func_ctx->checked_addr_list = node_next;
+            else
+                node_prev->next = node_next;
+            wasm_runtime_free(node);
+        }
+        else {
+            node_prev = node;
+        }
+
+        node = node_next;
+    }
+}
+
+bool
+aot_checked_addr_list_find(AOTFuncContext *func_ctx,
+                           uint32 local_idx, uint32 offset, uint32 bytes)
+{
+    AOTCheckedAddr *node = func_ctx->checked_addr_list;
+
+    while (node) {
+        if (node->local_idx == local_idx
+            && node->offset == offset
+            && node->bytes >= bytes) {
+            return true;
+        }
+        node = node->next;
+    }
+
+    return false;
+}
+
+void
+aot_checked_addr_list_destroy(AOTFuncContext *func_ctx)
+{
+    AOTCheckedAddr *node = func_ctx->checked_addr_list, *node_next;
+
+    while (node) {
+        node_next = node->next;
+        wasm_runtime_free(node);
+        node = node_next;
+    }
+
+    func_ctx->checked_addr_list = NULL;
+}
+
