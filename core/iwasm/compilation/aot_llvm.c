@@ -1120,11 +1120,15 @@ aot_create_comp_context(AOTCompData *comp_data,
         aot_set_last_error("create LLVM pass manager failed.");
         goto fail;
     }
+
+    LLVMAddBasicAliasAnalysisPass(comp_ctx->pass_mgr);
     LLVMAddPromoteMemoryToRegisterPass(comp_ctx->pass_mgr);
     LLVMAddInstructionCombiningPass(comp_ctx->pass_mgr);
-    LLVMAddCFGSimplificationPass(comp_ctx->pass_mgr);
     LLVMAddJumpThreadingPass(comp_ctx->pass_mgr);
     LLVMAddConstantPropagationPass(comp_ctx->pass_mgr);
+    LLVMAddReassociatePass(comp_ctx->pass_mgr);
+    LLVMAddGVNPass(comp_ctx->pass_mgr);
+    LLVMAddCFGSimplificationPass(comp_ctx->pass_mgr);
 
     /* Create metadata for llvm float experimental constrained intrinsics */
     if (!(comp_ctx->fp_rounding_mode =
