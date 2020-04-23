@@ -28,6 +28,14 @@ aot_compile_op_i64_extend_i32(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx
                               bool sign);
 
 bool
+aot_compile_op_i64_extend_i64(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
+                              int8 bitwidth);
+
+bool
+aot_compile_op_i32_extend_i32(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
+                              int8 bitwidth);
+
+bool
 aot_compile_op_i64_trunc_f32(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
                              bool sign);
 

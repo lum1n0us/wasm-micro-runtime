@@ -685,6 +685,31 @@ aot_compile_func(AOTCompContext *comp_ctx, uint32 func_index)
             return false;
         break;
 
+      case WASM_OP_I32_EXTEND8_S:
+        if (!aot_compile_op_i32_extend_i32(comp_ctx, func_ctx, 8))
+          return false;
+        break;
+
+      case WASM_OP_I32_EXTEND16_S:
+        if (!aot_compile_op_i32_extend_i32(comp_ctx, func_ctx, 16))
+          return false;
+        break;
+
+      case WASM_OP_I64_EXTEND8_S:
+        if (!aot_compile_op_i64_extend_i64(comp_ctx, func_ctx, 8))
+          return false;
+        break;
+
+      case WASM_OP_I64_EXTEND16_S:
+        if (!aot_compile_op_i64_extend_i64(comp_ctx, func_ctx, 16))
+          return false;
+        break;
+
+      case WASM_OP_I64_EXTEND32_S:
+        if (!aot_compile_op_i64_extend_i64(comp_ctx, func_ctx, 32))
+          return false;
+        break;
+
       default:
         break;
     }

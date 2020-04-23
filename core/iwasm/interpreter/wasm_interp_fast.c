@@ -547,7 +547,7 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
       wasm_set_exception(module, "integer overflow");               \
       goto got_exception;                                           \
     }                                                               \
-    SET_OPERAND(dst_type, 2, value);                               \
+    SET_OPERAND(dst_type, 2, value);                                \
     frame_ip += 4;                                                  \
   } while (0)
 
@@ -2129,6 +2129,26 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
           HANDLE_OP_END ();
         }
+
+      HANDLE_OP (WASM_OP_I32_EXTEND8_S):
+        DEF_OP_CONVERT(int32, I32, int8, I32);
+        HANDLE_OP_END ();
+
+      HANDLE_OP (WASM_OP_I32_EXTEND16_S):
+        DEF_OP_CONVERT(int32, I32, int16, I32);
+        HANDLE_OP_END ();
+
+      HANDLE_OP (WASM_OP_I64_EXTEND8_S):
+        DEF_OP_CONVERT(int64, I64, int8, I64);
+        HANDLE_OP_END ();
+
+      HANDLE_OP (WASM_OP_I64_EXTEND16_S):
+        DEF_OP_CONVERT(int64, I64, int16, I64);
+        HANDLE_OP_END ();
+
+      HANDLE_OP (WASM_OP_I64_EXTEND32_S):
+        DEF_OP_CONVERT(int64, I64, int32, I64);
+        HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_IMPDEP):
         frame = prev_frame;

@@ -2353,6 +2353,11 @@ wasm_loader_find_block_addr(BlockAddr *block_addr_cache,
             case WASM_OP_I64_REINTERPRET_F64:
             case WASM_OP_F32_REINTERPRET_I32:
             case WASM_OP_F64_REINTERPRET_I64:
+            case WASM_OP_I32_EXTEND8_S:
+            case WASM_OP_I32_EXTEND16_S:
+            case WASM_OP_I64_EXTEND8_S:
+            case WASM_OP_I64_EXTEND16_S:
+            case WASM_OP_I64_EXTEND32_S:
                 break;
 
             default:
@@ -4699,6 +4704,19 @@ handle_next_reachable_block:
             case WASM_OP_F64_REINTERPRET_I64:
                 POP_I64();
                 PUSH_F64();
+                break;
+
+            case WASM_OP_I32_EXTEND8_S:
+            case WASM_OP_I32_EXTEND16_S:
+                POP_I32();
+                PUSH_I32();
+                break;
+
+            case WASM_OP_I64_EXTEND8_S:
+            case WASM_OP_I64_EXTEND16_S:
+            case WASM_OP_I64_EXTEND32_S:
+                POP_I64();
+                PUSH_I64();
                 break;
 
             default:

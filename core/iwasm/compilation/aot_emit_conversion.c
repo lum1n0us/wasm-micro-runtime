@@ -181,6 +181,80 @@ fail:
 }
 
 bool
+aot_compile_op_i64_extend_i64(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
+                              int8 bitwidth)
+{
+    LLVMValueRef value, res, cast_value = NULL;
+
+    POP_I64(value);
+
+    if (bitwidth == 8) {
+        cast_value = LLVMBuildIntCast2(comp_ctx->builder, value,
+                                       INT8_TYPE, true, "i8_intcast_i64");
+    }
+    else if (bitwidth == 16) {
+        cast_value = LLVMBuildIntCast2(comp_ctx->builder, value,
+                                       INT16_TYPE, true, "i16_intcast_i64");
+    }
+    else if (bitwidth == 32) {
+        cast_value = LLVMBuildIntCast2(comp_ctx->builder, value,
+                                       I32_TYPE, true, "i32_intcast_i64");
+    }
+
+    if (!cast_value) {
+        aot_set_last_error("llvm build conversion failed.");
+        return false;
+    }
+
+    res = LLVMBuildSExt(comp_ctx->builder, cast_value, I64_TYPE, "i64_extend_i64_s");
+
+    if (!res) {
+        aot_set_last_error("llvm build conversion failed.");
+        return false;
+    }
+
+    PUSH_I64(res);
+    return true;
+fail:
+    return false;
+}
+
+bool
+aot_compile_op_i32_extend_i32(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
+                              int8 bitwidth)
+{
+    LLVMValueRef value, res, cast_value = NULL;
+
+    POP_I32(value);
+
+    if (bitwidth == 8) {
+        cast_value = LLVMBuildIntCast2(comp_ctx->builder, value,
+                                       INT8_TYPE, true, "i8_intcast_i32");
+    }
+    else if (bitwidth == 16) {
+        cast_value = LLVMBuildIntCast2(comp_ctx->builder, value,
+                                       INT16_TYPE, true, "i16_intcast_i32");
+    }
+
+    if (!cast_value) {
+        aot_set_last_error("llvm build conversion failed.");
+        return false;
+    }
+
+    res = LLVMBuildSExt(comp_ctx->builder, cast_value, I32_TYPE, "i32_extend_i32_s");
+
+    if (!res) {
+        aot_set_last_error("llvm build conversion failed.");
+        return false;
+    }
+
+    PUSH_I32(res);
+    return true;
+fail:
+    return false;
+}
+
+bool
 aot_compile_op_i64_trunc_f32(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
                              bool sign)
 {
