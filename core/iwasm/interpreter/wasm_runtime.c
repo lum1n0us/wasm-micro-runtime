@@ -419,10 +419,11 @@ globals_instantiate(const WASMModule *module,
     return globals;
 }
 
-static void
+static bool
 globals_instantiate_fix(WASMGlobalInstance *globals,
                         const WASMModule *module,
-                        WASMModuleInstance *module_inst)
+                        WASMModuleInstance *module_inst,
+                        char *error_buf, uint32 error_buf_size)
 {
     WASMGlobalInstance *global = globals;
     WASMImport *import = module->import_globals;
@@ -459,7 +460,11 @@ globals_instantiate_fix(WASMGlobalInstance *globals,
         InitializerExpression *init_expr = &module->globals[i].init_expr;
 
         if (init_expr->init_expr_type == INIT_EXPR_TYPE_GET_GLOBAL) {
-            bh_assert(init_expr->u.global_index < module->import_global_count);
+            if (init_expr->u.global_index >= module->import_global_count + i) {
+                set_error_buf(error_buf, error_buf_size,
+                              "Instantiate global failed: unknown global.");
+                return false;
+            }
             global->initial_value = globals[init_expr->u.global_index].initial_value;
         }
         else {
@@ -468,6 +473,7 @@ globals_instantiate_fix(WASMGlobalInstance *globals,
         }
         global++;
     }
+    return true;
 }
 
 /**
@@ -658,7 +664,11 @@ wasm_instantiate(WASMModule *module,
         memory_data = module_inst->default_memory->memory_data;
 
         /* fix import memoryBase */
-        globals_instantiate_fix(globals, module, module_inst);
+        if (!globals_instantiate_fix(globals, module, module_inst,
+                                     error_buf, error_buf_size)) {
+            wasm_deinstantiate(module_inst);
+            return NULL;
+        }
 
         /* Initialize the global data */
         global_data = memory->global_data;
