@@ -2359,6 +2359,11 @@ wasm_loader_find_block_addr(BlockAddr *block_addr_cache,
             case WASM_OP_I64_EXTEND16_S:
             case WASM_OP_I64_EXTEND32_S:
                 break;
+            case WASM_OP_MISC_PREFIX:
+                /* skip extend op */
+                if (p < code_end_addr)
+                    p++;
+                break;
 
             default:
                 if (error_buf)
@@ -4739,6 +4744,45 @@ handle_next_reachable_block:
                 POP_I64();
                 PUSH_I64();
                 break;
+
+            case WASM_OP_MISC_PREFIX:
+            {
+                opcode = read_uint8(p);
+#if WASM_ENABLE_FAST_INTERP != 0
+                emit_byte(loader_ctx, opcode);
+#endif
+                switch (opcode)
+                {
+                case WASM_OP_I32_TRUNC_SAT_S_F32:
+                case WASM_OP_I32_TRUNC_SAT_U_F32:
+                    POP_F32();
+                    PUSH_I32();
+                    break;
+                case WASM_OP_I32_TRUNC_SAT_S_F64:
+                case WASM_OP_I32_TRUNC_SAT_U_F64:
+                    POP_F64();
+                    PUSH_I32();
+                    break;
+                case WASM_OP_I64_TRUNC_SAT_S_F32:
+                case WASM_OP_I64_TRUNC_SAT_U_F32:
+                    POP_F32();
+                    PUSH_I64();
+                    break;
+                case WASM_OP_I64_TRUNC_SAT_S_F64:
+                case WASM_OP_I64_TRUNC_SAT_U_F64:
+                    POP_F64();
+                    PUSH_I64();
+                    break;
+                default:
+                    if (error_buf != NULL)
+                        snprintf(error_buf, error_buf_size,
+                                 "WASM module load failed: "
+                                 "invalid opcode 0xfc %02x.", opcode);
+                    goto fail;
+                    break;
+                }
+                break;
+            }
 
             default:
                 if (error_buf != NULL)

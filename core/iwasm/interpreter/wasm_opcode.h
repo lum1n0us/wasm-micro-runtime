@@ -256,8 +256,22 @@ typedef enum WASMOpcode {
     EXT_OP_COPY_STACK_TOP         = 0xcc,
     EXT_OP_COPY_STACK_TOP_I64     = 0xcd,
 
-    WASM_OP_IMPDEP                = 0xce
+    WASM_OP_IMPDEP                = 0xce,
+
+    /* Post-MVP extend op prefix */
+    WASM_OP_MISC_PREFIX           = 0xfc,
 } WASMOpcode;
+
+typedef enum WASMEXTOpcode {
+    WASM_OP_I32_TRUNC_SAT_S_F32   = 0x00,
+    WASM_OP_I32_TRUNC_SAT_U_F32   = 0x01,
+    WASM_OP_I32_TRUNC_SAT_S_F64   = 0x02,
+    WASM_OP_I32_TRUNC_SAT_U_F64   = 0x03,
+    WASM_OP_I64_TRUNC_SAT_S_F32   = 0x04,
+    WASM_OP_I64_TRUNC_SAT_U_F32   = 0x05,
+    WASM_OP_I64_TRUNC_SAT_S_F64   = 0x06,
+    WASM_OP_I64_TRUNC_SAT_U_F64   = 0x07,
+} WASMEXTOpcode;
 
 #ifdef __cplusplus
 }
@@ -477,6 +491,9 @@ static type _name[WASM_INSTRUCTION_NUM] = {                  \
   HANDLE_OPCODE (EXT_OP_COPY_STACK_TOP),     /* 0xcc */      \
   HANDLE_OPCODE (EXT_OP_COPY_STACK_TOP_I64), /* 0xcd */      \
   HANDLE_OPCODE (WASM_OP_IMPDEP),            /* 0xce */      \
-}
-
+};                                                           \
+do {                                                         \
+  _name[WASM_OP_MISC_PREFIX] =                               \
+    HANDLE_OPCODE (WASM_OP_MISC_PREFIX);     /* 0xfc */      \
+} while (0)
 #endif /* end of _WASM_OPCODE_H */
