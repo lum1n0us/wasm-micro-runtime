@@ -426,35 +426,7 @@ globals_instantiate_fix(WASMGlobalInstance *globals,
                         char *error_buf, uint32 error_buf_size)
 {
     WASMGlobalInstance *global = globals;
-    WASMImport *import = module->import_globals;
     uint32 i;
-
-    /* Fix globals from import section */
-    for (i = 0; i < module->import_global_count; i++, import++, global++) {
-        if (!strcmp(import->u.names.module_name, "env")) {
-            if (!strcmp(import->u.names.field_name, "memoryBase")
-                || !strcmp(import->u.names.field_name, "__memory_base")) {
-                global->initial_value.addr = 0;
-            }
-            else if (!strcmp(import->u.names.field_name, "tableBase")
-                     || !strcmp(import->u.names.field_name, "__table_base")) {
-                global->initial_value.addr = 0;
-            }
-            else if (!strcmp(import->u.names.field_name, "DYNAMICTOP_PTR")) {
-                global->initial_value.i32 = (int32)
-                    (module_inst->default_memory->num_bytes_per_page
-                     * module_inst->default_memory->cur_page_count);
-                module_inst->DYNAMICTOP_PTR_offset = global->data_offset;
-            }
-            else if (!strcmp(import->u.names.field_name, "STACKTOP")) {
-                global->initial_value.i32 = 0;
-            }
-            else if (!strcmp(import->u.names.field_name, "STACK_MAX")) {
-                /* Unused in emcc wasm bin actually. */
-                global->initial_value.i32 = 0;
-            }
-        }
-    }
 
     for (i = 0; i < module->global_count; i++) {
         InitializerExpression *init_expr = &module->globals[i].init_expr;
