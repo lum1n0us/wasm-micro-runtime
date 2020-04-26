@@ -994,6 +994,12 @@ __cxa_throw_wrapper(wasm_exec_env_t exec_env,
 }
 
 static void
+print_wrapper(wasm_exec_env_t exec_env)
+{
+    os_printf("\n");
+}
+
+static void
 print_i32_wrapper(wasm_exec_env_t exec_env, int32 i32)
 {
     os_printf("%d\n", i32);
@@ -1061,6 +1067,7 @@ static NativeSymbol native_symbols_libc_builtin[] = {
 };
 
 static NativeSymbol native_symbols_spectest[] = {
+    REG_NATIVE_FUNC(print, "()"),
     REG_NATIVE_FUNC(print_i32, "(i)")
 };
 

@@ -692,7 +692,7 @@ wasm_instantiate(WASMModule *module,
                     && (base_offset >= memory_size
                         || base_offset + length > memory_size)) {
                     set_error_buf(error_buf, error_buf_size,
-                            "Instantiate module failed: data segment out of range.");
+                            "Instantiate module failed: data segment does not fit.");
                     wasm_deinstantiate(module_inst);
                     return NULL;
                 }
@@ -766,9 +766,10 @@ wasm_instantiate(WASMModule *module,
 #endif
 
     if (module->start_function != (uint32)-1) {
-        bh_assert(module->start_function >= module->import_function_count);
-        module_inst->start_function =
-            &module_inst->functions[module->start_function];
+        /* TODO: fix start function can be import function issue */
+        if (module->start_function >= module->import_function_count)
+            module_inst->start_function =
+                &module_inst->functions[module->start_function];
     }
 
     module_inst->module = module;
@@ -862,6 +863,9 @@ wasm_create_exec_env_and_call_function(WASMModuleInstance *module_inst,
         wasm_set_exception(module_inst, "allocate memory failed.");
         return false;
     }
+
+    /* set thread handle and stack boundary */
+    wasm_exec_env_set_thread_info(exec_env);
 
     ret = wasm_call_function(exec_env, func, argc, argv);
     wasm_exec_env_destroy(exec_env);
@@ -980,12 +984,13 @@ wasm_addr_app_to_native(WASMModuleInstance *module_inst,
                         int32 app_offset)
 {
     WASMMemoryInstance *memory = module_inst->default_memory;
+    uint8 *addr = memory->memory_data + app_offset;
     int32 memory_data_size =
         (int32)(memory->num_bytes_per_page * memory->cur_page_count);
 
-    if (memory->heap_base_offset < app_offset
-        && app_offset < memory_data_size)
-        return memory->memory_data + app_offset;
+    if (memory->heap_data < addr
+        && addr < memory->memory_data + memory_data_size)
+        return addr;
     return NULL;
 }
 

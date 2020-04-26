@@ -292,7 +292,8 @@ wasm_runtime_call_wasm(WASMExecEnv *exec_env,
         return false;
     }
 
-    exec_env->handle = os_self_thread();
+    /* set thread handle and stack boundary */
+    wasm_exec_env_set_thread_info(exec_env);
 
 #if WASM_ENABLE_INTERP != 0
     if (exec_env->module_inst->module_type == Wasm_Module_Bytecode)
@@ -2150,7 +2151,9 @@ wasm_runtime_call_indirect(WASMExecEnv *exec_env,
         return false;
     }
 
-    exec_env->handle = os_self_thread();
+    /* this function is called from native code, so exec_env->handle and
+       exec_env->native_stack_boundary must have been set, we don't set
+       it again */
 
 #if WASM_ENABLE_INTERP != 0
     if (exec_env->module_inst->module_type == Wasm_Module_Bytecode)

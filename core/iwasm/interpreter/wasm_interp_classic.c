@@ -2478,7 +2478,11 @@ wasm_interp_call_wasm(WASMModuleInstance *module_inst,
         return;
     }
 
-    /* TODO: check stack overflow. */
+    if ((uint8*)&prev_frame < exec_env->native_stack_boundary) {
+        wasm_set_exception((WASMModuleInstance*)exec_env->module_inst,
+                           "WASM interp failed: native stack overflow.");
+        return;
+    }
 
     if (!(frame = ALLOC_FRAME(exec_env, frame_size, (WASMInterpFrame*)prev_frame)))
         return;

@@ -1463,19 +1463,32 @@ load_start_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                    char *error_buf, uint32 error_buf_size)
 {
     const uint8 *p = buf, *p_end = buf_end;
+    WASMType *type;
     uint32 start_function;
 
     read_leb_uint32(p, p_end, start_function);
 
-    if (start_function) {
-        if (start_function >= module->function_count + module->import_function_count) {
-            set_error_buf(error_buf, error_buf_size,
-                          "Load start section failed: "
-                          "unknown function.");
-            return false;
-        }
-        module->start_function = start_function;
+    if (start_function >= module->function_count
+                          + module->import_function_count) {
+        set_error_buf(error_buf, error_buf_size,
+                "Load start section failed: "
+                "unknown function.");
+        return false;
     }
+
+    if (start_function < module->import_function_count)
+        type = module->import_functions[start_function].u.function.func_type;
+    else
+        type = module->functions
+                [start_function - module->import_function_count]->func_type;
+    if (type->param_count != 0 || type->result_count != 0) {
+        set_error_buf(error_buf, error_buf_size,
+                "Load start section failed: "
+                "invalid start function.");
+        return false;
+    }
+
+    module->start_function = start_function;
 
     if (p != p_end) {
         set_error_buf(error_buf, error_buf_size,
