@@ -606,58 +606,128 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
     PUSH_##src_op_type(method(val));                                \
   } while (0)
 
-#define TRUNC_FUNCTION(func_name, dst_type, src_type,               \
-                       dst_op_type, src_op_type)                    \
-bool func_name(WASMModuleInstance *module, uint32 *frame_sp,        \
-               src_type min, src_type max,                          \
-               dst_type int_min, dst_type int_max,                  \
-               bool saturating)                                     \
+#define TRUNC_FUNCTION(func_name, src_type, dst_type, signed_type)  \
+static dst_type                                                     \
+func_name(src_type src_value, src_type src_min, src_type src_max,   \
+          dst_type dst_min, dst_type dst_max, bool is_sign)         \
 {                                                                   \
-  src_type value = POP_##src_op_type();                             \
-                                                                    \
-  if (!saturating) {                                                \
-    if (isnan(value)) {                                             \
-      wasm_set_exception(module, "invalid conversion to integer");  \
-      return true;                                                  \
-    }                                                               \
-    else if (value <= min || value >= max) {                        \
-      wasm_set_exception(module, "integer overflow");               \
-      return true;                                                  \
-    }                                                               \
-    PUSH_##dst_op_type(((dst_type)value));                          \
+  dst_type dst_value = 0;                                           \
+  if (!isnan(src_value)) {                                          \
+      if (src_value <= src_min)                                     \
+          dst_value = dst_min;                                      \
+      else if (src_value >= src_max)                                \
+          dst_value = dst_max;                                      \
+      else {                                                        \
+          if (is_sign)                                              \
+              dst_value = (dst_type)(signed_type)src_value;         \
+          else                                                      \
+              dst_value = (dst_type)src_value;                      \
+      }                                                             \
   }                                                                 \
-  else {                                                            \
-    dst_type dst_value;                                             \
-    if (isnan(value)) {                                             \
-      dst_value = 0;                                                \
-    }                                                               \
-    else if (value <= min) {                                        \
-      dst_value = int_min;                                          \
-    }                                                               \
-    else if (value >= max) {                                        \
-      dst_value = int_max;                                          \
-    }                                                               \
-    else {                                                          \
-      dst_value = (dst_type)value;                                  \
-    }                                                               \
-    PUSH_##dst_op_type(((dst_type)dst_value));                      \
-  }                                                                 \
-  return false;                                                     \
+  return dst_value;                                                 \
 }
 
-TRUNC_FUNCTION(trunc_f32_to_i32, int32, float32, I32, F32)
-TRUNC_FUNCTION(trunc_f32_to_u32, uint32, float32, I32, F32)
-TRUNC_FUNCTION(trunc_f64_to_i32, int32, float64, I32, F64)
-TRUNC_FUNCTION(trunc_f64_to_u32, uint32, float64, I32, F64)
-TRUNC_FUNCTION(trunc_f32_to_i64, int64, float32, I64, F32)
-TRUNC_FUNCTION(trunc_f32_to_u64, uint64, float32, I64, F32)
-TRUNC_FUNCTION(trunc_f64_to_i64, int64, float64, I64, F64)
-TRUNC_FUNCTION(trunc_f64_to_u64, uint64, float64, I64, F64)
+TRUNC_FUNCTION(trunc_f32_to_i32, float32, uint32, int32)
+TRUNC_FUNCTION(trunc_f32_to_i64, float32, uint64, int64)
+TRUNC_FUNCTION(trunc_f64_to_i32, float64, uint32, int32)
+TRUNC_FUNCTION(trunc_f64_to_i64, float64, uint64, int64)
 
-#define DEF_OP_TRUNC(func, min, max) do {                           \
-    if (func(module, frame_sp, min, max, 0, 0, false)) {            \
-      goto got_exception;                                           \
-    }                                                               \
+static bool
+trunc_f32_to_int(WASMModuleInstance *module,
+                 uint32 *frame_sp,
+                 float32 src_min, float32 src_max,
+                 bool saturating, bool is_i32, bool is_sign)
+{
+    float32 src_value = POP_F32();
+    uint64 dst_value_i64;
+    uint32 dst_value_i32;
+
+    if (!saturating) {
+        if (isnan(src_value)) {
+            wasm_set_exception(module, "invalid conversion to integer");
+            return true;
+        }
+        else if (src_value <= src_min || src_value >= src_max) {
+            wasm_set_exception(module, "integer overflow");
+            return true;
+        }
+    }
+
+    if (is_i32) {
+        uint32 dst_min = is_sign ? INT32_MIN : 0;
+        uint32 dst_max = is_sign ? INT32_MAX : UINT32_MAX;
+        dst_value_i32 = trunc_f32_to_i32(src_value, src_min, src_max,
+                                         dst_min, dst_max, is_sign);
+        PUSH_I32(dst_value_i32);
+    }
+    else {
+        uint64 dst_min = is_sign ? INT64_MIN : 0;
+        uint64 dst_max = is_sign ? INT64_MAX : UINT64_MAX;
+        dst_value_i64 = trunc_f32_to_i64(src_value, src_min, src_max,
+                                         dst_min, dst_max, is_sign);
+        PUSH_I64(dst_value_i64);
+    }
+    return false;
+}
+
+static bool
+trunc_f64_to_int(WASMModuleInstance *module,
+                 uint32 *frame_sp,
+                 float64 src_min, float64 src_max,
+                 bool saturating, bool is_i32, bool is_sign)
+{
+    float64 src_value = POP_F64();
+    uint64 dst_value_i64;
+    uint32 dst_value_i32;
+
+    if (!saturating) {
+        if (isnan(src_value)) {
+            wasm_set_exception(module, "invalid conversion to integer");
+            return true;
+        }
+        else if (src_value <= src_min || src_value >= src_max) {
+            wasm_set_exception(module, "integer overflow");
+            return true;
+        }
+    }
+
+    if (is_i32) {
+        uint32 dst_min = is_sign ? INT32_MIN : 0;
+        uint32 dst_max = is_sign ? INT32_MAX : UINT32_MAX;
+        dst_value_i32 = trunc_f64_to_i32(src_value, src_min, src_max,
+                                         dst_min, dst_max, is_sign);
+        PUSH_I32(dst_value_i32);
+    }
+    else {
+        uint64 dst_min = is_sign ? INT64_MIN : 0;
+        uint64 dst_max = is_sign ? INT64_MAX : UINT64_MAX;
+        dst_value_i64 = trunc_f64_to_i64(src_value, src_min, src_max,
+                                         dst_min, dst_max, is_sign);
+        PUSH_I64(dst_value_i64);
+    }
+    return false;
+}
+
+#define DEF_OP_TRUNC_F32(min, max, is_i32, is_sign) do {            \
+    if (trunc_f32_to_int(module, frame_sp, min, max,                \
+                         false, is_i32, is_sign))                   \
+        goto got_exception;                                         \
+  } while (0)
+
+#define DEF_OP_TRUNC_F64(min, max, is_i32, is_sign) do {            \
+    if (trunc_f64_to_int(module, frame_sp, min, max,                \
+                         false, is_i32, is_sign))                   \
+        goto got_exception;                                         \
+  } while (0)
+
+#define DEF_OP_TRUNC_SAT_F32(min, max, is_i32, is_sign) do {        \
+    (void)trunc_f32_to_int(module, frame_sp, min, max,              \
+                           true, is_i32, is_sign);                  \
+  } while (0)
+
+#define DEF_OP_TRUNC_SAT_F64(min, max, is_i32, is_sign) do {        \
+    (void)trunc_f64_to_int(module, frame_sp, min, max,              \
+                           true, is_i32, is_sign);                  \
   } while (0)
 
 #define DEF_OP_CONVERT(dst_type, dst_op_type,                       \
@@ -2128,22 +2198,22 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
            all int32/uint32/int64/uint64 values, e.g.:
            UINT32_MAX is 4294967295, but (float32)4294967295 is 4294967296.0f,
            but not 4294967295.0f. */
-        DEF_OP_TRUNC(trunc_f32_to_i32, -2147483904.0f, 2147483648.0f);
+        DEF_OP_TRUNC_F32(-2147483904.0f, 2147483648.0f, true, true);
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_I32_TRUNC_U_F32):
-        DEF_OP_TRUNC(trunc_f32_to_u32, -1.0f, 4294967296.0f);
+        DEF_OP_TRUNC_F32(-1.0f, 4294967296.0f, true, false);
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_I32_TRUNC_S_F64):
-        DEF_OP_TRUNC(trunc_f64_to_i32, -2147483649.0, 2147483648.0);
+        DEF_OP_TRUNC_F64(-2147483649.0, 2147483648.0, true, true);
         /* frame_sp can't be moved in trunc function, we need to manually adjust
           it if src and dst op's cell num is different */
         frame_sp--;
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_I32_TRUNC_U_F64):
-        DEF_OP_TRUNC(trunc_f64_to_u32, -1.0, 4294967296.0);
+        DEF_OP_TRUNC_F64(-1.0, 4294967296.0, true, false);
         frame_sp--;
         HANDLE_OP_END ();
 
@@ -2157,25 +2227,25 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_I64_TRUNC_S_F32):
-        DEF_OP_TRUNC(trunc_f32_to_i64, -9223373136366403584.0f,
-                     9223372036854775808.0f);
+        DEF_OP_TRUNC_F32(-9223373136366403584.0f, 9223372036854775808.0f,
+                         false, true);
         frame_sp++;
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_I64_TRUNC_U_F32):
-        DEF_OP_TRUNC(trunc_f32_to_u64, -1.0f,
-                     18446744073709551616.0f);
+        DEF_OP_TRUNC_F32(-1.0f, 18446744073709551616.0f,
+                         false, false);
         frame_sp++;
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_I64_TRUNC_S_F64):
-        DEF_OP_TRUNC(trunc_f64_to_i64, -9223372036854777856.0,
-                     9223372036854775808.0);
+        DEF_OP_TRUNC_F64(-9223372036854777856.0, 9223372036854775808.0,
+                         false, true);
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_I64_TRUNC_U_F64):
-        DEF_OP_TRUNC(trunc_f64_to_u64, -1.0,
-                     18446744073709551616.0);
+        DEF_OP_TRUNC_F64(-1.0, 18446744073709551616.0,
+                         false, false);
         HANDLE_OP_END ();
 
       /* conversions of f32 */
@@ -2253,48 +2323,40 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
         switch (opcode)
         {
         case WASM_OP_I32_TRUNC_SAT_S_F32:
-          trunc_f32_to_i32(module, frame_sp,
-                           -2147483904.0f, 2147483648.0f,
-                           INT32_MIN, INT32_MAX, true);
+          DEF_OP_TRUNC_SAT_F32(-2147483904.0f, 2147483648.0f,
+                               true, true);
           break;
         case WASM_OP_I32_TRUNC_SAT_U_F32:
-          trunc_f32_to_u32(module, frame_sp,
-                           -1.0f, 4294967296.0f,
-                           0, UINT32_MAX, true);
+          DEF_OP_TRUNC_SAT_F32(-1.0f, 4294967296.0f,
+                               true, false);
           break;
         case WASM_OP_I32_TRUNC_SAT_S_F64:
-          trunc_f64_to_i32(module, frame_sp,
-                           -2147483649.0, 2147483648.0,
-                           INT32_MIN, INT32_MAX, true);
+          DEF_OP_TRUNC_SAT_F64(-2147483649.0, 2147483648.0,
+                               true, true);
           frame_sp--;
           break;
         case WASM_OP_I32_TRUNC_SAT_U_F64:
-          trunc_f64_to_u32(module, frame_sp,
-                           -1.0, 4294967296.0,
-                           0, UINT32_MAX, true);
+          DEF_OP_TRUNC_SAT_F64(-1.0, 4294967296.0,
+                               true, false);
           frame_sp--;
           break;
         case WASM_OP_I64_TRUNC_SAT_S_F32:
-          trunc_f32_to_i64(module, frame_sp,
-                           -9223373136366403584.0f, 9223372036854775808.0f,
-                           INT64_MIN, INT64_MAX, true);
+          DEF_OP_TRUNC_SAT_F32(-9223373136366403584.0f, 9223372036854775808.0f,
+                               false, true);
           frame_sp++;
           break;
         case WASM_OP_I64_TRUNC_SAT_U_F32:
-          trunc_f32_to_u64(module, frame_sp,
-                           -1.0f, 18446744073709551616.0f,
-                           0, UINT64_MAX, true);
+          DEF_OP_TRUNC_SAT_F32(-1.0f, 18446744073709551616.0f,
+                               false, false);
           frame_sp++;
           break;
         case WASM_OP_I64_TRUNC_SAT_S_F64:
-          trunc_f64_to_i64(module, frame_sp,
-                           -9223372036854777856.0, 9223372036854775808.0,
-                           INT64_MIN, INT64_MAX, true);
+          DEF_OP_TRUNC_SAT_F64(-9223372036854777856.0, 9223372036854775808.0,
+                               false, true);
           break;
         case WASM_OP_I64_TRUNC_SAT_U_F64:
-          trunc_f64_to_u64(module, frame_sp,
-                           -1.0f, 18446744073709551616.0,
-                           0, UINT64_MAX, true);
+          DEF_OP_TRUNC_SAT_F64(-1.0f, 18446744073709551616.0,
+                               false, false);
           break;
         default:
           wasm_set_exception(module, "WASM interp failed: unsupported opcode.");
