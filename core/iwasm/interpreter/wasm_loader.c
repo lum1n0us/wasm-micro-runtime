@@ -468,6 +468,18 @@ load_type_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 }
 
 static bool
+check_table_max_size(uint32 init_size, uint32 max_size,
+                     char *error_buf, uint32 error_buf_size)
+{
+    if (max_size < init_size) {
+        set_error_buf(error_buf, error_buf_size,
+                      "size minimum must not be greater than maximum");
+        return false;
+    }
+    return true;
+}
+
+static bool
 load_table_import(const uint8 **p_buf, const uint8 *buf_end,
                   WASMTableImport *table,
                   char *error_buf, uint32 error_buf_size)
@@ -480,8 +492,12 @@ load_table_import(const uint8 **p_buf, const uint8 *buf_end,
     bh_assert(table->elem_type == TABLE_ELEM_TYPE_ANY_FUNC);
     read_leb_uint32(p, p_end, table->flags);
     read_leb_uint32(p, p_end, table->init_size);
-    if (table->flags & 1)
+    if (table->flags & 1) {
         read_leb_uint32(p, p_end, table->max_size);
+        if (!check_table_max_size(table->init_size, table->max_size,
+                                  error_buf, error_buf_size))
+            return false;
+    }
     else
         table->max_size = 0x10000;
 
@@ -573,8 +589,12 @@ load_table(const uint8 **p_buf, const uint8 *buf_end, WASMTable *table,
     bh_assert(table->elem_type == TABLE_ELEM_TYPE_ANY_FUNC);
     read_leb_uint32(p, p_end, table->flags);
     read_leb_uint32(p, p_end, table->init_size);
-    if (table->flags & 1)
+    if (table->flags & 1) {
         read_leb_uint32(p, p_end, table->max_size);
+        if (!check_table_max_size(table->init_size, table->max_size,
+                                  error_buf, error_buf_size))
+            return false;
+    }
     else
         table->max_size = 0x10000;
 
