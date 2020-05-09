@@ -42,11 +42,11 @@ set_error_buf(char *error_buf, uint32 error_buf_size, const char *string)
 } while (0)
 
 static bool
-skip_leb(const uint8  *buf, const uint8 *buf_end,
-         uint32 *p_offset, uint32 maxbits,
+skip_leb(const uint8 const **p_buf, const uint8 *buf_end, uint32 maxbits,
          char* error_buf, uint32 error_buf_size)
 {
-    uint32 bcnt = 0;
+    const uint8 *buf = *p_buf;
+    uint32 offset = 0, bcnt = 0;
     uint64 byte;
 
     while (true) {
@@ -57,51 +57,46 @@ skip_leb(const uint8  *buf, const uint8 *buf_end,
             return false;
         }
 
-        CHECK_BUF(buf, buf_end, *p_offset + 1);
-        byte = buf[*p_offset];
-        *p_offset += 1;
+        CHECK_BUF(buf, buf_end, offset + 1);
+        byte = buf[offset];
+        offset += 1;
         bcnt += 1;
         if ((byte & 0x80) == 0) {
             break;
         }
     }
 
+    *p_buf += offset;
     return true;
 }
 
 #define skip_leb_int64(p, p_end) do {               \
-  uint32 off = 0;                                   \
-  if (!skip_leb(p, p_end, &off, 64,                 \
+  if (!skip_leb(&p, p_end, 64,                      \
                 error_buf, error_buf_size))         \
     return false;                                   \
-  p += off;                                         \
 } while (0)
 
 #define skip_leb_uint32(p, p_end) do {              \
-  uint32 off = 0;                                   \
-  if (!skip_leb(p, p_end, &off, 32,                 \
+  if (!skip_leb(&p, p_end, 32,                      \
                 error_buf, error_buf_size))         \
     return false;                                   \
-  p += off;                                         \
 } while (0)
 
 #define skip_leb_int32(p, p_end) do {               \
-  uint32 off = 0;                                   \
-  if (!skip_leb(p, p_end, &off, 32,                 \
+  if (!skip_leb(&p, p_end, 32,                      \
                 error_buf, error_buf_size))         \
     return false;                                   \
-  p += off;                                         \
 } while (0)
 
 static bool
-read_leb(const uint8 *buf, const uint8 *buf_end,
-         uint32 *p_offset, uint32 maxbits,
-         bool sign, uint64 *p_result,
+read_leb(uint8 **p_buf, const uint8 *buf_end,
+         uint32 maxbits, bool sign, uint64 *p_result,
          char* error_buf, uint32 error_buf_size)
 {
+    const uint8 *buf = *p_buf;
     uint64 result = 0;
     uint32 shift = 0;
-    uint32 bcnt = 0;
+    uint32 offset = 0, bcnt = 0;
     uint64 byte;
 
     while (true) {
@@ -112,9 +107,9 @@ read_leb(const uint8 *buf, const uint8 *buf_end,
             return false;
         }
 
-        CHECK_BUF(buf, buf_end, *p_offset + 1);
-        byte = buf[*p_offset];
-        *p_offset += 1;
+        CHECK_BUF(buf, buf_end, offset + 1);
+        byte = buf[offset];
+        offset += 1;
         result |= ((byte & 0x7f) << shift);
         shift += 7;
         bcnt += 1;
@@ -160,6 +155,7 @@ read_leb(const uint8 *buf, const uint8 *buf_end,
         }
     }
 
+    *p_buf += offset;
     *p_result = result;
     return true;
 
@@ -174,62 +170,26 @@ fail_integer_too_large:
 #define read_bool(p)   TEMPLATE_READ_VALUE(bool, p)
 
 #define read_leb_int64(p, p_end, res) do {          \
-  if (p < p_end) {                                  \
-    uint8 _val = *p;                                \
-    if (!(_val & 0x80)) {                           \
-      res = (int64)_val;                            \
-      if (_val & 0x40)                              \
-        /* sign extend */                           \
-        res |= 0xFFFFFFFFFFFFFF80LL;                \
-      p++;                                          \
-      break;                                        \
-    }                                               \
-  }                                                 \
-  uint32 off = 0;                                   \
   uint64 res64;                                     \
-  if (!read_leb(p, p_end, &off, 64, true, &res64,   \
+  if (!read_leb((uint8**)&p, p_end, 64, true, &res64,\
                 error_buf, error_buf_size))         \
     return false;                                   \
-  p += off;                                         \
   res = (int64)res64;                               \
 } while (0)
 
 #define read_leb_uint32(p, p_end, res) do {         \
-  if (p < p_end) {                                  \
-    uint8 _val = *p;                                \
-    if (!(_val & 0x80)) {                           \
-      res = _val;                                   \
-      p++;                                          \
-      break;                                        \
-    }                                               \
-  }                                                 \
-  uint32 off = 0;                                   \
   uint64 res64;                                     \
-  if (!read_leb(p, p_end, &off, 32, false, &res64,  \
+  if (!read_leb((uint8**)&p, p_end, 32, false, &res64,\
                 error_buf, error_buf_size))         \
     return false;                                   \
-  p += off;                                         \
   res = (uint32)res64;                              \
 } while (0)
 
 #define read_leb_int32(p, p_end, res) do {          \
-  if (p < p_end) {                                  \
-    uint8 _val = *p;                                \
-    if (!(_val & 0x80)) {                           \
-      res = (int32)_val;                            \
-      if (_val & 0x40)                              \
-        /* sign extend */                           \
-        res |= 0xFFFFFF80;                          \
-      p++;                                          \
-      break;                                        \
-    }                                               \
-  }                                                 \
-  uint32 off = 0;                                   \
   uint64 res64;                                     \
-  if (!read_leb(p, p_end, &off, 32, true, &res64,   \
+  if (!read_leb((uint8**)&p, p_end, 32, true, &res64,\
                 error_buf, error_buf_size))         \
     return false;                                   \
-  p += off;                                         \
   res = (int32)res64;                               \
 } while (0)
 
@@ -2094,14 +2054,21 @@ wasm_loader_find_block_addr(BlockAddr *block_addr_cache,
 {
     const uint8 *p = start_addr, *p_end = code_end_addr;
     uint8 *else_addr = NULL;
-    uint32 block_nested_depth = 1, count, i;
+    uint32 block_nested_depth = 1, count, i, j, t;
     uint8 opcode, u8;
-
     BlockAddr block_stack[16] = { 0 }, *block;
-    uint32 j, t;
 
     i = ((uintptr_t)start_addr) % BLOCK_ADDR_CACHE_SIZE;
     block = block_addr_cache + BLOCK_ADDR_CONFLICT_SIZE * i;
+
+    for (j = 0; j < BLOCK_ADDR_CONFLICT_SIZE; j++) {
+        if (block[j].start_addr == start_addr) {
+            /* Cache hit */
+            *p_else_addr = block[j].else_addr;
+            *p_end_addr = block[j].end_addr;
+            return true;
+        }
+    }
 
     /* Cache unhit */
     block_stack[0].start_addr = start_addr;
@@ -3613,12 +3580,10 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
     uint8 *param_types, ret_type, *local_types, local_type, global_type;
     uint16 *local_offsets, local_offset;
     uint32 count, i, local_idx, global_idx, u32, align, mem_offset;
-    uint32 cache_index, item_index;
     int32 i32, i32_const = 0;
     int64 i64;
     uint8 opcode, u8, block_return_type;
     bool return_value = false, is_i32_const = false;
-    BlockAddr *cache_items;
     WASMLoaderContext *loader_ctx;
     BranchBlock *frame_csp_tmp;
 #if WASM_ENABLE_FAST_INTERP != 0
@@ -3723,23 +3688,7 @@ re_scan:
                 if (!is_i32_const)
                     (loader_ctx->frame_csp - 1)->is_block_reachable = true;
                 else {
-                    cache_index = ((uintptr_t)(loader_ctx->frame_csp - 1)->start_addr)
-                                   & (uintptr_t)(BLOCK_ADDR_CACHE_SIZE - 1);
-                    cache_items = block_addr_cache
-                                  + BLOCK_ADDR_CONFLICT_SIZE * cache_index;
-                    for (item_index = 0; item_index < BLOCK_ADDR_CONFLICT_SIZE;
-                         item_index++) {
-                        if (cache_items[item_index].start_addr ==
-                                (loader_ctx->frame_csp - 1)->start_addr) {
-                            (loader_ctx->frame_csp - 1)->else_addr =
-                                cache_items[item_index].else_addr;
-                            (loader_ctx->frame_csp - 1)->end_addr =
-                                cache_items[item_index].end_addr;
-                            break;
-                        }
-                    }
-                    if (item_index == BLOCK_ADDR_CONFLICT_SIZE
-                        && !wasm_loader_find_block_addr(block_addr_cache,
+                    if (!wasm_loader_find_block_addr(block_addr_cache,
                                         (loader_ctx->frame_csp - 1)->start_addr,
                                         p_end,
                                         (loader_ctx->frame_csp - 1)->block_type,
@@ -3892,24 +3841,13 @@ handle_next_reachable_block:
 
                 block_return_type = (loader_ctx->frame_csp - i)->return_type;
 
-                cache_index = ((uintptr_t)(loader_ctx->frame_csp - i)->start_addr)
-                              & (uintptr_t)(BLOCK_ADDR_CACHE_SIZE - 1);
-                cache_items = block_addr_cache + BLOCK_ADDR_CONFLICT_SIZE * cache_index;
-                for (item_index = 0; item_index < BLOCK_ADDR_CONFLICT_SIZE; item_index++) {
-                    if (cache_items[item_index].start_addr == (loader_ctx->frame_csp - i)->start_addr) {
-                        (loader_ctx->frame_csp - i)->else_addr = cache_items[item_index].else_addr;
-                        (loader_ctx->frame_csp - i)->end_addr = cache_items[item_index].end_addr;
-                        break;
-                    }
-                }
-                if(item_index == BLOCK_ADDR_CONFLICT_SIZE
-                   && !wasm_loader_find_block_addr(block_addr_cache,
-                                                   (loader_ctx->frame_csp - i)->start_addr,
-                                                   p_end,
-                                                   (loader_ctx->frame_csp - i)->block_type,
-                                                   &(loader_ctx->frame_csp - i)->else_addr,
-                                                   &(loader_ctx->frame_csp - i)->end_addr,
-                                                   error_buf, error_buf_size))
+                if(!wasm_loader_find_block_addr(block_addr_cache,
+                                    (loader_ctx->frame_csp - i)->start_addr,
+                                    p_end,
+                                    (loader_ctx->frame_csp - i)->block_type,
+                                    &(loader_ctx->frame_csp - i)->else_addr,
+                                    &(loader_ctx->frame_csp - i)->end_addr,
+                                    error_buf, error_buf_size))
                     goto fail;
 
                 loader_ctx->stack_cell_num = (loader_ctx->frame_csp - i)->stack_cell_num;
