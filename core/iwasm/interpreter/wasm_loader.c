@@ -2729,6 +2729,20 @@ wasm_loader_pop_frame_ref(WASMLoaderContext *ctx, uint8 type,
 }
 
 static bool
+wasm_loader_push_pop_frame_ref(WASMLoaderContext *ctx, uint8 pop_cnt,
+                               uint8 type_push, uint8 type_pop,
+                               char *error_buf, uint32 error_buf_size)
+{
+    for (int i = 0; i < pop_cnt; i++) {
+        if (!wasm_loader_pop_frame_ref(ctx, type_pop, error_buf, error_buf_size))
+            return false;
+    }
+    if (!wasm_loader_push_frame_ref(ctx, type_push, error_buf, error_buf_size))
+        return false;
+    return true;
+}
+
+static bool
 wasm_loader_push_frame_csp(WASMLoaderContext *ctx, uint8 type,
                            uint8 ret_type, uint8* start_addr,
                            char *error_buf, uint32 error_buf_size)
@@ -3221,6 +3235,24 @@ wasm_loader_pop_frame_offset(WASMLoaderContext *ctx, uint8 type,
 }
 
 static bool
+wasm_loader_push_pop_frame_offset(WASMLoaderContext *ctx, uint8 pop_cnt,
+                                  uint8 type_push, uint8 type_pop,
+                                  bool disable_emit, int16 operand_offset,
+                                  char *error_buf, uint32 error_buf_size)
+{
+    for (int i = 0; i < pop_cnt; i++) {
+        if (!wasm_loader_pop_frame_offset(ctx, type_pop, error_buf, error_buf_size))
+            return false;
+    }
+    if (!wasm_loader_push_frame_offset(ctx, type_push,
+                                       disable_emit, operand_offset,
+                                       error_buf, error_buf_size))
+        return false;
+
+    return true;
+}
+
+static bool
 wasm_loader_push_frame_ref_offset(WASMLoaderContext *ctx, uint8 type,
                                   bool disable_emit, int16 operand_offset,
                                   char *error_buf, uint32 error_buf_size)
@@ -3246,6 +3278,22 @@ wasm_loader_pop_frame_ref_offset(WASMLoaderContext *ctx, uint8 type,
     return true;
 }
 
+static bool
+wasm_loader_push_pop_frame_ref_offset(WASMLoaderContext *ctx, uint8 pop_cnt,
+                                      uint8 type_push, uint8 type_pop,
+                                      bool disable_emit, int16 operand_offset,
+                                      char *error_buf, uint32 error_buf_size)
+{
+    if (!wasm_loader_push_pop_frame_ref(ctx, pop_cnt, type_push, type_pop,
+                                        error_buf, error_buf_size))
+        return false;
+    if (!wasm_loader_push_pop_frame_offset(ctx, pop_cnt, type_push, type_pop,
+                                           disable_emit, operand_offset,
+                                           error_buf, error_buf_size))
+        return false;
+
+    return true;
+}
 
 static bool
 wasm_loader_get_const_offset(WASMLoaderContext *ctx, uint8 type,
@@ -3399,6 +3447,23 @@ fail:
         goto fail;                                                      \
   } while (0)
 
+#define POP_AND_PUSH(type_pop, type_push) do {                                \
+    if (!(wasm_loader_push_pop_frame_ref_offset(loader_ctx, 1,                \
+                                                type_push, type_pop,          \
+                                                disable_emit, operand_offset, \
+                                                error_buf, error_buf_size)))  \
+        goto fail;                                                            \
+  } while (0)
+
+/* type of POPs should be the same */
+#define POP2_AND_PUSH(type_pop, type_push) do {                               \
+    if (!(wasm_loader_push_pop_frame_ref_offset(loader_ctx, 2,                \
+                                                type_push, type_pop,          \
+                                                disable_emit, operand_offset, \
+                                                error_buf, error_buf_size)))  \
+        goto fail;                                                            \
+  } while (0)
+
 #else /* WASM_ENABLE_FAST_INTERP */
 
 #define PUSH_I32() do {                                             \
@@ -3449,7 +3514,84 @@ fail:
         goto fail;                                                  \
   } while (0)
 
+#define POP_AND_PUSH(type_pop, type_push) do {                           \
+    if (!(wasm_loader_push_pop_frame_ref(loader_ctx, 1,                  \
+                                         type_push, type_pop,            \
+                                         error_buf, error_buf_size)))    \
+        goto fail;                                                       \
+  } while (0)
+
+/* type of POPs should be the same */
+#define POP2_AND_PUSH(type_pop, type_push) do {                          \
+    if (!(wasm_loader_push_pop_frame_ref(loader_ctx, 2,                  \
+                                         type_push, type_pop,            \
+                                         error_buf, error_buf_size)))    \
+        goto fail;                                                       \
+  } while (0)
 #endif /* WASM_ENABLE_FAST_INTERP */
+
+#if WASM_ENABLE_FAST_INTERP != 0
+
+static bool
+reserve_block_ret(WASMLoaderContext *loader_ctx, uint8 opcode, bool disable_emit,
+                  char *error_buf, uint32 error_buf_size)
+{
+    int16 operand_offset = 0;
+    uint8 block_depth = 0;
+    if (opcode == WASM_OP_ELSE)
+        block_depth = 1;
+    else
+        block_depth = 0;
+
+    if ((loader_ctx->frame_csp - block_depth)->return_type != VALUE_TYPE_VOID) {
+        uint8 return_cells;
+        if ((loader_ctx->frame_csp - block_depth)->return_type == VALUE_TYPE_I32
+            || (loader_ctx->frame_csp - block_depth)->return_type == VALUE_TYPE_F32)
+            return_cells = 1;
+        else
+            return_cells = 2;
+        if ((loader_ctx->frame_csp - block_depth)->dynamic_offset !=
+                *(loader_ctx->frame_offset - return_cells)) {
+
+            /* insert op_copy before else opcode */
+            if (opcode == WASM_OP_ELSE)
+                skip_label();
+
+            if (return_cells == 1)
+                emit_label(EXT_OP_COPY_STACK_TOP);
+            else
+                emit_label(EXT_OP_COPY_STACK_TOP_I64);
+            emit_operand(loader_ctx, *(loader_ctx->frame_offset - return_cells));
+            emit_operand(loader_ctx, (loader_ctx->frame_csp - block_depth)->dynamic_offset);
+
+            if (opcode == WASM_OP_ELSE) {
+                *(loader_ctx->frame_offset - return_cells) =
+                    (loader_ctx->frame_csp - block_depth)->dynamic_offset;
+            }
+            else {
+                loader_ctx->frame_offset -= return_cells;
+                loader_ctx->dynamic_offset = loader_ctx->frame_csp->dynamic_offset;
+                PUSH_OFFSET_TYPE((loader_ctx->frame_csp - block_depth)->return_type);
+                wasm_loader_emit_backspace(loader_ctx, sizeof(int16));
+            }
+            if (opcode == WASM_OP_ELSE)
+                emit_label(opcode);
+        }
+    }
+
+    return true;
+
+fail:
+    return false;
+}
+
+#endif /* WASM_ENABLE_FAST_INTERP */
+
+#define RESERVE_BLOCK_RET() do {                                    \
+     if (!reserve_block_ret(loader_ctx, opcode, disable_emit,       \
+                            error_buf, error_buf_size))             \
+        goto fail;                                                  \
+  } while (0)
 
 #define PUSH_TYPE(type) do {                                        \
     if (!(wasm_loader_push_frame_ref(loader_ctx, type,              \
@@ -3745,27 +3887,7 @@ re_scan:
                                             loader_ctx->stack_cell_num;
 #if WASM_ENABLE_FAST_INTERP != 0
                 /* if the result of if branch is in local or const area, add a copy op */
-                if ((loader_ctx->frame_csp - 1)->return_type != VALUE_TYPE_VOID) {
-                    uint8 return_cells;
-                    if ((loader_ctx->frame_csp - 1)->return_type == VALUE_TYPE_I32
-                        || (loader_ctx->frame_csp - 1)->return_type == VALUE_TYPE_F32)
-                        return_cells = 1;
-                    else
-                        return_cells = 2;
-                    if ((loader_ctx->frame_csp - 1)->dynamic_offset !=
-                            *(loader_ctx->frame_offset - return_cells)) {
-                        skip_label();
-                        if (return_cells == 1)
-                            emit_label(EXT_OP_COPY_STACK_TOP);
-                        else
-                            emit_label(EXT_OP_COPY_STACK_TOP_I64);
-                        emit_operand(loader_ctx, *(loader_ctx->frame_offset - return_cells));
-                        emit_operand(loader_ctx, (loader_ctx->frame_csp - 1)->dynamic_offset);
-                        *(loader_ctx->frame_offset - return_cells) =
-                            (loader_ctx->frame_csp - 1)->dynamic_offset;
-                        emit_label(opcode);
-                    }
-                }
+                RESERVE_BLOCK_RET();
                 loader_ctx->frame_offset = loader_ctx->frame_offset_bottom +
                                                 loader_ctx->stack_cell_num;
                 emit_empty_label_addr_and_frame_ip(PATCH_END);
@@ -3779,29 +3901,8 @@ re_scan:
 
 #if WASM_ENABLE_FAST_INTERP != 0
                 skip_label();
-                // copy the result to the block return address
-                if (loader_ctx->frame_csp->return_type != VALUE_TYPE_VOID) {
-                    uint8 return_cells;
-                    if (loader_ctx->frame_csp->return_type == VALUE_TYPE_I32
-                        || loader_ctx->frame_csp->return_type == VALUE_TYPE_F32)
-                        return_cells = 1;
-                    else
-                        return_cells = 2;
-                    if (loader_ctx->frame_csp->dynamic_offset !=
-                            *(loader_ctx->frame_offset - return_cells)) {
-                        if (return_cells == 1)
-                            emit_label(EXT_OP_COPY_STACK_TOP);
-                        else
-                            emit_label(EXT_OP_COPY_STACK_TOP_I64);
-                        emit_operand(loader_ctx, *(loader_ctx->frame_offset - return_cells));
-                        emit_operand(loader_ctx, loader_ctx->frame_csp->dynamic_offset);
-                    }
-                    // the frame_offset stack top should be the return address of the block
-                    loader_ctx->frame_offset -= return_cells;
-                    loader_ctx->dynamic_offset = loader_ctx->frame_csp->dynamic_offset;
-                    PUSH_OFFSET_TYPE(loader_ctx->frame_csp->return_type);
-                    wasm_loader_emit_backspace(loader_ctx, sizeof(int16));
-                }
+                /* copy the result to the block return address */
+                RESERVE_BLOCK_RET();
 
                 apply_label_patch(loader_ctx, 0, PATCH_END);
                 free_label_patch_list(loader_ctx->frame_csp);
@@ -4381,8 +4482,7 @@ handle_next_reachable_block:
                     case WASM_OP_I32_LOAD8_U:
                     case WASM_OP_I32_LOAD16_S:
                     case WASM_OP_I32_LOAD16_U:
-                        POP_I32();
-                        PUSH_I32();
+                        POP_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_I32);
                         break;
                     case WASM_OP_I64_LOAD:
                     case WASM_OP_I64_LOAD8_S:
@@ -4391,16 +4491,13 @@ handle_next_reachable_block:
                     case WASM_OP_I64_LOAD16_U:
                     case WASM_OP_I64_LOAD32_S:
                     case WASM_OP_I64_LOAD32_U:
-                        POP_I32();
-                        PUSH_I64();
+                        POP_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_I64);
                         break;
                     case WASM_OP_F32_LOAD:
-                        POP_I32();
-                        PUSH_F32();
+                        POP_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_F32);
                         break;
                     case WASM_OP_F64_LOAD:
-                        POP_I32();
-                        PUSH_F64();
+                        POP_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_F64);
                         break;
                     /* store */
                     case WASM_OP_I32_STORE:
@@ -4451,8 +4548,7 @@ handle_next_reachable_block:
                                   "zero flag expected");
                     goto fail;
                 }
-                POP_I32();
-                PUSH_I32();
+                POP_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_I32);
 
                 func->has_op_memory_grow = true;
                 module->possible_memory_grow = true;
@@ -4504,8 +4600,7 @@ handle_next_reachable_block:
                 break;
 
             case WASM_OP_I32_EQZ:
-                POP_I32();
-                PUSH_I32();
+                POP_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_I32);
                 break;
 
             case WASM_OP_I32_EQ:
@@ -4518,14 +4613,11 @@ handle_next_reachable_block:
             case WASM_OP_I32_LE_U:
             case WASM_OP_I32_GE_S:
             case WASM_OP_I32_GE_U:
-                POP_I32();
-                POP_I32();
-                PUSH_I32();
+                POP2_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_I32);
                 break;
 
             case WASM_OP_I64_EQZ:
-                POP_I64();
-                PUSH_I32();
+                POP_AND_PUSH(VALUE_TYPE_I64, VALUE_TYPE_I32);
                 break;
 
             case WASM_OP_I64_EQ:
@@ -4538,9 +4630,7 @@ handle_next_reachable_block:
             case WASM_OP_I64_LE_U:
             case WASM_OP_I64_GE_S:
             case WASM_OP_I64_GE_U:
-                POP_I64();
-                POP_I64();
-                PUSH_I32();
+                POP2_AND_PUSH(VALUE_TYPE_I64, VALUE_TYPE_I32);
                 break;
 
             case WASM_OP_F32_EQ:
@@ -4549,9 +4639,7 @@ handle_next_reachable_block:
             case WASM_OP_F32_GT:
             case WASM_OP_F32_LE:
             case WASM_OP_F32_GE:
-                POP_F32();
-                POP_F32();
-                PUSH_I32();
+                POP2_AND_PUSH(VALUE_TYPE_F32, VALUE_TYPE_I32);
                 break;
 
             case WASM_OP_F64_EQ:
@@ -4560,9 +4648,7 @@ handle_next_reachable_block:
             case WASM_OP_F64_GT:
             case WASM_OP_F64_LE:
             case WASM_OP_F64_GE:
-                POP_F64();
-                POP_F64();
-                PUSH_I32();
+                POP2_AND_PUSH(VALUE_TYPE_F64, VALUE_TYPE_I32);
                 break;
 
                 break;
@@ -4570,8 +4656,7 @@ handle_next_reachable_block:
             case WASM_OP_I32_CLZ:
             case WASM_OP_I32_CTZ:
             case WASM_OP_I32_POPCNT:
-                POP_I32();
-                PUSH_I32();
+                POP_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_I32);
                 break;
 
             case WASM_OP_I32_ADD:
@@ -4589,16 +4674,13 @@ handle_next_reachable_block:
             case WASM_OP_I32_SHR_U:
             case WASM_OP_I32_ROTL:
             case WASM_OP_I32_ROTR:
-                POP_I32();
-                POP_I32();
-                PUSH_I32();
+                POP2_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_I32);
                 break;
 
             case WASM_OP_I64_CLZ:
             case WASM_OP_I64_CTZ:
             case WASM_OP_I64_POPCNT:
-                POP_I64();
-                PUSH_I64();
+                POP_AND_PUSH(VALUE_TYPE_I64, VALUE_TYPE_I64);
                 break;
 
             case WASM_OP_I64_ADD:
@@ -4616,9 +4698,7 @@ handle_next_reachable_block:
             case WASM_OP_I64_SHR_U:
             case WASM_OP_I64_ROTL:
             case WASM_OP_I64_ROTR:
-                POP_I64();
-                POP_I64();
-                PUSH_I64();
+                POP2_AND_PUSH(VALUE_TYPE_I64, VALUE_TYPE_I64);
                 break;
 
             case WASM_OP_F32_ABS:
@@ -4628,8 +4708,7 @@ handle_next_reachable_block:
             case WASM_OP_F32_TRUNC:
             case WASM_OP_F32_NEAREST:
             case WASM_OP_F32_SQRT:
-                POP_F32();
-                PUSH_F32();
+                POP_AND_PUSH(VALUE_TYPE_F32, VALUE_TYPE_F32);
                 break;
 
             case WASM_OP_F32_ADD:
@@ -4639,9 +4718,7 @@ handle_next_reachable_block:
             case WASM_OP_F32_MIN:
             case WASM_OP_F32_MAX:
             case WASM_OP_F32_COPYSIGN:
-                POP_F32();
-                POP_F32();
-                PUSH_F32();
+                POP2_AND_PUSH(VALUE_TYPE_F32, VALUE_TYPE_F32);
                 break;
 
             case WASM_OP_F64_ABS:
@@ -4651,8 +4728,7 @@ handle_next_reachable_block:
             case WASM_OP_F64_TRUNC:
             case WASM_OP_F64_NEAREST:
             case WASM_OP_F64_SQRT:
-                POP_F64();
-                PUSH_F64();
+                POP_AND_PUSH(VALUE_TYPE_F64, VALUE_TYPE_F64);
                 break;
 
             case WASM_OP_F64_ADD:
@@ -4662,111 +4738,91 @@ handle_next_reachable_block:
             case WASM_OP_F64_MIN:
             case WASM_OP_F64_MAX:
             case WASM_OP_F64_COPYSIGN:
-                POP_F64();
-                POP_F64();
-                PUSH_F64();
+                POP2_AND_PUSH(VALUE_TYPE_F64, VALUE_TYPE_F64);
                 break;
 
             case WASM_OP_I32_WRAP_I64:
-                POP_I64();
-                PUSH_I32();
+                POP_AND_PUSH(VALUE_TYPE_I64, VALUE_TYPE_I32);
                 break;
 
             case WASM_OP_I32_TRUNC_S_F32:
             case WASM_OP_I32_TRUNC_U_F32:
-                POP_F32();
-                PUSH_I32();
+                POP_AND_PUSH(VALUE_TYPE_F32, VALUE_TYPE_I32);
                 break;
 
             case WASM_OP_I32_TRUNC_S_F64:
             case WASM_OP_I32_TRUNC_U_F64:
-                POP_F64();
-                PUSH_I32();
+                POP_AND_PUSH(VALUE_TYPE_F64, VALUE_TYPE_I32);
                 break;
 
             case WASM_OP_I64_EXTEND_S_I32:
             case WASM_OP_I64_EXTEND_U_I32:
-                POP_I32();
-                PUSH_I64();
+                POP_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_I64);
                 break;
 
             case WASM_OP_I64_TRUNC_S_F32:
             case WASM_OP_I64_TRUNC_U_F32:
-                POP_F32();
-                PUSH_I64();
+                POP_AND_PUSH(VALUE_TYPE_F32, VALUE_TYPE_I64);
                 break;
 
             case WASM_OP_I64_TRUNC_S_F64:
             case WASM_OP_I64_TRUNC_U_F64:
-                POP_F64();
-                PUSH_I64();
+                POP_AND_PUSH(VALUE_TYPE_F64, VALUE_TYPE_I64);
                 break;
 
             case WASM_OP_F32_CONVERT_S_I32:
             case WASM_OP_F32_CONVERT_U_I32:
-                POP_I32();
-                PUSH_F32();
+                POP_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_F32);
                 break;
 
             case WASM_OP_F32_CONVERT_S_I64:
             case WASM_OP_F32_CONVERT_U_I64:
-                POP_I64();
-                PUSH_F32();
+                POP_AND_PUSH(VALUE_TYPE_I64, VALUE_TYPE_F32);
                 break;
 
             case WASM_OP_F32_DEMOTE_F64:
-                POP_F64();
-                PUSH_F32();
+                POP_AND_PUSH(VALUE_TYPE_F64, VALUE_TYPE_F32);
                 break;
 
             case WASM_OP_F64_CONVERT_S_I32:
             case WASM_OP_F64_CONVERT_U_I32:
-                POP_I32();
-                PUSH_F64();
+                POP_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_F64);
                 break;
 
             case WASM_OP_F64_CONVERT_S_I64:
             case WASM_OP_F64_CONVERT_U_I64:
-                POP_I64();
-                PUSH_F64();
+                POP_AND_PUSH(VALUE_TYPE_I64, VALUE_TYPE_F64);
                 break;
 
             case WASM_OP_F64_PROMOTE_F32:
-                POP_F32();
-                PUSH_F64();
+                POP_AND_PUSH(VALUE_TYPE_F32, VALUE_TYPE_F64);
                 break;
 
             case WASM_OP_I32_REINTERPRET_F32:
-                POP_F32();
-                PUSH_I32();
+                POP_AND_PUSH(VALUE_TYPE_F32, VALUE_TYPE_I32);
                 break;
 
             case WASM_OP_I64_REINTERPRET_F64:
-                POP_F64();
-                PUSH_I64();
+                POP_AND_PUSH(VALUE_TYPE_F64, VALUE_TYPE_I64);
                 break;
 
             case WASM_OP_F32_REINTERPRET_I32:
-                POP_I32();
-                PUSH_F32();
+                POP_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_F32);
                 break;
 
             case WASM_OP_F64_REINTERPRET_I64:
-                POP_I64();
-                PUSH_F64();
+                POP_AND_PUSH(VALUE_TYPE_I64, VALUE_TYPE_F64);
                 break;
 
             case WASM_OP_I32_EXTEND8_S:
             case WASM_OP_I32_EXTEND16_S:
-                POP_I32();
-                PUSH_I32();
+                POP_AND_PUSH(VALUE_TYPE_I32, VALUE_TYPE_I32);
                 break;
 
             case WASM_OP_I64_EXTEND8_S:
             case WASM_OP_I64_EXTEND16_S:
             case WASM_OP_I64_EXTEND32_S:
-                POP_I64();
-                PUSH_I64();
+                POP_AND_PUSH(VALUE_TYPE_I64, VALUE_TYPE_I64);
                 break;
 
             case WASM_OP_MISC_PREFIX:
@@ -4779,23 +4835,19 @@ handle_next_reachable_block:
                 {
                 case WASM_OP_I32_TRUNC_SAT_S_F32:
                 case WASM_OP_I32_TRUNC_SAT_U_F32:
-                    POP_F32();
-                    PUSH_I32();
+                    POP_AND_PUSH(VALUE_TYPE_F32, VALUE_TYPE_I32);
                     break;
                 case WASM_OP_I32_TRUNC_SAT_S_F64:
                 case WASM_OP_I32_TRUNC_SAT_U_F64:
-                    POP_F64();
-                    PUSH_I32();
+                    POP_AND_PUSH(VALUE_TYPE_F64, VALUE_TYPE_I32);
                     break;
                 case WASM_OP_I64_TRUNC_SAT_S_F32:
                 case WASM_OP_I64_TRUNC_SAT_U_F32:
-                    POP_F32();
-                    PUSH_I64();
+                    POP_AND_PUSH(VALUE_TYPE_F32, VALUE_TYPE_I64);
                     break;
                 case WASM_OP_I64_TRUNC_SAT_S_F64:
                 case WASM_OP_I64_TRUNC_SAT_U_F64:
-                    POP_F64();
-                    PUSH_I64();
+                    POP_AND_PUSH(VALUE_TYPE_F64, VALUE_TYPE_I64);
                     break;
                 default:
                     if (error_buf != NULL)
