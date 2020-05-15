@@ -42,7 +42,7 @@ set_error_buf(char *error_buf, uint32 error_buf_size, const char *string)
 } while (0)
 
 static bool
-skip_leb(const uint8 const **p_buf, const uint8 *buf_end, uint32 maxbits,
+skip_leb(const uint8 **p_buf, const uint8 *buf_end, uint32 maxbits,
          char* error_buf, uint32 error_buf_size)
 {
     const uint8 *buf = *p_buf;
