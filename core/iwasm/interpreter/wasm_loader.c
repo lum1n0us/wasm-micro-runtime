@@ -1879,8 +1879,21 @@ load_data_segment_section(const uint8 *buf, const uint8 *buf_end,
     uint64 total_size;
     WASMDataSeg *dataseg;
     InitializerExpression init_expr;
+#if WASM_ENABLE_BULK_MEMORY != 0
+    bool is_passive = false;
+    uint32 mem_flag;
+#endif
 
     read_leb_uint32(p, p_end, data_seg_count);
+
+#if WASM_ENABLE_BULK_MEMORY != 0
+    if ((module->data_seg_count1 != 0)
+        && (data_seg_count != module->data_seg_count1)) {
+        set_error_buf(error_buf, error_buf_size,
+                      "data count and data section have inconsistent lengths");
+        return false;
+    }
+#endif
 
     if (data_seg_count) {
         module->data_seg_count = data_seg_count;
@@ -1897,16 +1910,50 @@ load_data_segment_section(const uint8 *buf, const uint8 *buf_end,
 
         for (i = 0; i < data_seg_count; i++) {
             read_leb_uint32(p, p_end, mem_index);
+#if WASM_ENABLE_BULK_MEMORY != 0
+            is_passive = false;
+            mem_flag = mem_index & 0x03;
+            switch (mem_flag) {
+                case 0x01:
+                    is_passive = true;
+                    break;
+                case 0x00:
+                    /* no memory index, treat index as 0 */
+                    mem_index = 0;
+                    goto check_mem_index;
+                    break;
+                case 0x02:
+                    /* read following memory index */
+                    read_leb_uint32(p, p_end, mem_index);
+check_mem_index:
+                    if (mem_index
+                        >= module->import_memory_count + module->memory_count) {
+                        LOG_ERROR("memory#%d does not exist", mem_index);
+                        set_error_buf(error_buf, error_buf_size, "unknown memory");
+                        return false;
+                    }
+                    break;
+                case 0x03:
+                default:
+                    set_error_buf(error_buf, error_buf_size, "unknown memory");
+                        return false;
+                    break;
+            }
+#else
             if (mem_index
                 >= module->import_memory_count + module->memory_count) {
                 LOG_ERROR("memory#%d does not exist", mem_index);
                 set_error_buf(error_buf, error_buf_size, "unknown memory");
                 return false;
             }
+#endif /* WASM_ENABLE_BULK_MEMORY */
 
-            if (!load_init_expr(&p, p_end, &init_expr, VALUE_TYPE_I32,
-                                error_buf, error_buf_size))
-                return false;
+#if WASM_ENABLE_BULK_MEMORY != 0
+            if (!is_passive)
+#endif
+                if (!load_init_expr(&p, p_end, &init_expr, VALUE_TYPE_I32,
+                                    error_buf, error_buf_size))
+                    return false;
 
             read_leb_uint32(p, p_end, data_seg_len);
 
@@ -1918,10 +1965,17 @@ load_data_segment_section(const uint8 *buf, const uint8 *buf_end,
                 return false;
             }
 
-            bh_memcpy_s(&dataseg->base_offset, sizeof(InitializerExpression),
-                        &init_expr, sizeof(InitializerExpression));
+#if WASM_ENABLE_BULK_MEMORY != 0
+            dataseg->is_passive = is_passive;
+            if (!is_passive)
+#endif
+            {
+                bh_memcpy_s(&dataseg->base_offset, sizeof(InitializerExpression),
+                            &init_expr, sizeof(InitializerExpression));
 
-            dataseg->memory_index = mem_index;
+                dataseg->memory_index = mem_index;
+            }
+
             dataseg->data_length = data_seg_len;
             CHECK_BUF(p, p_end, data_seg_len);
             dataseg->data = (uint8*)p;
@@ -1938,6 +1992,28 @@ load_data_segment_section(const uint8 *buf, const uint8 *buf_end,
     LOG_VERBOSE("Load data segment section success.\n");
     return true;
 }
+
+#if WASM_ENABLE_BULK_MEMORY != 0
+static bool
+load_datacount_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
+                       char *error_buf, uint32 error_buf_size)
+{
+    const uint8 *p = buf, *p_end = buf_end;
+    uint32 data_seg_count1 = 0;
+
+    read_leb_uint32(p, p_end, data_seg_count1);
+    module->data_seg_count1 = data_seg_count1;
+
+    if (p != p_end) {
+        set_error_buf(error_buf, error_buf_size,
+                      "Load datacount section failed: section size mismatch");
+        return false;
+    }
+
+    LOG_VERBOSE("Load datacount section success.\n");
+    return true;
+}
+#endif
 
 static bool
 load_code_section(const uint8 *buf, const uint8 *buf_end,
@@ -2145,6 +2221,12 @@ load_from_sections(WASMModule *module, WASMSection *sections,
                 if (!load_data_segment_section(buf, buf_end, module, error_buf, error_buf_size))
                     return false;
                 break;
+#if WASM_ENABLE_BULK_MEMORY != 0
+            case SECTION_TYPE_DATACOUNT:
+                if (!load_datacount_section(buf, buf_end, module, error_buf, error_buf_size))
+                    return false;
+                break;
+#endif
             default:
                 set_error_buf(error_buf, error_buf_size,
                               "WASM module load failed: invalid section id");
@@ -2348,6 +2430,37 @@ destroy_sections(WASMSection *section_list)
     }
 }
 
+static uint8 section_ids[] = {
+    SECTION_TYPE_USER,
+    SECTION_TYPE_TYPE,
+    SECTION_TYPE_IMPORT,
+    SECTION_TYPE_FUNC,
+    SECTION_TYPE_TABLE,
+    SECTION_TYPE_MEMORY,
+    SECTION_TYPE_GLOBAL,
+    SECTION_TYPE_EXPORT,
+    SECTION_TYPE_START,
+    SECTION_TYPE_ELEM,
+#if WASM_ENABLE_BULK_MEMORY != 0
+    SECTION_TYPE_DATACOUNT,
+#endif
+    SECTION_TYPE_CODE,
+    SECTION_TYPE_DATA
+};
+
+static uint8
+get_section_index(uint8 section_type)
+{
+    uint8 max_id = sizeof(section_ids) / sizeof(uint8);
+
+    for (uint8 i = 0; i < max_id; i++) {
+        if (section_type == section_ids[i])
+            return i;
+    }
+
+    return (uint8)-1;
+}
+
 static bool
 create_sections(const uint8 *buf, uint32 size,
                 WASMSection **p_section_list,
@@ -2355,7 +2468,7 @@ create_sections(const uint8 *buf, uint32 size,
 {
     WASMSection *section_list_end = NULL, *section;
     const uint8 *p = buf, *p_end = buf + size/*, *section_body*/;
-    uint8 section_type, last_section_type = (uint8)-1;
+    uint8 section_type, section_index, last_section_index = (uint8)-1;
     uint32 section_size;
 
     bh_assert(!*p_section_list);
@@ -2364,19 +2477,20 @@ create_sections(const uint8 *buf, uint32 size,
     while (p < p_end) {
         CHECK_BUF(p, p_end, 1);
         section_type = read_uint8(p);
-        if (section_type <= SECTION_TYPE_DATA) {
+        section_index = get_section_index(section_type);
+        if (section_index != (uint8)-1) {
             if (section_type != SECTION_TYPE_USER) {
                 /* Custom sections may be inserted at any place,
                    while other sections must occur at most once
                    and in prescribed order. */
-                if (last_section_type != (uint8)-1
-                    && section_type <= last_section_type) {
+                if (last_section_index != (uint8)-1
+                    && (section_index <= last_section_index)) {
                     set_error_buf(error_buf, error_buf_size,
                                   "WASM module load failed: "
                                   "junk after last section");
                     return false;
                 }
-                last_section_type = section_type;
+                last_section_index = section_index;
             }
             CHECK_BUF1(p, p_end, 1);
             read_leb_uint32(p, p_end, section_size);
@@ -2911,10 +3025,45 @@ wasm_loader_find_block_addr(BlockAddr *block_addr_cache,
             case WASM_OP_I64_EXTEND32_S:
                 break;
             case WASM_OP_MISC_PREFIX:
-                /* skip extend op */
-                if (p < code_end_addr)
-                    p++;
+            {
+                opcode = read_uint8(p);
+                switch (opcode) {
+                    case WASM_OP_I32_TRUNC_SAT_S_F32:
+                    case WASM_OP_I32_TRUNC_SAT_U_F32:
+                    case WASM_OP_I32_TRUNC_SAT_S_F64:
+                    case WASM_OP_I32_TRUNC_SAT_U_F64:
+                    case WASM_OP_I64_TRUNC_SAT_S_F32:
+                    case WASM_OP_I64_TRUNC_SAT_U_F32:
+                    case WASM_OP_I64_TRUNC_SAT_S_F64:
+                    case WASM_OP_I64_TRUNC_SAT_U_F64:
+                        break;
+#if WASM_ENABLE_BULK_MEMORY != 0
+                    case WASM_OP_MEMORY_INIT:
+                        skip_leb_uint32(p, p_end);
+                        /* skip memory idx */
+                        p++;
+                        break;
+                    case WASM_OP_DATA_DROP:
+                        skip_leb_uint32(p, p_end);
+                        break;
+                    case WASM_OP_MEMORY_COPY:
+                        /* skip two memory idx */
+                        p += 2;
+                        break;
+                    case WASM_OP_MEMORY_FILL:
+                        /* skip memory idx */
+                        p++;
+                        break;
+#endif
+                    default:
+                        if (error_buf)
+                            snprintf(error_buf, error_buf_size,
+                                    "WASM loader find block addr failed: "
+                                    "invalid opcode fc %02x.", opcode);
+                        return false;
+                }
                 break;
+            }
 
             default:
                 if (error_buf)
@@ -4456,6 +4605,9 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
     bool return_value = false;
     WASMLoaderContext *loader_ctx;
     BranchBlock *frame_csp_tmp;
+#if WASM_ENABLE_BULK_MEMORY != 0
+    uint32 segment_index;
+#endif
 #if WASM_ENABLE_FAST_INTERP != 0
     uint8 *func_const_end, *func_const;
     int16 operand_offset;
@@ -5582,6 +5734,92 @@ re_scan:
                 case WASM_OP_I64_TRUNC_SAT_U_F64:
                     POP_AND_PUSH(VALUE_TYPE_F64, VALUE_TYPE_I64);
                     break;
+#if WASM_ENABLE_BULK_MEMORY != 0
+                case WASM_OP_MEMORY_INIT:
+                    read_leb_uint32(p, p_end, segment_index);
+#if WASM_ENABLE_FAST_INTERP != 0
+                    emit_const(segment_index);
+#endif
+                    if (module->import_memory_count == 0 && module->memory_count == 0)
+                        goto fail_unknown_memory;
+
+                    if (*p++ != 0x00)
+                        goto fail_zero_flag_expected;
+
+                    if (segment_index >= module->data_seg_count) {
+                        char msg[128];
+                        snprintf(msg, 128, "WASM loader prepare bytecode failed: "
+                                           "unknown data segment %d", segment_index);
+                        set_error_buf(error_buf, error_buf_size, msg);
+                        goto fail;
+                    }
+
+                    if (module->data_seg_count1 == 0)
+                        goto fail_data_cnt_sec_require;
+
+                    POP_I32();
+                    POP_I32();
+                    POP_I32();
+                    break;
+                case WASM_OP_DATA_DROP:
+                    read_leb_uint32(p, p_end, segment_index);
+#if WASM_ENABLE_FAST_INTERP != 0
+                    emit_const(segment_index);
+#endif
+                    if (segment_index >= module->data_seg_count) {
+                        set_error_buf(error_buf, error_buf_size,
+                                      "WASM loader prepare bytecode failed: "
+                                      "unknown data segment");
+                        goto fail;
+                    }
+
+                    if (module->data_seg_count1 == 0)
+                        goto fail_data_cnt_sec_require;
+
+                    break;
+                case WASM_OP_MEMORY_COPY:
+                    /* both src and dst memory index should be 0 */
+                    if (*(int16*)p != 0x0000)
+                        goto fail_zero_flag_expected;
+                    p += 2;
+
+                    if (module->import_memory_count == 0 && module->memory_count == 0)
+                        goto fail_unknown_memory;
+
+                    POP_I32();
+                    POP_I32();
+                    POP_I32();
+                    break;
+                case WASM_OP_MEMORY_FILL:
+                    if (*p++ != 0x00) {
+                        goto fail_zero_flag_expected;
+                    }
+                    if (module->import_memory_count == 0 && module->memory_count == 0) {
+                        goto fail_unknown_memory;
+                    }
+
+                    POP_I32();
+                    POP_I32();
+                    POP_I32();
+                    break;
+fail_zero_flag_expected:
+                    set_error_buf(error_buf, error_buf_size,
+                                  "WASM loader prepare bytecode failed: "
+                                  "zero flag expected");
+                    goto fail;
+
+fail_unknown_memory:
+                    set_error_buf(error_buf, error_buf_size,
+                                  "WASM loader prepare bytecode failed: "
+                                  "unknown memory 0");
+                    goto fail;
+fail_data_cnt_sec_require:
+                    set_error_buf(error_buf, error_buf_size,
+                                  "WASM loader prepare bytecode failed: "
+                                  "data count section required");
+                    goto fail;
+                /* TODO: to support bulk table operation */
+#endif /* WASM_ENABLE_BULK_MEMORY */
                 default:
                     if (error_buf != NULL)
                         snprintf(error_buf, error_buf_size,
@@ -5592,7 +5830,6 @@ re_scan:
                 }
                 break;
             }
-
             default:
                 if (error_buf != NULL)
                     snprintf(error_buf, error_buf_size,

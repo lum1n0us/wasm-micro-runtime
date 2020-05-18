@@ -94,6 +94,11 @@ enum {
 #define WASM_ENABLE_APP_FRAMEWORK 0
 #endif
 
+/* Bulk memory operation */
+#ifndef WASM_ENABLE_BULK_MEMORY
+#define WASM_ENABLE_BULK_MEMORY 0
+#endif
+
 /* WASM log system */
 #ifndef WASM_ENABLE_LOG
 #define WASM_ENABLE_LOG 1

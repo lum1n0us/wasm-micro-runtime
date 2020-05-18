@@ -52,6 +52,9 @@ extern "C" {
 #define SECTION_TYPE_ELEM 9
 #define SECTION_TYPE_CODE 10
 #define SECTION_TYPE_DATA 11
+#if WASM_ENABLE_BULK_MEMORY != 0
+#define SECTION_TYPE_DATACOUNT 12
+#endif
 
 #define IMPORT_KIND_FUNC 0
 #define IMPORT_KIND_TABLE 1
@@ -247,6 +250,9 @@ typedef struct WASMDataSeg {
     uint32 memory_index;
     InitializerExpression base_offset;
     uint32 data_length;
+#if WASM_ENABLE_BULK_MEMORY != 0
+    bool is_passive;
+#endif
     uint8 *data;
 } WASMDataSeg;
 
@@ -290,7 +296,12 @@ typedef struct WASMModule {
     uint32 global_count;
     uint32 export_count;
     uint32 table_seg_count;
+    /* data seg count read from data segment section */
     uint32 data_seg_count;
+#if WASM_ENABLE_BULK_MEMORY != 0
+    /* data count read from datacount section */
+    uint32 data_seg_count1;
+#endif
 
     uint32 import_function_count;
     uint32 import_table_count;

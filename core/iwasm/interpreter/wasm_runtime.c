@@ -1064,6 +1064,11 @@ wasm_instantiate(WASMModule *module,
         uint32 memory_size = 0;
         WASMDataSeg *data_seg = module->data_segments[i];
 
+#if WASM_ENABLE_BULK_MEMORY != 0
+        if (data_seg->is_passive)
+            continue;
+#endif
+
         /* has check it in loader */
         memory = module_inst->memories[data_seg->memory_index];
         memory_data = memory->memory_data;

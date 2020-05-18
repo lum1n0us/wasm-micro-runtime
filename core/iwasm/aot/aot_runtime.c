@@ -172,6 +172,11 @@ memory_instantiate(AOTModuleInstance *module_inst, AOTModule *module,
     if (module->mem_init_page_count > 0) {
         for (i = 0; i < module->mem_init_data_count; i++) {
             data_seg = module->mem_init_data_list[i];
+#if WASM_ENABLE_BULK_MEMORY != 0
+            if (data_seg->is_passive)
+                continue;
+#endif
+
             bh_assert(data_seg->offset.init_expr_type ==
                             INIT_EXPR_TYPE_I32_CONST
                       || data_seg->offset.init_expr_type ==
@@ -952,3 +957,61 @@ aot_call_indirect(WASMExecEnv *exec_env,
                                       func_type, signature, attachment,
                                       argv, argc, argv);
 }
+
+#if WASM_ENABLE_BULK_MEMORY != 0
+bool
+aot_memory_init(AOTModuleInstance *module_inst, uint32 seg_index,
+                uint32 offset, uint32 len, uint32 dst)
+{
+    AOTModule *aot_module;
+    uint8 *data = NULL;
+    uint8 *maddr;
+    uint64 seg_len = 0;
+
+    aot_module = (AOTModule *)module_inst->aot_module.ptr;
+    if (aot_module->is_jit_mode) {
+#if WASM_ENABLE_JIT != 0
+        seg_len = aot_module->wasm_module->data_segments[seg_index]->data_length;
+        data = aot_module->wasm_module->data_segments[seg_index]->data;
+#endif
+    }
+    else {
+        seg_len = aot_module->mem_init_data_list[seg_index]->byte_count;
+        data = aot_module->mem_init_data_list[seg_index]->bytes;
+    }
+
+    if (!aot_validate_app_addr(module_inst, dst, len))
+        return false;
+
+    if ((uint64)offset + (uint64)len > seg_len) {
+        aot_set_exception(module_inst, "out of bounds memory access");
+        return false;
+    }
+
+    maddr = aot_addr_app_to_native(module_inst, dst);
+
+    bh_memcpy_s(maddr, module_inst->memory_data_size - dst,
+                data + offset, len);
+    return true;
+}
+
+bool
+aot_data_drop(AOTModuleInstance *module_inst, uint32 seg_index)
+{
+    AOTModule *aot_module = (AOTModule *)(module_inst->aot_module.ptr);
+
+    if (aot_module->is_jit_mode) {
+#if WASM_ENABLE_JIT != 0
+        aot_module->wasm_module->data_segments[seg_index]->data_length = 0;
+        /* Currently we can't free the dropped data segment
+            as they are stored in wasm bytecode */
+#endif
+    }
+    else {
+        aot_module->mem_init_data_list[seg_index]->byte_count = 0;
+        /* Currently we can't free the dropped data segment
+            as the mem_init_data_count is a continuous array */
+    }
+    return true;
+}
+#endif /* WASM_ENABLE_BULK_MEMORY */

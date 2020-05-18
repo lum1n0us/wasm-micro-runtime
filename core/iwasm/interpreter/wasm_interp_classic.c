@@ -236,6 +236,15 @@ LOAD_I16(void *addr)
       goto out_of_bounds;                                                   \
   } while (0)
 
+#define CHECK_BULK_MEMORY_OVERFLOW(start, bytes, maddr) do {                \
+    uint64 offset1 = (int32)(start);                                        \
+    if (offset1 + bytes <= linear_mem_size)                                 \
+      /* App heap space is not valid space for bulk memory operation */     \
+      maddr = memory->memory_data + offset1;                                \
+    else                                                                    \
+      goto out_of_bounds;                                                   \
+  } while (0)
+
 static inline uint32
 rotl32(uint32 n, uint32 c)
 {
@@ -955,6 +964,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
   uint32 total_mem_size = memory ? num_bytes_per_page * memory->cur_page_count
                                    - heap_base_offset : 0;
   uint8 *global_data = module->global_data;
+#if WASM_ENABLE_BULK_MEMORY != 0
+  uint32 linear_mem_size = memory ? num_bytes_per_page * memory->cur_page_count : 0;
+#endif
   WASMTableInstance *table = module->default_table;
   WASMGlobalInstance *globals = module->globals;
   uint8 opcode_IMPDEP = WASM_OP_IMPDEP;
@@ -1622,6 +1634,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
           memory = module->default_memory;
           total_mem_size = num_bytes_per_page * memory->cur_page_count
                            - heap_base_offset;
+#if WASM_ENABLE_BULK_MEMORY != 0
+          linear_mem_size = num_bytes_per_page * memory->cur_page_count;
+#endif
         }
 
         (void)reserved;
@@ -2458,6 +2473,78 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
           DEF_OP_TRUNC_SAT_F64(-1.0f, 18446744073709551616.0,
                                false, false);
           break;
+#if WASM_ENABLE_BULK_MEMORY != 0
+        case WASM_OP_MEMORY_INIT:
+        {
+          uint32 addr, segment;
+          uint64 bytes, offset, seg_len;
+          uint8* data;
+
+          read_leb_uint32(frame_ip, frame_ip_end, segment);
+          /* skip memory index */
+          frame_ip++;
+
+          bytes = (uint64)(uint32)POP_I32();
+          offset = (uint64)(uint32)POP_I32();
+          addr = (uint32)POP_I32();
+
+          CHECK_BULK_MEMORY_OVERFLOW(addr, bytes, maddr);
+
+          seg_len = (uint64)module->module->data_segments[segment]->data_length;
+          data = module->module->data_segments[segment]->data;
+          if (offset + bytes > seg_len)
+            goto out_of_bounds;
+
+          bh_memcpy_s(maddr, linear_mem_size - addr,
+                      data + offset, bytes);
+          break;
+        }
+        case WASM_OP_DATA_DROP:
+        {
+          uint32 segment;
+
+          read_leb_uint32(frame_ip, frame_ip_end, segment);
+          module->module->data_segments[segment]->data_length = 0;
+
+          break;
+        }
+        case WASM_OP_MEMORY_COPY:
+        {
+          uint32 dst, src, len;
+          uint8 *mdst, *msrc;
+
+          frame_ip += 2;
+
+          len = POP_I32();
+          src = POP_I32();
+          dst = POP_I32();
+
+          CHECK_BULK_MEMORY_OVERFLOW(src, len, msrc);
+          CHECK_BULK_MEMORY_OVERFLOW(dst, len, mdst);
+
+          /* allowing the destination and source to overlap */
+          bh_memmove_s(mdst, linear_mem_size - dst,
+                       msrc, len);
+
+          break;
+        }
+        case WASM_OP_MEMORY_FILL:
+        {
+          uint32 dst, len;
+          uint8 val, *mdst;
+          frame_ip++;
+
+          len = POP_I32();
+          val = POP_I32();
+          dst = POP_I32();
+
+          CHECK_BULK_MEMORY_OVERFLOW(dst, len, mdst);
+
+          memset(mdst, val, len);
+
+          break;
+        }
+#endif /* WASM_ENABLE_BULK_MEMORY */
         default:
           wasm_set_exception(module, "WASM interp failed: unsupported opcode.");
             goto got_exception;

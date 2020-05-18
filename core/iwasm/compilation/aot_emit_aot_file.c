@@ -122,10 +122,18 @@ get_target_info_section_size()
 static uint32
 get_mem_init_data_size(AOTMemInitData *mem_init_data)
 {
+    /* TODO: use option to control the size */
+#if WASM_ENABLE_BULK_MEMORY != 0
+    /* is_passive (4 bytes) + init expr type (4 bytes) +
+        init expr value (8 bytes) + byte count (4 bytes) + bytes */
+    return (uint32)(sizeof(uint32) + sizeof(uint32) + sizeof(uint64)
+                    + sizeof(uint32) + mem_init_data->byte_count);
+#else
     /* init expr type (4 bytes) + init expr value (8 bytes)
        + byte count (4 bytes) + bytes */
     return (uint32)(sizeof(uint32) + sizeof(uint64)
                     + sizeof(uint32) + mem_init_data->byte_count);
+#endif
 }
 
 static uint32
@@ -882,6 +890,11 @@ aot_emit_mem_info(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
 
     for (i = 0; i < comp_data->mem_init_data_count; i++) {
         offset = align_uint(offset, 4);
+        /* TODO: use option to control the emit */
+        /* TODO: emit memory_index */
+#if WASM_ENABLE_BULK_MEMORY != 0
+        EMIT_U32(init_datas[i]->is_passive);
+#endif
         EMIT_U32(init_datas[i]->offset.init_expr_type);
         EMIT_U64(init_datas[i]->offset.u.i64);
         EMIT_U32(init_datas[i]->byte_count);
