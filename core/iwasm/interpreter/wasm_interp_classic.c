@@ -877,6 +877,59 @@ wasm_interp_call_func_native(WASMModuleInstance *module_inst,
     wasm_exec_env_set_cur_frame(exec_env, prev_frame);
 }
 
+#if WASM_ENABLE_MULTI_MODULE != 0
+static void
+wasm_interp_call_func_bytecode(WASMModuleInstance *module,
+                               WASMExecEnv *exec_env,
+                               WASMFunctionInstance *cur_func,
+                               WASMInterpFrame *prev_frame);
+
+static void
+wasm_interp_call_func_import(WASMModuleInstance *module_inst,
+                             WASMExecEnv *exec_env,
+                             WASMFunctionInstance *cur_func,
+                             WASMInterpFrame *prev_frame)
+{
+    WASMModuleInstance *sub_module_inst = cur_func->import_module_inst;
+    WASMFunctionInstance *sub_func_inst = cur_func->import_func_inst;
+    WASMFunctionImport *func_import = cur_func->u.func_import;
+    uint8 *ip = prev_frame->ip;
+    char buf[128];
+
+    if (!sub_func_inst) {
+        snprintf(buf, sizeof(buf),
+                 "fail to call unlinked import function (%s, %s)",
+                 func_import->module_name, func_import->field_name);
+        wasm_set_exception(module_inst, buf);
+        return;
+    }
+
+    /* set ip NULL to make call_func_bytecode return after executing
+       this function */
+    prev_frame->ip = NULL;
+
+    /* replace exec_env's module_inst with sub_module_inst so we can
+       call it */
+    exec_env->module_inst = (WASMModuleInstanceCommon *)sub_module_inst;
+
+    /* call function of sub-module*/
+    wasm_interp_call_func_bytecode(sub_module_inst, exec_env,
+                                   sub_func_inst, prev_frame);
+
+    /* restore ip and module_inst */
+    prev_frame->ip = ip;
+    exec_env->module_inst = (WASMModuleInstanceCommon *)module_inst;
+
+    /* transfer exception if it is thrown */
+    if (wasm_get_exception(sub_module_inst)) {
+        bh_memcpy_s(module_inst->cur_exception,
+                    sizeof(module_inst->cur_exception),
+                    sub_module_inst->cur_exception,
+                    sizeof(sub_module_inst->cur_exception));
+    }
+}
+#endif
+
 #if WASM_ENABLE_LABELS_AS_VALUES != 0
 
 #define HANDLE_OP(opcode) HANDLE_##opcode
@@ -1086,14 +1139,27 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
       HANDLE_OP (WASM_OP_CALL):
         read_leb_uint32(frame_ip, frame_ip_end, fidx);
-        bh_assert(fidx < module->function_count);
+#if WASM_ENABLE_MULTI_MODULE != 0
+        if (fidx >= module->function_count) {
+          wasm_set_exception(module, "unknown function");
+          goto got_exception;
+        }
+#endif
+
         cur_func = module->functions + fidx;
         goto call_func_from_interp;
 
       HANDLE_OP (WASM_OP_CALL_INDIRECT):
         {
           WASMType *cur_type, *cur_func_type;
+          WASMTableInstance *cur_table_inst;
 
+          /**
+           * type check. compiler will make sure all like
+           * (call_indirect (type $x) (i32.const 1))
+           * the function type has to be defined in the module also
+           * no matter it is used or not
+           */
           read_leb_uint32(frame_ip, frame_ip_end, tidx);
           if (tidx >= module->module->type_count) {
             wasm_set_exception(module, "type index is overflow");
@@ -1105,27 +1171,48 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
           frame_ip++;
           val = POP_I32();
 
-          if (val < 0 || val >= (int32)table->cur_size) {
+          /* careful, it might be a table in another module */
+          cur_table_inst = table;
+#if WASM_ENABLE_MULTI_MODULE != 0
+          if (table->table_inst_linked) {
+              cur_table_inst = table->table_inst_linked;
+          }
+#endif
+
+          if (val < 0 || val >= (int32)cur_table_inst->cur_size) {
             wasm_set_exception(module, "undefined element");
             goto got_exception;
           }
 
-          fidx = ((uint32*)table->base_addr)[val];
+          fidx = ((uint32*)cur_table_inst->base_addr)[val];
           if (fidx == (uint32)-1) {
             wasm_set_exception(module, "uninitialized element");
             goto got_exception;
           }
 
+#if WASM_ENABLE_MULTI_MODULE != 0
+          if (fidx >=  module->function_count) {
+            wasm_set_exception(module, "unknown function");
+            goto got_exception;
+          }
+#endif
+
+          /* always call module own functions */
           cur_func = module->functions + fidx;
 
-          if (cur_func->is_import_func)
-            cur_func_type = cur_func->u.func_import->func_type;
+          if (cur_func->is_import_func
+#if WASM_ENABLE_MULTI_MODULE != 0
+              && !cur_func->import_func_inst
+#endif
+          )
+              cur_func_type = cur_func->u.func_import->func_type;
           else
             cur_func_type = cur_func->u.func->func_type;
           if (!wasm_type_equal(cur_type, cur_func_type)) {
             wasm_set_exception(module, "indirect call type mismatch");
             goto got_exception;
           }
+
           goto call_func_from_interp;
         }
 
@@ -1264,7 +1351,14 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
           bh_assert(global_idx < module->global_count);
           global = globals + global_idx;
-          global_addr = global_data + global->data_offset;
+          global_addr =
+#if WASM_ENABLE_MULTI_MODULE != 0
+            global->import_global_inst
+              ? global->import_module_inst->global_data
+                + global->import_global_inst->data_offset
+              :
+#endif
+              global_data + global->data_offset;
 
           switch (global->type) {
             case VALUE_TYPE_I32:
@@ -1289,7 +1383,14 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
           bh_assert(global_idx < module->global_count);
           global = globals + global_idx;
-          global_addr = global_data + global->data_offset;
+          global_addr =
+#if WASM_ENABLE_MULTI_MODULE != 0
+            global->import_global_inst
+              ? global->import_module_inst->global_data
+                + global->import_global_inst->data_offset
+              :
+#endif
+              global_data + global->data_offset;
 
           switch (global->type) {
             case VALUE_TYPE_I32:
@@ -2430,14 +2531,25 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
   call_func_from_entry:
     {
       if (cur_func->is_import_func) {
-        wasm_interp_call_func_native(module, exec_env, cur_func, prev_frame);
-        prev_frame = frame->prev_frame;
-        cur_func = frame->function;
-        UPDATE_ALL_FROM_FRAME();
+#if WASM_ENABLE_MULTI_MODULE != 0
+          if (cur_func->import_func_inst) {
+              wasm_interp_call_func_import(module, exec_env, cur_func,
+                                           prev_frame);
+          }
+          else
+#endif
+          {
+              wasm_interp_call_func_native(module, exec_env, cur_func,
+                                           prev_frame);
+          }
 
-        memory = module->default_memory;
-        if (wasm_get_exception(module))
-          goto got_exception;
+          prev_frame = frame->prev_frame;
+          cur_func = frame->function;
+          UPDATE_ALL_FROM_FRAME();
+
+          memory = module->default_memory;
+          if (wasm_get_exception(module))
+              goto got_exception;
       }
       else {
         WASMFunction *cur_wasm_func = cur_func->u.func;
@@ -2521,6 +2633,7 @@ wasm_interp_call_wasm(WASMModuleInstance *module_inst,
                       WASMFunctionInstance *function,
                       uint32 argc, uint32 argv[])
 {
+    // TODO: since module_inst = exec_env->module_inst, shall we remove the 1st arg?
     WASMRuntimeFrame *prev_frame = wasm_exec_env_get_cur_frame(exec_env);
     WASMInterpFrame *frame, *outs_area;
 
@@ -2559,15 +2672,44 @@ wasm_interp_call_wasm(WASMModuleInstance *module_inst,
 
     wasm_exec_env_set_cur_frame(exec_env, frame);
 
-    if (function->is_import_func)
-        wasm_interp_call_func_native(module_inst, exec_env, function, frame);
-    else
+    if (function->is_import_func) {
+#if WASM_ENABLE_MULTI_MODULE != 0
+        if (function->import_module_inst) {
+            LOG_DEBUG("it is a function of a sub module");
+            wasm_interp_call_func_import(module_inst,
+                                         exec_env,
+                                         function,
+                                         frame);
+        }
+        else
+#endif
+        {
+            LOG_DEBUG("it is an native function");
+            /* it is a native function */
+            wasm_interp_call_func_native(module_inst,
+                                         exec_env,
+                                         function,
+                                         frame);
+        }
+    }
+    else {
+        LOG_DEBUG("it is a function of the module itself");
         wasm_interp_call_func_bytecode(module_inst, exec_env, function, frame);
+    }
 
     /* Output the return value to the caller */
     if (!wasm_get_exception(module_inst)) {
-        for (i = 0; i < function->ret_cell_num; i++)
+        for (i = 0; i < function->ret_cell_num; i++) {
             argv[i] = *(frame->sp + i - function->ret_cell_num);
+        }
+
+        if (function->ret_cell_num) {
+            LOG_DEBUG("first return value argv[0]=%d", argv[0]);
+        } else {
+            LOG_DEBUG("no return value");
+        }
+    } else {
+        LOG_WARNING("meet an exception %s", wasm_get_exception(module_inst));
     }
 
     wasm_exec_env_set_cur_frame(exec_env, prev_frame);

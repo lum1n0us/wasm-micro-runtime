@@ -21,7 +21,6 @@
 extern "C" {
 #endif
 
-
 typedef struct WASMModuleCommon {
     /* Module type, for module loaded from WASM bytecode binary,
        this field is Wasm_Module_Bytecode, and this structure should
@@ -56,8 +55,24 @@ typedef struct WASIContext {
 } WASIContext;
 #endif
 
+#if WASM_ENABLE_MULTI_MODULE != 0
+typedef struct WASMRegisteredModule {
+    bh_list_link l;
+    /* point to a string pool */
+    const char *module_name;
+    WASMModule *module;
+    /* to store the original module file buffer address */
+    uint8 *orig_file_buf;
+    uint32 orig_file_buf_size;
+} WASMRegisteredModule;
+#endif
+
 typedef package_type_t PackageType;
 typedef wasm_section_t WASMSection, AOTSection;
+
+void
+set_error_buf_v(char *error_buf, uint32 error_buf_size, const char *format,
+                ...);
 
 /* See wasm_export.h for description */
 bool
@@ -74,6 +89,7 @@ wasm_runtime_destroy();
 /* See wasm_export.h for description */
 PackageType
 get_package_type(const uint8 *buf, uint32 size);
+
 
 /* See wasm_export.h for description */
 WASMModuleCommon *
@@ -260,6 +276,63 @@ wasm_runtime_get_llvm_stack(WASMModuleInstanceCommon *module_inst);
 void
 wasm_runtime_set_llvm_stack(WASMModuleInstanceCommon *module_inst,
                             uint32 llvm_stack);
+
+#if WASM_ENABLE_MULTI_MODULE != 0
+module_reader
+wasm_runtime_get_module_reader();
+
+module_destroyer
+wasm_runtime_get_module_destroyer();
+
+bool
+wasm_runtime_register_module_internal(const char *module_name,
+                                      WASMModule *module, uint8 *orig_file_buf,
+                                      uint32 orig_file_buf_size,
+                                      char *error_buf,
+                                      uint32_t error_buf_size);
+void
+wasm_runtime_unregister_module(const WASMModule *module);
+
+bool
+wasm_runtime_is_module_registered(const char *module_name);
+
+WASMFunction *
+wasm_runtime_resolve_function(const char *module_name,
+                              const char *function_name,
+                              const WASMType *func_type, char *error_buf,
+                              uint32 error_buf_size);
+
+WASMTable *
+wasm_runtime_resolve_table(const char *module_name, const char *table_name,
+                           uint32 init_size, uint32 max_size,
+                           char *error_buf, uint32 error_buf_size);
+
+WASMMemory *
+wasm_runtime_resolve_memory(const char *module_name, const char *memory_name,
+                            uint32 init_page_count, uint32 max_page_count,
+                            char *error_buf, uint32 error_buf_size);
+
+WASMGlobal *
+wasm_runtime_resolve_global(const char *module_name, const char *global_name,
+                            uint8 type, bool is_mutable, char *error_buf,
+                            uint32 error_buf_size);
+
+bool
+wasm_runtime_add_loading_module(const char *module_name, char *error_buf,
+                                uint32 error_buf_size);
+
+void
+wasm_runtime_delete_loading_module(const char *module_name);
+
+bool
+wasm_runtime_is_loading_module(const char *module_name);
+
+void
+wasm_runtime_destory_loading_module_list();
+#endif /* WASM_ENALBE_MULTI_MODULE */
+
+bool
+wasm_runtime_is_built_in_module(const char *module_name);
 
 #if WASM_ENABLE_LIBC_WASI != 0
 /* See wasm_export.h for description */

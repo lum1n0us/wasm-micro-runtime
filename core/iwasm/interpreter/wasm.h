@@ -66,6 +66,10 @@ extern "C" {
 #define BLOCK_TYPE_IF 2
 #define BLOCK_TYPE_FUNCTION 3
 
+typedef struct WASMModule WASMModule;
+typedef struct WASMFunction WASMFunction;
+typedef struct WASMGlobal WASMGlobal;
+
 typedef union WASMValue {
     int32 i32;
     uint32 u32;
@@ -119,6 +123,10 @@ typedef struct WASMTableImport {
     uint32 init_size;
     /* specified if (flags & 1), else it is 0x10000 */
     uint32 max_size;
+#if WASM_ENABLE_MULTI_MODULE != 0
+    WASMModule *import_module;
+    WASMTable *import_table_linked;
+#endif
 } WASMTableImport;
 
 typedef struct WASMMemoryImport {
@@ -128,6 +136,10 @@ typedef struct WASMMemoryImport {
     uint32 num_bytes_per_page;
     uint32 init_page_count;
     uint32 max_page_count;
+#if WASM_ENABLE_MULTI_MODULE != 0
+    WASMModule *import_module;
+    WASMMemory *import_memory_linked;
+#endif
 } WASMMemoryImport;
 
 typedef struct WASMFunctionImport {
@@ -135,13 +147,17 @@ typedef struct WASMFunctionImport {
     char *field_name;
     /* function type */
     WASMType *func_type;
-    /* function pointer after linked */
+    /* native function pointer after linked */
     void *func_ptr_linked;
     /* signature from registered native symbols */
     const char *signature;
     /* attachment */
     void *attachment;
     bool call_conv_raw;
+#if WASM_ENABLE_MULTI_MODULE != 0
+    WASMModule *import_module;
+    WASMFunction *import_func_linked;
+#endif
 } WASMFunctionImport;
 
 typedef struct WASMGlobalImport {
@@ -151,6 +167,12 @@ typedef struct WASMGlobalImport {
     bool is_mutable;
     /* global data after linked */
     WASMValue global_data_linked;
+#if WASM_ENABLE_MULTI_MODULE != 0
+    /* imported function pointer after linked */
+    // TODO: remove if not necessary
+    WASMModule *import_module;
+    WASMGlobal *import_global_linked;
+#endif
 } WASMGlobalImport;
 
 typedef struct WASMImport {
@@ -308,6 +330,12 @@ typedef struct WASMModule {
     WASIArguments wasi_args;
     bool is_wasi_module;
 #endif
+
+#if WASM_ENABLE_MULTI_MODULE != 0
+    // TODO: mutex ? mutli-threads ?
+    bh_list import_module_list_head;
+    bh_list *import_module_list;
+#endif
 } WASMModule;
 
 typedef struct WASMBranchBlock {
@@ -431,4 +459,3 @@ wasm_type_equal(const WASMType *type1, const WASMType *type2)
 #endif
 
 #endif /* end of _WASM_H_ */
-

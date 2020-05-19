@@ -428,6 +428,90 @@ load_type_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 }
 
 static bool
+load_function_import(const WASMModule *parent_module, WASMModule *sub_module,
+                     char *sub_module_name, char *function_name,
+                     const uint8 **p_buf, const uint8 *buf_end,
+                     WASMFunctionImport *function, char *error_buf,
+                     uint32 error_buf_size)
+{
+    const uint8 *p = *p_buf, *p_end = buf_end;
+    uint32 declare_type_index = 0;
+    WASMType *declare_func_type = NULL;
+    WASMFunction *linked_func = NULL;
+    const char *linked_signature = NULL;
+    void *linked_attachment = NULL;
+    bool linked_call_conv_raw = false;
+    bool is_built_in_module = false;
+
+    CHECK_BUF(p, p_end, 1);
+    read_leb_uint32(p, p_end, declare_type_index);
+    *p_buf = p;
+
+    if (declare_type_index >= parent_module->type_count) {
+        set_error_buf(error_buf, error_buf_size,
+                      "Load import section failed: unknown type.");
+        LOG_ERROR("the type index is out of range");
+        return false;
+    }
+
+    declare_func_type = parent_module->types[declare_type_index];
+
+    is_built_in_module = wasm_runtime_is_built_in_module(sub_module_name);
+    if (is_built_in_module) {
+        LOG_DEBUG("%s is a function of a built-in module %s",
+                  function_name,
+                  sub_module_name);
+        /* check built-in modules */
+        linked_func = wasm_native_resolve_symbol(sub_module_name,
+                                                 function_name,
+                                                 declare_func_type,
+                                                 &linked_signature,
+                                                 &linked_attachment,
+                                                 &linked_call_conv_raw);
+    }
+#if WASM_ENABLE_MULTI_MODULE != 0
+    else {
+        LOG_DEBUG("%s is a function of a sub-module %s",
+                  function_name,
+                  sub_module_name);
+        linked_func = wasm_runtime_resolve_function(sub_module_name,
+                                                    function_name,
+                                                    declare_func_type,
+                                                    error_buf,
+                                                    error_buf_size);
+    }
+#endif
+
+    if (!linked_func) {
+#if WASM_ENABLE_WAMR_COMPILER == 0
+        LOG_WARNING(
+          "warning: fail to link import a built-in function (%s, %s)",
+          sub_module_name,
+          function_name);
+#endif
+        set_error_buf(error_buf,
+                      error_buf_size,
+                      "unknown import or incompatible import type");
+        return false;
+    }
+
+    function->module_name = sub_module_name;
+    function->field_name = function_name;
+    function->func_type = declare_func_type;
+    /* func_ptr_linked is for built-in functions */
+    function->func_ptr_linked = is_built_in_module ? linked_func : NULL;
+    function->signature = linked_signature;
+    function->attachment = linked_attachment;
+    function->call_conv_raw = linked_call_conv_raw;
+#if WASM_ENABLE_MULTI_MODULE != 0
+    function->import_module = is_built_in_module ? NULL : sub_module;
+    /* can not set both func_ptr_linked and import_func_linked not NULL */
+    function->import_func_linked = is_built_in_module ? NULL : linked_func;
+#endif
+    return true;
+}
+
+static bool
 check_table_max_size(uint32 init_size, uint32 max_size,
                      char *error_buf, uint32 error_buf_size)
 {
@@ -440,28 +524,98 @@ check_table_max_size(uint32 init_size, uint32 max_size,
 }
 
 static bool
-load_table_import(const uint8 **p_buf, const uint8 *buf_end,
-                  WASMTableImport *table,
+load_table_import(WASMModule *sub_module, const char *sub_module_name,
+                  const char *table_name, const uint8 **p_buf,
+                  const uint8 *buf_end, WASMTableImport *table,
                   char *error_buf, uint32 error_buf_size)
 {
     const uint8 *p = *p_buf, *p_end = buf_end;
+    uint32 declare_elem_type = 0;
+    uint32 declare_max_size_flag = 0;
+    uint32 declare_init_size = 0;
+    uint32 declare_max_size = 0;
+#if WASM_ENABLE_MULTI_MODULE != 0
+    WASMTable *linked_table = NULL;
+#endif
 
     CHECK_BUF(p, p_end, 1);
     /* 0x70 */
-    table->elem_type = read_uint8(p);
-    bh_assert(table->elem_type == TABLE_ELEM_TYPE_ANY_FUNC);
-    read_leb_uint32(p, p_end, table->flags);
-    read_leb_uint32(p, p_end, table->init_size);
-    if (table->flags & 1) {
-        read_leb_uint32(p, p_end, table->max_size);
+    declare_elem_type = read_uint8(p);
+    if (TABLE_ELEM_TYPE_ANY_FUNC != declare_elem_type) {
+        set_error_buf(error_buf, error_buf_size, "incompatible import type");
+        return false;
+    }
+
+    read_leb_uint32(p, p_end, declare_max_size_flag);
+    read_leb_uint32(p, p_end, declare_init_size);
+    if (declare_max_size_flag & 1) {
+        read_leb_uint32(p, p_end, declare_max_size);
         if (!check_table_max_size(table->init_size, table->max_size,
                                   error_buf, error_buf_size))
             return false;
+    } else {
+        declare_max_size = 0x10000;
     }
-    else
-        table->max_size = 0x10000;
-
     *p_buf = p;
+
+    if ((declare_max_size_flag & 1) && declare_init_size > declare_max_size) {
+        set_error_buf(error_buf, error_buf_size,
+                      "size minimum must not be greater than maximum");
+        return false;
+    }
+
+#if WASM_ENABLE_MULTI_MODULE != 0
+    if (!wasm_runtime_is_built_in_module(sub_module_name)) {
+        linked_table = wasm_runtime_resolve_table(
+          sub_module_name, table_name, declare_init_size, declare_max_size,
+          error_buf, error_buf_size);
+        if (!linked_table) {
+            LOG_ERROR("(%s, %s) is not an exported from one of modules",
+                        table_name, sub_module_name);
+            return false;
+        }
+
+        /**
+         * reset with linked table limit
+         */
+        declare_elem_type = linked_table->elem_type;
+        declare_init_size = linked_table->init_size;
+        declare_max_size = linked_table->max_size;
+        declare_max_size_flag = linked_table->flags;
+        table->import_table_linked = linked_table;
+        table->import_module = sub_module;
+    }
+#endif
+
+#if WASM_ENABLE_SPEC_TEST != 0
+    /* (table (export "table") 10 20 funcref) */
+    if (!strcmp("spectest", sub_module_name)) {
+        uint32 spectest_table_init_size = 10;
+        uint32 spectest_table_max_size = 20;
+
+        if (strcmp("table", table_name)) {
+            set_error_buf(error_buf, error_buf_size,
+                          "incompatible import type or unknown import");
+            return false;
+        }
+
+        if (declare_init_size > spectest_table_init_size
+            || declare_max_size < spectest_table_max_size) {
+            set_error_buf(error_buf, error_buf_size,
+                          "incompatible import type");
+            return false;
+        }
+
+        declare_init_size = spectest_table_init_size;
+        declare_max_size = spectest_table_max_size;
+    }
+#endif
+
+    /* now we believe all declaration are ok */
+    table->elem_type = declare_elem_type;
+    table->init_size = declare_init_size;
+    table->flags = declare_max_size_flag;
+    table->max_size = declare_max_size;
     return true;
 }
 
@@ -499,8 +653,9 @@ check_memory_max_size(uint32 init_size, uint32 max_size,
 }
 
 static bool
-load_memory_import(const uint8 **p_buf, const uint8 *buf_end,
-                   WASMMemoryImport *memory,
+load_memory_import(WASMModule *sub_module, const char *sub_module_name,
+                   const char *memory_name, const uint8 **p_buf,
+                   const uint8 *buf_end, WASMMemoryImport *memory,
                    char *error_buf, uint32 error_buf_size)
 {
     const uint8 *p = *p_buf, *p_end = buf_end;
@@ -510,31 +665,164 @@ load_memory_import(const uint8 **p_buf, const uint8 *buf_end,
                             / DEFAULT_NUM_BYTES_PER_PAGE;
 #else
     uint32 max_page_count = pool_size / DEFAULT_NUM_BYTES_PER_PAGE;
+#endif /* WASM_ENABLE_APP_FRAMEWORK */
+    uint32 declare_max_page_count_flag = 0;
+    uint32 declare_init_page_count = 0;
+    uint32 declare_max_page_count = 0;
+#if WASM_ENABLE_MULTI_MODULE != 0
+    WASMMemory *linked_memory = NULL;
 #endif
 
-    read_leb_uint32(p, p_end, memory->flags);
-    read_leb_uint32(p, p_end, memory->init_page_count);
-    if (!check_memory_init_size(memory->init_page_count,
-                                error_buf, error_buf_size))
+    read_leb_uint32(p, p_end, declare_max_page_count_flag);
+    read_leb_uint32(p, p_end, declare_init_page_count);
+    if (!check_memory_init_size(declare_init_page_count, error_buf,
+                                error_buf_size)) {
         return false;
-
-    if (memory->flags & 1) {
-        read_leb_uint32(p, p_end, memory->max_page_count);
-        if (!check_memory_max_size(memory->init_page_count,
-                                   memory->max_page_count,
-                                   error_buf, error_buf_size))
-                return false;
-        if (memory->max_page_count > max_page_count)
-            memory->max_page_count = max_page_count;
     }
-    else
-        /* Limit the maximum memory size to max_page_count */
-        memory->max_page_count = max_page_count;
 
+    if (declare_max_page_count_flag & 1) {
+        read_leb_uint32(p, p_end, declare_max_page_count);
+        if (!check_memory_max_size(declare_init_page_count,
+                                   declare_max_page_count, error_buf,
+                                   error_buf_size)) {
+            return false;
+        }
+        if (declare_max_page_count > max_page_count) {
+            declare_max_page_count = max_page_count;
+        }
+    }
+    else {
+        /* Limit the maximum memory size to max_page_count */
+        declare_max_page_count = max_page_count;
+    }
+
+#if WASM_ENABLE_MULTI_MODULE != 0
+    if (!wasm_runtime_is_built_in_module(sub_module_name)) {
+        linked_memory = wasm_runtime_resolve_memory(
+          sub_module_name, memory_name, declare_init_page_count,
+          declare_max_page_count, error_buf, error_buf_size);
+        if (!linked_memory) {
+            return false;
+        }
+
+        /**
+         * reset with linked memory limit
+         */
+        memory->import_module = sub_module;
+        memory->import_memory_linked = linked_memory;
+        declare_init_page_count = linked_memory->init_page_count;
+        declare_max_page_count = linked_memory->max_page_count;
+    }
+#endif
+
+#if WASM_ENABLE_SPEC_TEST != 0
+    /* (memory (export "memory") 1 2) */
+    if (!strcmp("spectest", sub_module_name)) {
+        uint32 spectest_memory_init_page = 1;
+        uint32 spectest_memory_max_page = 2;
+
+        if (strcmp("memory", memory_name)) {
+            set_error_buf(error_buf, error_buf_size,
+                          "incompatible import type or unknown import");
+            return false;
+        }
+
+        if (declare_init_page_count > spectest_memory_init_page
+            || declare_max_page_count < spectest_memory_max_page) {
+            set_error_buf(error_buf, error_buf_size,
+                          "incompatible import type");
+            return false;
+        }
+
+        declare_init_page_count = spectest_memory_init_page;
+        declare_max_page_count = spectest_memory_max_page;
+    }
+#endif
+
+    /* now we believe all declaration are ok */
+    memory->flags = declare_max_page_count_flag;
+    memory->init_page_count = declare_init_page_count;
+    memory->max_page_count = declare_max_page_count;
     memory->num_bytes_per_page = DEFAULT_NUM_BYTES_PER_PAGE;
 
     *p_buf = p;
     return true;
+}
+
+static bool
+load_global_import(const WASMModule *parent_module,
+                   WASMModule *sub_module,
+                   char *sub_module_name, char *global_name,
+                   const uint8 **p_buf, const uint8 *buf_end,
+                   WASMGlobalImport *global, char *error_buf,
+                   uint32 error_buf_size)
+{
+    const uint8 *p = *p_buf, *p_end = buf_end;
+    uint8 declare_type = 0;
+    uint8 declare_mutable = 0;
+    bool is_mutable = false;
+    bool ret = false;
+#if WASM_ENABLE_MULTI_MODULE != 0
+    WASMGlobal *linked_global = NULL;
+#endif
+
+    CHECK_BUF(p, p_end, 2);
+    declare_type = read_uint8(p);
+    declare_mutable = read_uint8(p);
+    *p_buf = p;
+
+    if (declare_mutable >= 2) {
+        set_error_buf(error_buf, error_buf_size,
+                      "Load import section failed: "
+                      "invalid mutability");
+        return false;
+    }
+
+    is_mutable = declare_mutable & 1 ? true : false;
+
+    ret = wasm_runtime_is_built_in_module(sub_module_name);
+    if (ret) {
+        /* check built-in modules */
+#if WASM_ENABLE_LIBC_BUILTIN != 0
+        ret = wasm_native_lookup_libc_builtin_global(sub_module_name,
+                                                     global_name, global);
+        if (!ret) {
+            set_error_buf_v(error_buf, error_buf_size,
+                            "unknown import or incompatible import type");
+            return false;
+        }
+
+        LOG_VERBOSE("(%s, %s) is a global of a built-in module", sub_module_name,
+                    global_name);
+
+        global->module_name = sub_module_name;
+        global->field_name = global_name;
+        global->type = declare_type;
+        global->is_mutable = is_mutable;
+        return true;
+#endif /* WASM_ENABLE_LIBC_BUILTIN */
+    }
+
+#if WASM_ENABLE_MULTI_MODULE != 0
+    /* check sub modules */
+    linked_global =
+      wasm_runtime_resolve_global(sub_module_name, global_name, declare_type,
+                                  declare_mutable, error_buf, error_buf_size);
+    if (linked_global) {
+        LOG_VERBOSE("(%s, %s) is a global of external module", sub_module_name,
+                    global_name);
+        memset(error_buf, 0, error_buf_size);
+        global->module_name = sub_module_name;
+        global->field_name = global_name;
+        global->type = declare_type;
+        global->is_mutable = is_mutable;
+        memset(&(global->global_data_linked), 0, sizeof(WASMGlobalImport));
+        global->import_module = sub_module;
+        global->import_global_linked = linked_global;
+        return true;
+    }
+#endif
+    return false;
 }
 
 static bool
@@ -546,7 +834,11 @@ load_table(const uint8 **p_buf, const uint8 *buf_end, WASMTable *table,
     CHECK_BUF(p, p_end, 1);
     /* 0x70 */
     table->elem_type = read_uint8(p);
-    bh_assert(table->elem_type == TABLE_ELEM_TYPE_ANY_FUNC);
+    if (TABLE_ELEM_TYPE_ANY_FUNC != table->elem_type) {
+        set_error_buf(error_buf, error_buf_size, "incompatible import type");
+        return false;
+    }
+
     read_leb_uint32(p, p_end, table->flags);
     read_leb_uint32(p, p_end, table->init_size);
     if (table->flags & 1) {
@@ -557,6 +849,12 @@ load_table(const uint8 **p_buf, const uint8 *buf_end, WASMTable *table,
     }
     else
         table->max_size = 0x10000;
+
+    if ((table->flags & 1) && table->init_size > table->max_size) {
+        set_error_buf(error_buf, error_buf_size,
+                      "size minimum must not be greater than maximum");
+        return false;
+    }
 
     *p_buf = p;
     return true;
@@ -600,6 +898,172 @@ load_memory(const uint8 **p_buf, const uint8 *buf_end, WASMMemory *memory,
     return true;
 }
 
+#if WASM_ENABLE_MULTI_MODULE != 0
+static WASMModule *
+search_sub_module(const WASMModule *parent_module, const char *sub_module_name)
+{
+    WASMRegisteredModule *node =
+      bh_list_first_elem(parent_module->import_module_list);
+    while (node && strcmp(sub_module_name, node->module_name)) {
+        node = bh_list_elem_next(node);
+    }
+    return node ? node->module : NULL;
+}
+
+static bool
+register_sub_module(const WASMModule *parent_module,
+                    const char *sub_module_name, WASMModule *sub_module)
+{
+    /* register a sub_module on its parent sub module list */
+    WASMRegisteredModule *node = NULL;
+
+    if (search_sub_module(parent_module, sub_module_name)) {
+        LOG_DEBUG("%s has been registered in its parent", sub_module_name);
+        return true;
+    }
+
+    node = wasm_runtime_malloc(sizeof(WASMRegisteredModule));
+    if (!node) {
+        LOG_ERROR("malloc WASMRegisteredModule failed. SZ %d\n",
+                  sizeof(WASMRegisteredModule));
+        return false;
+    }
+
+    node->module_name = sub_module_name;
+    node->module = sub_module;
+    bh_list_status ret = bh_list_insert(parent_module->import_module_list, node);
+    bh_assert(BH_LIST_SUCCESS == ret);
+    return true;
+}
+
+static WASMModule *
+load_depended_module(const WASMModule *parent_module,
+                     const char *sub_module_name, char *error_buf,
+                     uint32 error_buf_size)
+{
+    WASMModule *sub_module = NULL;
+    bool ret = false;
+    uint8 *buffer = NULL;
+    uint32 buffer_size = 0;
+    const module_reader reader = wasm_runtime_get_module_reader();
+    const module_destroyer destroyer = wasm_runtime_get_module_destroyer();
+
+    /* check the registered module list of the parent */
+    sub_module = search_sub_module(parent_module, sub_module_name);
+    if (sub_module) {
+        LOG_DEBUG("%s has been loaded before", sub_module_name);
+        return sub_module;
+    }
+
+    /* check the global registered module list */
+    sub_module =
+      (WASMModule *)wasm_runtime_find_module_registered(sub_module_name);
+    if (sub_module) {
+        LOG_DEBUG("%s has been loaded", sub_module_name);
+        goto REGISTER_SUB_MODULE;
+    }
+
+    LOG_VERBOSE("to load %s", sub_module_name);
+
+    if (!reader) {
+        LOG_ERROR("error: there is no sub_module reader to load %s",
+                  sub_module_name);
+        set_error_buf_v(error_buf, error_buf_size,
+                        "error: there is no sub_module reader to load %s",
+                        sub_module_name);
+        return NULL;
+    }
+
+    /* start to maintain a loading module list */
+    ret = wasm_runtime_is_loading_module(sub_module_name);
+    if (ret) {
+        LOG_ERROR("find a circular dependency on %s", sub_module_name);
+        // TODO: need current sub_module name
+        set_error_buf_v(error_buf, error_buf_size,
+                        "error: find a circular dependency on %s",
+                        sub_module_name);
+        return NULL;
+    }
+
+    ret = wasm_runtime_add_loading_module(sub_module_name, error_buf,
+                                          error_buf_size);
+    if (!ret) {
+        LOG_ERROR("can not add %s into loading module list\n",
+                  sub_module_name);
+        return NULL;
+    }
+
+    ret = reader(sub_module_name, &buffer, &buffer_size);
+    if (!ret) {
+        LOG_ERROR("read the file of %s failed", sub_module_name);
+        set_error_buf_v(error_buf, error_buf_size,
+                        "error: can not read the module file of %s",
+                        sub_module_name);
+        goto DELETE_FROM_LOADING_LIST;
+    }
+
+    sub_module =
+      wasm_loader_load(buffer, buffer_size, error_buf, error_buf_size);
+    if (!sub_module) {
+        LOG_ERROR("error: can not load the sub_module %s", sub_module_name);
+        /*
+         * others will be destroyed in runtime_destroy()
+         */
+        goto DESTROY_FILE_BUFFER;
+    }
+
+    wasm_runtime_delete_loading_module(sub_module_name);
+
+    /* register on a global list */
+    ret = wasm_runtime_register_module_internal(sub_module_name, sub_module,
+                                                buffer, buffer_size, error_buf,
+                                                error_buf_size);
+    if (!ret) {
+        LOG_ERROR("error: can not register module %s globally\n",
+                  sub_module_name);
+        /*
+         * others will be unload in runtime_destroy()
+         */
+        goto UNLOAD_MODULE;
+    }
+
+    /* register on its parent list */
+REGISTER_SUB_MODULE:
+    ret = register_sub_module(parent_module, sub_module_name, sub_module);
+    if (!ret) {
+        LOG_WARNING("error: can not register a sub module %s with its parent",
+                    sizeof(WASMRegisteredModule));
+        set_error_buf_v(
+          error_buf, error_buf_size,
+          "error: can not register a sub module %s with its parent",
+          sizeof(WASMRegisteredModule));
+        /*
+         * since it is in the global module list, there is no need to
+         * unload the module. the runtime_destroy() will do it
+         */
+        return NULL;
+    }
+
+    return sub_module;
+
+UNLOAD_MODULE:
+    wasm_loader_unload(sub_module);
+
+DESTROY_FILE_BUFFER:
+    if (destroyer) {
+        destroyer(buffer, buffer_size);
+    }
+    else {
+        LOG_WARNING("need to release the reading buffer of %s manually",
+                    sub_module_name);
+    }
+
+DELETE_FROM_LOADING_LIST:
+    wasm_runtime_delete_loading_module(sub_module_name);
+    return NULL;
+}
+#endif /* WASM_ENABLE_MULTI_MODULE */
+
 static bool
 load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                     char *error_buf, uint32 error_buf_size)
@@ -610,8 +1074,8 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
     WASMImport *import;
     WASMImport *import_functions = NULL, *import_tables = NULL;
     WASMImport *import_memories = NULL, *import_globals = NULL;
-    char *module_name, *field_name;
-    uint8 mutable, u8, kind;
+    char *sub_module_name, *field_name;
+    uint8 u8, kind;
 
     read_leb_uint32(p, p_end, import_count);
 
@@ -708,6 +1172,7 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
         p = p_old;
 
+        // TODO: move it out of the loop
         /* insert "env", "wasi_unstable" and "wasi_snapshot_preview1" to const str list */
         if (!const_str_list_insert((uint8*)"env", 3, module, error_buf, error_buf_size)
             || !const_str_list_insert((uint8*)"wasi_unstable", 13, module,
@@ -719,11 +1184,13 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
         /* Scan again to read the data */
         for (i = 0; i < import_count; i++) {
+            WASMModule *sub_module = NULL;
+
             /* load module name */
             read_leb_uint32(p, p_end, name_len);
             CHECK_BUF(p, p_end, name_len);
-            if (!(module_name = const_str_list_insert
-                        (p, name_len, module, error_buf, error_buf_size))) {
+            if (!(sub_module_name = const_str_list_insert(
+                    p, name_len, module, error_buf, error_buf_size))) {
                 return false;
             }
             p += name_len;
@@ -731,11 +1198,30 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
             /* load field name */
             read_leb_uint32(p, p_end, name_len);
             CHECK_BUF(p, p_end, name_len);
-            if (!(field_name = const_str_list_insert
-                        (p, name_len, module, error_buf, error_buf_size))) {
+            if (!(field_name = const_str_list_insert(
+                    p, name_len, module, error_buf, error_buf_size))) {
                 return false;
             }
             p += name_len;
+
+            LOG_DEBUG("import #%d: (%s, %s)", i, sub_module_name, field_name);
+#if WASM_ENABLE_MULTI_MODULE != 0
+            /* assume built-in modules have been loaded */
+            if (!wasm_runtime_is_built_in_module(sub_module_name)) {
+                LOG_DEBUG("%s is an exported field of a %s", field_name,
+                          sub_module_name);
+                /*
+                * if it returns well, guarantee that
+                * the sub_module_name and its dependencies
+                * have been loaded well
+                */
+                sub_module = load_depended_module(module, sub_module_name,
+                                                  error_buf, error_buf_size);
+                if (!sub_module) {
+                    return false;
+                }
+            }
+#endif
 
             CHECK_BUF(p, p_end, 1);
             /* 0x00/0x01/0x02/0x03 */
@@ -744,36 +1230,38 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                 case IMPORT_KIND_FUNC: /* import function */
                     bh_assert(import_functions);
                     import = import_functions++;
-                    read_leb_uint32(p, p_end, type_index);
-                    if (type_index >= module->type_count) {
-                        set_error_buf(error_buf, error_buf_size,
-                                      "Load import section failed: "
-                                      "unknown type.");
-                        return false;
-                    }
-                    import->u.function.func_type = module->types[type_index];
-
-                    if (!(import->u.function.func_ptr_linked =
-                            wasm_native_resolve_symbol(module_name, field_name,
-                                        import->u.function.func_type,
-                                        &import->u.function.signature,
-                                        &import->u.function.attachment,
-                                        &import->u.function.call_conv_raw))) {
-#if WASM_ENABLE_WAMR_COMPILER == 0 /* Output warning except running aot compiler */
-                        LOG_WARNING("warning: fail to link import function (%s, %s)\n",
-                                    module_name, field_name);
+                    if (!load_function_import(module, sub_module,
+                                              sub_module_name, field_name, &p,
+                                              p_end, &import->u.function,
+                                              error_buf, error_buf_size)) {
+#if WASM_ENABLE_WAMR_COMPILER == 0
+                        /* Output warning except running aot compiler */
+                        LOG_WARNING(
+                          "warning: fail to link import function (%s, %s)\n",
+                          sub_module_name, field_name);
 #endif
+                        return false;
                     }
                     break;
 
                 case IMPORT_KIND_TABLE: /* import table */
                     bh_assert(import_tables);
                     import = import_tables++;
-                    if (!load_table_import(&p, p_end, &import->u.table,
-                                error_buf, error_buf_size))
+                    if (!load_table_import(sub_module,
+                                           sub_module_name,
+                                           field_name,
+                                           &p,
+                                           p_end,
+                                           &import->u.table,
+                                           error_buf,
+                                           error_buf_size)) {
+                        LOG_WARNING("can not import such a table (%s,%s)",
+                                    sub_module_name, field_name);
                         return false;
+                    }
                     if (module->import_table_count > 1) {
-                        set_error_buf(error_buf, error_buf_size, "multiple tables");
+                        set_error_buf(error_buf, error_buf_size,
+                                      "multiple tables");
                         return false;
                     }
                     break;
@@ -781,12 +1269,20 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                 case IMPORT_KIND_MEMORY: /* import memory */
                     bh_assert(import_memories);
                     import = import_memories++;
-                    if (!load_memory_import(&p, p_end, &import->u.memory,
-                                error_buf, error_buf_size))
+                    if (!load_memory_import(sub_module,
+                                            sub_module_name,
+                                            field_name,
+                                            &p,
+                                            p_end,
+                                            &import->u.memory,
+                                            error_buf,
+                                            error_buf_size)) {
                         return false;
+                    }
                     if (module->import_memory_count > 1) {
-                        set_error_buf(error_buf, error_buf_size,
-                                      "Load import section failed: multiple memories");
+                        set_error_buf(
+                          error_buf, error_buf_size,
+                          "Load import section failed: multiple memories");
                         return false;
                     }
                     break;
@@ -794,28 +1290,13 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                 case IMPORT_KIND_GLOBAL: /* import global */
                     bh_assert(import_globals);
                     import = import_globals++;
-                    CHECK_BUF(p, p_end, 2);
-                    import->u.global.type = read_uint8(p);
-                    mutable = read_uint8(p);
-                    if (mutable >= 2) {
-                        set_error_buf(error_buf, error_buf_size,
-                                      "Load import section failed: "
-                                      "invalid mutability");
+                    if (!load_global_import(module,
+                                            sub_module,
+                                            sub_module_name, field_name, &p,
+                                            p_end, &import->u.global,
+                                            error_buf, error_buf_size)) {
                         return false;
                     }
-                    import->u.global.is_mutable = mutable & 1 ? true : false;
-#if WASM_ENABLE_LIBC_BUILTIN != 0
-                    if (!(wasm_native_lookup_libc_builtin_global(
-                                    module_name, field_name,
-                                    &import->u.global))) {
-                        if (error_buf != NULL)
-                            snprintf(error_buf, error_buf_size,
-                                     "Load import section failed: "
-                                     "resolve import global (%s, %s) failed.",
-                                     module_name, field_name);
-                        return false;
-                    }
-#endif
                     break;
 
                 default:
@@ -825,8 +1306,9 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                     return false;
             }
             import->kind = kind;
-            import->u.names.module_name = module_name;
+            import->u.names.module_name = sub_module_name;
             import->u.names.field_name = field_name;
+            (void)sub_module;
         }
 
 #if WASM_ENABLE_LIBC_WASI != 0
@@ -850,6 +1332,7 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
     LOG_VERBOSE("Load import section success.\n");
     (void)u8;
     (void)u32;
+    (void)type_index;
     return true;
 }
 
@@ -985,6 +1468,16 @@ load_function_section(const uint8 *buf, const uint8 *buf_end,
             if (local_count > 0)
                 func->local_types = (uint8*)func + sizeof(WASMFunction);
             func->code_size = code_size;
+            /*
+             * we shall make a copy of code body [p_code, p_code + code_size]
+             * when we are worrying about inappropriate releasing behaviour.
+             * all code bodies are actually in a buffer which user allocates in
+             * his embedding environment and we don't have power on them.
+             * it will be like:
+             * code_body_cp = malloc(code_size);
+             * memcpy(code_body_cp, p_code, code_size);
+             * func->code = code_body_cp;
+             */
             func->code = (uint8*)p_code;
 
             /* Load each local type */
@@ -1045,6 +1538,11 @@ load_table_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
     WASMTable *table;
 
     read_leb_uint32(p, p_end, table_count);
+    /* a total of one table is allowed */
+    if (module->import_table_count + table_count > 1) {
+        set_error_buf(error_buf, error_buf_size, "multiple tables");
+        return false;
+    }
 
     if (table_count) {
         if (table_count > 1) {
@@ -1090,6 +1588,11 @@ load_memory_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
     WASMMemory *memory;
 
     read_leb_uint32(p, p_end, memory_count);
+    /* a total of one memory is allowed */
+    if (module->import_memory_count + memory_count > 1) {
+        set_error_buf(error_buf, error_buf_size, "multiple memories");
+        return false;
+    }
 
     if (memory_count) {
         if (memory_count > 1) {
@@ -1309,6 +1812,13 @@ load_table_segment_section(const uint8 *buf, const uint8 *buf_end, WASMModule *m
                 return false;
             }
             read_leb_uint32(p, p_end, table_index);
+            if (table_index
+                >= module->import_table_count + module->table_count) {
+                LOG_ERROR("table#%d does not exist", table_index);
+                set_error_buf(error_buf, error_buf_size, "unknown table");
+                return false;
+            }
+
             table_segment->table_index = table_index;
 
             /* initialize expression */
@@ -1372,6 +1882,12 @@ load_data_segment_section(const uint8 *buf, const uint8 *buf_end,
 
         for (i = 0; i < data_seg_count; i++) {
             read_leb_uint32(p, p_end, mem_index);
+            if (mem_index
+                >= module->import_memory_count + module->memory_count) {
+                LOG_ERROR("memory#%d does not exist", mem_index);
+                set_error_buf(error_buf, error_buf_size, "unknown memory");
+                return false;
+            }
 
             if (!load_init_expr(&p, p_end, &init_expr, VALUE_TYPE_I32,
                                 error_buf, error_buf_size))
@@ -1447,23 +1963,24 @@ load_start_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
     read_leb_uint32(p, p_end, start_function);
 
-    if (start_function >= module->function_count
-                          + module->import_function_count) {
+    if (start_function
+        >= module->function_count + module->import_function_count) {
         set_error_buf(error_buf, error_buf_size,
-                "Load start section failed: "
-                "unknown function.");
+                      "Load start section failed: "
+                      "unknown function.");
         return false;
     }
 
     if (start_function < module->import_function_count)
         type = module->import_functions[start_function].u.function.func_type;
     else
-        type = module->functions
-                [start_function - module->import_function_count]->func_type;
+        type =
+          module->functions[start_function - module->import_function_count]
+            ->func_type;
     if (type->param_count != 0 || type->result_count != 0) {
         set_error_buf(error_buf, error_buf_size,
-                "Load start section failed: "
-                "invalid start function.");
+                      "Load start section failed: "
+                      "invalid start function.");
         return false;
     }
 
@@ -1560,6 +2077,7 @@ load_from_sections(WASMModule *module, WASMSection *sections,
     while (section) {
         buf = section->section_body;
         buf_end = buf + section->section_body_size;
+        LOG_DEBUG("to section %d", section->section_type);
         switch (section->section_type) {
             case SECTION_TYPE_USER:
                 /* unsupported user section, ignore it. */
@@ -1781,6 +2299,9 @@ create_module(char *error_buf, uint32 error_buf_size)
     /* Set start_function to -1, means no start function */
     module->start_function = (uint32)-1;
 
+#if WASM_ENABLE_MULTI_MODULE != 0
+    module->import_module_list = &module->import_module_list_head;
+#endif
     return module;
 }
 
@@ -1940,25 +2461,17 @@ load(const uint8 *buf, uint32 size, WASMModule *module,
 WASMModule*
 wasm_loader_load(const uint8 *buf, uint32 size, char *error_buf, uint32 error_buf_size)
 {
-    WASMModule *module = wasm_runtime_malloc(sizeof(WASMModule));
-
+    WASMModule *module = create_module(error_buf, error_buf_size);
     if (!module) {
-        set_error_buf(error_buf, error_buf_size,
-                "WASM module load failed: allocate memory failed.");
         return NULL;
     }
 
-    memset(module, 0, sizeof(WASMModule));
-
-    module->module_type = Wasm_Module_Bytecode;
-
-    /* Set start_function to -1, means no start function */
-    module->start_function = (uint32)-1;
-
-    if (!load(buf, size, module, error_buf, error_buf_size))
+    if (!load(buf, size, module, error_buf, error_buf_size)) {
+        LOG_VERBOSE("Load module failed, %s", error_buf);
         goto fail;
+    }
 
-    LOG_VERBOSE("Load module success.\n");
+    LOG_VERBOSE("Load module success");
     return module;
 
 fail:
@@ -2038,6 +2551,30 @@ wasm_loader_unload(WASMModule *module)
             node = node_next;
         }
     }
+
+#if WASM_ENABLE_MULTI_MODULE != 0
+    /* just release the sub module list */
+    if (module->import_module_list) {
+        WASMRegisteredModule *node =
+          bh_list_first_elem(module->import_module_list);
+        while (node) {
+            WASMRegisteredModule *next = bh_list_elem_next(node);
+            bh_list_remove(module->import_module_list, node);
+            /*
+             * unload(sub_module) will be trigged during runtime_destroy().
+             * every module in the global module list will be unloaded one by
+             * one. so don't worry.
+             */
+            wasm_runtime_free(node);
+            /*
+             *
+             * the module file reading buffer will be released
+             * in runtime_destroy()
+             */
+            node = next;
+        }
+    }
+#endif
 
     wasm_runtime_free(module);
 }

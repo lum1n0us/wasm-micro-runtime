@@ -120,6 +120,11 @@ enum {
 #define WASM_ENABLE_OPCODE_COUNTER 0
 #endif
 
+/* Support a module with dependency, other modules */
+#ifndef WASM_ENABLE_MULTI_MODULE
+#define WASM_ENABLE_MULTI_MODULE 0
+#endif
+
 /* Heap and stack profiling */
 #define BH_ENABLE_MEMORY_PROFILING 0
 
