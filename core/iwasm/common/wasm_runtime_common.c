@@ -267,6 +267,7 @@ wasm_runtime_register_module_internal(const char *module_name,
     os_mutex_lock(&registered_module_list_lock);
     bh_list_status ret = bh_list_insert(registered_module_list, node);
     bh_assert(BH_LIST_SUCCESS == ret);
+    (void)ret;
     os_mutex_unlock(&registered_module_list_lock);
     return true;
 }
@@ -607,6 +608,7 @@ wasm_runtime_add_loading_module(const char *module_name, char *error_buf,
     os_mutex_lock(&loading_module_list_lock);
     bh_list_status ret = bh_list_insert(loading_module_list, loadingModule);
     bh_assert(BH_LIST_SUCCESS == ret);
+    (void)ret;
     os_mutex_unlock(&loading_module_list_lock);
     return true;
 }

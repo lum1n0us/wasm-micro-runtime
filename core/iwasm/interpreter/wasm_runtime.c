@@ -869,6 +869,7 @@ sub_module_instantiate(WASMModule *module, WASMModuleInstance *module_inst,
         bh_list_status ret =
           bh_list_insert(sub_module_inst_list, sub_module_inst_list_node);
         bh_assert(BH_LIST_SUCCESS == ret);
+        (void)ret;
 
         sub_module_list_node = bh_list_elem_next(sub_module_list_node);
     }

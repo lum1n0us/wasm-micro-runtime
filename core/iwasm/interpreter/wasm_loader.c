@@ -933,6 +933,7 @@ register_sub_module(const WASMModule *parent_module,
     node->module = sub_module;
     bh_list_status ret = bh_list_insert(parent_module->import_module_list, node);
     bh_assert(BH_LIST_SUCCESS == ret);
+    (void)ret;
     return true;
 }
 
