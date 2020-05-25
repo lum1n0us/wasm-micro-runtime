@@ -1222,6 +1222,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
           bh_assert(global_idx < module->global_count);
           global = globals + global_idx;
+          global_addr =
 #if WASM_ENABLE_MULTI_MODULE != 0
             global->import_global_inst
               ? global->import_module_inst->global_data
