@@ -1263,9 +1263,6 @@ wasm_deinstantiate(WASMModuleInstance *module_inst)
     if (module_inst->global_data)
         wasm_runtime_free(module_inst->global_data);
 
-    if (module_inst->global_data)
-        wasm_runtime_free(module_inst->global_data);
-
     wasm_runtime_free(module_inst);
 }
 
