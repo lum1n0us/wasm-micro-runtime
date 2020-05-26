@@ -1680,6 +1680,20 @@ load_global_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
             if (!load_init_expr(&p, p_end, &(global->init_expr),
                                 global->type, error_buf, error_buf_size))
                 return false;
+
+            if (INIT_EXPR_TYPE_GET_GLOBAL == global->init_expr.init_expr_type) {
+                /**
+                 * Currently, constant expressions occurring as initializers
+                 * of globals are further constrained in that contained
+                 * global.get instructions are
+                 * only allowed to refer to imported globals.
+                 */
+                uint32 target_global_index = global->init_expr.u.global_index;
+                if (target_global_index >= module->import_global_count) {
+                    set_error_buf(error_buf, error_buf_size, "unknown global");
+                    return false;
+                }
+            }
         }
     }
 
