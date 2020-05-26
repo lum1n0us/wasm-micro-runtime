@@ -877,7 +877,7 @@ wasm_runtime_lookup_function(WASMModuleInstanceCommon * const module_inst,
 bool
 wasm_runtime_call_wasm(WASMExecEnv *exec_env,
                        WASMFunctionInstanceCommon *function,
-                       unsigned argc, uint32 argv[])
+                       uint32 argc, uint32 argv[])
 {
     if (!wasm_runtime_exec_env_check(exec_env)) {
         LOG_ERROR("Invalid exec env stack info.");
@@ -905,7 +905,7 @@ wasm_runtime_call_wasm(WASMExecEnv *exec_env,
 bool
 wasm_runtime_create_exec_env_and_call_wasm(WASMModuleInstanceCommon *module_inst,
                                            WASMFunctionInstanceCommon *function,
-                                           unsigned argc, uint32 argv[])
+                                           uint32 argc, uint32 argv[])
 {
 #if WASM_ENABLE_INTERP != 0
     if (module_inst->module_type == Wasm_Module_Bytecode)
@@ -1669,7 +1669,7 @@ check_main_func_type(const WASMType *type)
 
 bool
 wasm_application_execute_main(WASMModuleInstanceCommon *module_inst,
-                              int argc, char *argv[])
+                              int32 argc, char *argv[])
 {
     WASMFunctionInstanceCommon *func;
     WASMType *func_type = NULL;
@@ -1935,7 +1935,7 @@ static union {
 
 bool
 wasm_application_execute_func(WASMModuleInstanceCommon *module_inst,
-                              const char *name, int argc, char *argv[])
+                              const char *name, int32 argc, char *argv[])
 {
     WASMFunctionInstanceCommon *func;
     WASMType *type = NULL;

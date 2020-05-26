@@ -149,7 +149,7 @@ wasm_runtime_get_user_data(wasm_exec_env_t exec_env);
 bool
 wasm_runtime_call_wasm(WASMExecEnv *exec_env,
                        WASMFunctionInstanceCommon *function,
-                       unsigned argc, uint32 argv[]);
+                       uint32 argc, uint32 argv[]);
 
 /**
  * Call a function reference of a given WASM runtime instance with
@@ -170,23 +170,23 @@ wasm_runtime_call_wasm(WASMExecEnv *exec_env,
  */
 bool
 wasm_runtime_call_indirect(WASMExecEnv *exec_env,
-                           uint32_t element_indices,
-                           uint32_t argc, uint32_t argv[]);
+                           uint32 element_indices,
+                           uint32 argc, uint32 argv[]);
 
 bool
 wasm_runtime_create_exec_env_and_call_wasm(WASMModuleInstanceCommon *module_inst,
                                            WASMFunctionInstanceCommon *function,
-                                           unsigned argc, uint32 argv[]);
+                                           uint32 argc, uint32 argv[]);
 
 /* See wasm_export.h for description */
 bool
 wasm_application_execute_main(WASMModuleInstanceCommon *module_inst,
-                              int argc, char *argv[]);
+                              int32 argc, char *argv[]);
 
 /* See wasm_export.h for description */
 bool
 wasm_application_execute_func(WASMModuleInstanceCommon *module_inst,
-                              const char *name, int argc, char *argv[]);
+                              const char *name, int32 argc, char *argv[]);
 
 /* See wasm_export.h for description */
 void

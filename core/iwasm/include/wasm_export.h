@@ -6,7 +6,7 @@
 #ifndef _WASM_EXPORT_H
 #define _WASM_EXPORT_H
 
-#include <inttypes.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include "lib_export.h"
 
