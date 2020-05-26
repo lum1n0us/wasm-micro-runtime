@@ -228,11 +228,24 @@ check_utf8_str(const uint8* str, uint32 len)
     return true;
 }
 
+static StringNode*
+search_const_str_list(const uint8 *str, uint32 len, WASMModule *module)
+{
+    StringNode *node = module->const_str_list;
+    /* Search const str list */
+    while (node
+           && (strlen(node->str) != len
+               || strncmp((char *)node->str, (char *)str, len))) {
+        node = node->next;
+    }
+    return node != NULL ? node : NULL;
+}
+
 static char*
 const_str_list_insert(const uint8 *str, uint32 len, WASMModule *module,
                      char* error_buf, uint32 error_buf_size)
 {
-    StringNode *node, *node_next;
+    StringNode *node;
 
     if (!check_utf8_str(str, len)) {
         set_error_buf(error_buf, error_buf_size,
@@ -242,17 +255,12 @@ const_str_list_insert(const uint8 *str, uint32 len, WASMModule *module,
     }
 
     /* Search const str list */
-    node = module->const_str_list;
-    while (node) {
-        node_next = node->next;
-        if (strlen(node->str) == len
-            && !memcmp(node->str, str, len))
-            break;
-        node = node_next;
-    }
+    node = search_const_str_list(str, len, module);
 
-    if (node)
+    if (node) {
+        LOG_DEBUG("reuse %s", node->str);
         return node->str;
+    }
 
     if (!(node = wasm_runtime_malloc(sizeof(StringNode) + len + 1))) {
         set_error_buf(error_buf, error_buf_size,
@@ -1714,10 +1722,19 @@ load_export_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
         for (i = 0; i < export_count; i++, export++) {
             read_leb_uint32(p, p_end, str_len);
             CHECK_BUF(p, p_end, str_len);
+
+            if (search_const_str_list(p, str_len, module)) {
+                set_error_buf(error_buf,
+                              error_buf_size,
+                              "duplicate export name");
+                return false;
+            }
+
             if (!(export->name = const_str_list_insert(p, str_len, module,
                             error_buf, error_buf_size))) {
                 return false;
             }
+
             p += str_len;
             CHECK_BUF(p, p_end, 1);
             export->kind = read_uint8(p);
@@ -4941,6 +4958,7 @@ handle_next_reachable_block:
 
             case WASM_OP_SET_GLOBAL:
             {
+                bool is_multable = false;
                 read_leb_uint32(p, p_end, global_idx);
                 if (global_idx >= global_count) {
                     set_error_buf(error_buf, error_buf_size,
@@ -4949,9 +4967,23 @@ handle_next_reachable_block:
                     goto fail;
                 }
 
-                global_type = global_idx < module->import_global_count
-                              ? module->import_globals[global_idx].u.global.type
-                              : module->globals[global_idx - module->import_global_count].type;
+                is_multable =
+                  global_idx < module->import_global_count
+                    ? module->import_globals[global_idx].u.global.is_mutable
+                    : module->globals[global_idx - module->import_global_count]
+                        .is_mutable;
+                if (!is_multable) {
+                    set_error_buf(error_buf,
+                                  error_buf_size,
+                                  "global is immutable");
+                    goto fail;
+                }
+
+                global_type =
+                  global_idx < module->import_global_count
+                    ? module->import_globals[global_idx].u.global.type
+                    : module->globals[global_idx - module->import_global_count]
+                        .type;
 
                 POP_TYPE(global_type);
 #if WASM_ENABLE_FAST_INTERP != 0
