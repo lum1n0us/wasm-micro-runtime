@@ -485,16 +485,18 @@ load_function_import(const WASMModule *parent_module, WASMModule *sub_module,
 #endif
 
     if (!linked_func) {
-#if WASM_ENABLE_WAMR_COMPILER == 0
-        LOG_WARNING(
-          "warning: fail to link import a built-in function (%s, %s)",
-          sub_module_name,
-          function_name);
-#endif
+#if WASM_ENABLE_SPEC_TEST != 0
         set_error_buf(error_buf,
                       error_buf_size,
                       "unknown import or incompatible import type");
         return false;
+#else
+#if WASM_ENABLE_WAMR_COMPILER == 0
+        LOG_WARNING(
+          "warning: fail to link import function (%s, %s)",
+          sub_module_name, function_name);
+#endif
+#endif
     }
 
     function->module_name = sub_module_name;
@@ -1238,12 +1240,8 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                                               p_end, &import->u.function,
                                               error_buf, error_buf_size)) {
 #if WASM_ENABLE_WAMR_COMPILER == 0
-                        /* Output warning except running aot compiler */
-                        LOG_WARNING(
-                          "warning: fail to link import function (%s, %s)\n",
-                          sub_module_name, field_name);
-#endif
                         return false;
+#endif
                     }
                     break;
 
