@@ -4271,7 +4271,7 @@ static bool
 check_memory_access_align(uint8 opcode, uint32 align,
                           char *error_buf, uint32 error_buf_size)
 {
-    uint32 mem_access_aligns[] = {
+    uint8 mem_access_aligns[] = {
        2, 3, 2, 3, 0, 0, 1, 1, 0, 0, 1, 1, 2, 2, /* loads */
        2, 3, 2, 3, 0, 1, 0, 1, 2                 /* stores */
     };
