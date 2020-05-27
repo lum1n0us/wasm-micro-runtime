@@ -62,6 +62,7 @@ aot_create_mem_init_data_list(const WASMModule *module)
 
 #if WASM_ENABLE_BULK_MEMORY != 0
     data_list[i]->is_passive = module->data_segments[i]->is_passive;
+    data_list[i]->memory_index = module->data_segments[i]->memory_index;
 #endif
     data_list[i]->offset = module->data_segments[i]->base_offset;
     data_list[i]->byte_count = module->data_segments[i]->data_length;

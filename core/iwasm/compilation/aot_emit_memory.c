@@ -760,6 +760,9 @@ aot_compile_op_memory_init(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
 {
     LLVMValueRef seg, offset, dst, len, param_values[5], ret_value, func, value;
     LLVMTypeRef param_types[5], ret_type, func_type, func_ptr_type;
+    AOTFuncType *aot_func_type = func_ctx->aot_func->func_type;
+    LLVMBasicBlockRef block_curr = LLVMGetInsertBlock(comp_ctx->builder);
+    LLVMBasicBlockRef mem_init_fail, init_success;
 
     seg = I32_CONST(seg_index);
 
@@ -772,7 +775,7 @@ aot_compile_op_memory_init(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
     param_types[2] = I32_TYPE;
     param_types[3] = I32_TYPE;
     param_types[4] = I32_TYPE;
-    ret_type = VOID_TYPE;
+    ret_type = INT8_TYPE;
 
     GET_AOT_FUNCTION(aot_memory_init, 5);
 
@@ -787,6 +790,45 @@ aot_compile_op_memory_init(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
         aot_set_last_error("llvm build call failed.");
         return false;
     }
+
+    BUILD_ICMP(LLVMIntUGT, ret_value, I8_ZERO, ret_value, "mem_init_ret");
+
+    ADD_BASIC_BLOCK(mem_init_fail, "mem_init_fail");
+    ADD_BASIC_BLOCK(init_success, "init_success");
+
+    LLVMMoveBasicBlockAfter(mem_init_fail, block_curr);
+    LLVMMoveBasicBlockAfter(init_success, block_curr);
+
+    if (!LLVMBuildCondBr(comp_ctx->builder, ret_value,
+                         init_success, mem_init_fail)) {
+        aot_set_last_error("llvm build cond br failed.");
+        goto fail;
+    }
+
+    /* If memory.init failed, return this function
+        so the runtime can catch the exception */
+    LLVMPositionBuilderAtEnd(comp_ctx->builder, mem_init_fail);
+    if (aot_func_type->result_count) {
+        switch (aot_func_type->types[aot_func_type->param_count]) {
+            case VALUE_TYPE_I32:
+                LLVMBuildRet(comp_ctx->builder, I32_ZERO);
+                break;
+            case VALUE_TYPE_I64:
+                LLVMBuildRet(comp_ctx->builder, I64_ZERO);
+                break;
+            case VALUE_TYPE_F32:
+                LLVMBuildRet(comp_ctx->builder, F32_ZERO);
+                break;
+            case VALUE_TYPE_F64:
+                LLVMBuildRet(comp_ctx->builder, F64_ZERO);
+                break;
+        }
+    }
+    else {
+        LLVMBuildRetVoid(comp_ctx->builder);
+    }
+
+    LLVMPositionBuilderAtEnd(comp_ctx->builder, init_success);
 
     return true;
 fail:
@@ -804,7 +846,7 @@ aot_compile_op_data_drop(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
 
     param_types[0] = INT8_PTR_TYPE;
     param_types[1] = I32_TYPE;
-    ret_type = VOID_TYPE;
+    ret_type = INT8_TYPE;
 
     GET_AOT_FUNCTION(aot_data_drop, 2);
 

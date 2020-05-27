@@ -122,18 +122,20 @@ get_target_info_section_size()
 static uint32
 get_mem_init_data_size(AOTMemInitData *mem_init_data)
 {
-    /* TODO: use option to control the size */
-#if WASM_ENABLE_BULK_MEMORY != 0
-    /* is_passive (4 bytes) + init expr type (4 bytes) +
-        init expr value (8 bytes) + byte count (4 bytes) + bytes */
-    return (uint32)(sizeof(uint32) + sizeof(uint32) + sizeof(uint64)
-                    + sizeof(uint32) + mem_init_data->byte_count);
-#else
     /* init expr type (4 bytes) + init expr value (8 bytes)
        + byte count (4 bytes) + bytes */
-    return (uint32)(sizeof(uint32) + sizeof(uint64)
-                    + sizeof(uint32) + mem_init_data->byte_count);
-#endif
+    uint32 total_size =
+        (uint32)(sizeof(uint32) + sizeof(uint64)
+                 + sizeof(uint32) + mem_init_data->byte_count);
+
+    /* bulk_memory enabled:
+        is_passive (4 bytes) + memory_index (4 bytes)
+       bulk memory disabled:
+        placeholder (4 bytes) + placeholder (4 bytes)
+    */
+    total_size += (sizeof(uint32) + sizeof(uint32));
+
+    return total_size;
 }
 
 static uint32
@@ -690,7 +692,8 @@ get_relocation_section_size(AOTObjectData *obj_data)
 }
 
 static uint32
-get_aot_file_size(AOTCompData *comp_data, AOTObjectData *obj_data)
+get_aot_file_size(AOTCompContext *comp_ctx, AOTCompData *comp_data,
+                  AOTObjectData *obj_data)
 {
     uint32 size = 0;
 
@@ -876,7 +879,8 @@ aot_emit_target_info_section(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
 
 static bool
 aot_emit_mem_info(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
-                  AOTCompData *comp_data, AOTObjectData *obj_data)
+                  AOTCompContext *comp_ctx, AOTCompData *comp_data,
+                  AOTObjectData *obj_data)
 {
     uint32 offset = *p_offset, i;
     AOTMemInitData **init_datas = comp_data->mem_init_data_list;
@@ -890,11 +894,18 @@ aot_emit_mem_info(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
 
     for (i = 0; i < comp_data->mem_init_data_count; i++) {
         offset = align_uint(offset, 4);
-        /* TODO: use option to control the emit */
-        /* TODO: emit memory_index */
 #if WASM_ENABLE_BULK_MEMORY != 0
-        EMIT_U32(init_datas[i]->is_passive);
+        if (comp_ctx->enable_bulk_memory) {
+            EMIT_U32(init_datas[i]->is_passive);
+            EMIT_U32(init_datas[i]->memory_index);
+        }
+        else
 #endif
+        {
+            /* emit two placeholder to keep the same size */
+            EMIT_U32(0);
+            EMIT_U32(0);
+        }
         EMIT_U32(init_datas[i]->offset.init_expr_type);
         EMIT_U64(init_datas[i]->offset.u.i64);
         EMIT_U32(init_datas[i]->byte_count);
@@ -1090,7 +1101,8 @@ aot_emit_object_data_section_info(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
 
 static bool
 aot_emit_init_data_section(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
-                           AOTCompData *comp_data, AOTObjectData *obj_data)
+                           AOTCompContext *comp_ctx, AOTCompData *comp_data,
+                           AOTObjectData *obj_data)
 {
     uint32 section_size = get_init_data_section_size(comp_data, obj_data);
     uint32 offset = *p_offset;
@@ -1100,7 +1112,7 @@ aot_emit_init_data_section(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
     EMIT_U32(AOT_SECTION_TYPE_INIT_DATA);
     EMIT_U32(section_size);
 
-    if (!aot_emit_mem_info(buf, buf_end, &offset, comp_data, obj_data)
+    if (!aot_emit_mem_info(buf, buf_end, &offset, comp_ctx, comp_data, obj_data)
         || !aot_emit_table_info(buf, buf_end, &offset, comp_data, obj_data)
         || !aot_emit_func_type_info(buf, buf_end, &offset, comp_data, obj_data)
         || !aot_emit_import_global_info(buf, buf_end, &offset, comp_data, obj_data)
@@ -1950,7 +1962,7 @@ aot_emit_aot_file(AOTCompContext *comp_ctx, AOTCompData *comp_data,
 
     bh_print_time("Begin to emit AOT file");
 
-    aot_file_size = get_aot_file_size(comp_data, obj_data);
+    aot_file_size = get_aot_file_size(comp_ctx, comp_data, obj_data);
 
     if (!(buf = aot_file_buf = wasm_runtime_malloc(aot_file_size))) {
         aot_set_last_error("allocate memory failed.");
@@ -1962,7 +1974,7 @@ aot_emit_aot_file(AOTCompContext *comp_ctx, AOTCompData *comp_data,
 
     if (!aot_emit_file_header(buf, buf_end, &offset, comp_data, obj_data)
         || !aot_emit_target_info_section(buf, buf_end, &offset, comp_data, obj_data)
-        || !aot_emit_init_data_section(buf, buf_end, &offset, comp_data, obj_data)
+        || !aot_emit_init_data_section(buf, buf_end, &offset, comp_ctx, comp_data, obj_data)
         || !aot_emit_text_section(buf, buf_end, &offset, comp_data, obj_data)
         || !aot_emit_func_section(buf, buf_end, &offset, comp_data, obj_data)
         || !aot_emit_export_section(buf, buf_end, &offset, comp_data, obj_data)
