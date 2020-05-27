@@ -228,24 +228,11 @@ check_utf8_str(const uint8* str, uint32 len)
     return true;
 }
 
-static StringNode*
-search_const_str_list(const uint8 *str, uint32 len, WASMModule *module)
-{
-    StringNode *node = module->const_str_list;
-    /* Search const str list */
-    while (node
-           && (strlen(node->str) != len
-               || strncmp((char *)node->str, (char *)str, len))) {
-        node = node->next;
-    }
-    return node != NULL ? node : NULL;
-}
-
 static char*
 const_str_list_insert(const uint8 *str, uint32 len, WASMModule *module,
                      char* error_buf, uint32 error_buf_size)
 {
-    StringNode *node;
+    StringNode *node, *node_next;
 
     if (!check_utf8_str(str, len)) {
         set_error_buf(error_buf, error_buf_size,
@@ -255,7 +242,14 @@ const_str_list_insert(const uint8 *str, uint32 len, WASMModule *module,
     }
 
     /* Search const str list */
-    node = search_const_str_list(str, len, module);
+    node = module->const_str_list;
+    while (node) {
+        node_next = node->next;
+        if (strlen(node->str) == len
+            && !memcmp(node->str, str, len))
+            break;
+        node = node_next;
+    }
 
     if (node) {
         LOG_DEBUG("reuse %s", node->str);
@@ -1268,11 +1262,6 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                                     sub_module_name, field_name);
                         return false;
                     }
-                    if (module->import_table_count > 1) {
-                        set_error_buf(error_buf, error_buf_size,
-                                      "multiple tables");
-                        return false;
-                    }
                     break;
 
                 case IMPORT_KIND_MEMORY: /* import memory */
@@ -1286,12 +1275,6 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                                             &import->u.memory,
                                             error_buf,
                                             error_buf_size)) {
-                        return false;
-                    }
-                    if (module->import_memory_count > 1) {
-                        set_error_buf(
-                          error_buf, error_buf_size,
-                          "Load import section failed: multiple memories");
                         return false;
                     }
                     break;
@@ -1554,11 +1537,6 @@ load_table_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
     }
 
     if (table_count) {
-        if (table_count > 1) {
-            set_error_buf(error_buf, error_buf_size,
-                          "Load table section failed: multiple tables");
-            return false;
-        }
         module->table_count = table_count;
         total_size = sizeof(WASMTable) * (uint64)table_count;
         if (total_size >= UINT32_MAX
@@ -1604,11 +1582,6 @@ load_memory_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
     }
 
     if (memory_count) {
-        if (memory_count > 1) {
-            set_error_buf(error_buf, error_buf_size,
-                          "Load memory section failed: multiple memories");
-            return false;
-        }
         module->memory_count = memory_count;
         total_size = sizeof(WASMMemory) * (uint64)memory_count;
         if (total_size >= UINT32_MAX
@@ -1712,10 +1685,11 @@ load_export_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                     char *error_buf, uint32 error_buf_size)
 {
     const uint8 *p = buf, *p_end = buf_end;
-    uint32 export_count, i, index;
+    uint32 export_count, i, j, index;
     uint64 total_size;
     uint32 str_len;
     WASMExport *export;
+    const char *name;
 
     read_leb_uint32(p, p_end, export_count);
 
@@ -1737,11 +1711,14 @@ load_export_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
             read_leb_uint32(p, p_end, str_len);
             CHECK_BUF(p, p_end, str_len);
 
-            if (search_const_str_list(p, str_len, module)) {
-                set_error_buf(error_buf,
-                              error_buf_size,
-                              "duplicate export name");
-                return false;
+            for (j = 0; j < i; j++) {
+                name = module->exports[j].name;
+                if (strlen(name) == str_len
+                    && memcmp(name, p, str_len) == 0) {
+                   set_error_buf(error_buf, error_buf_size,
+                                 "duplicate export name");
+                   return false;
+                }
             }
 
             if (!(export->name = const_str_list_insert(p, str_len, module,
@@ -4291,6 +4268,24 @@ check_memory(WASMModule *module,
   } while (0)
 
 static bool
+check_memory_access_align(uint8 opcode, uint32 align,
+                          char *error_buf, uint32 error_buf_size)
+{
+    uint32 mem_access_aligns[] = {
+       2, 3, 2, 3, 0, 0, 1, 1, 0, 0, 1, 1, 2, 2, /* loads */
+       2, 3, 2, 3, 0, 1, 0, 1, 2                 /* stores */
+    };
+    bh_assert(opcode >= WASM_OP_I32_LOAD
+              && opcode <= WASM_OP_I64_STORE32);
+    if (align > mem_access_aligns[opcode - WASM_OP_I32_LOAD]) {
+        set_error_buf(error_buf, error_buf_size,
+                      "alignment must not be larger than natural");
+        return false;
+    }
+    return true;
+}
+
+static bool
 is_block_type_valid(uint8 type)
 {
     return type == VALUE_TYPE_I32 ||
@@ -5205,6 +5200,10 @@ re_scan:
                 CHECK_MEMORY();
                 read_leb_uint32(p, p_end, align); /* align */
                 read_leb_uint32(p, p_end, mem_offset); /* offset */
+                if (!check_memory_access_align(opcode, align,
+                                               error_buf, error_buf_size)) {
+                    goto fail;
+                }
 #if WASM_ENABLE_FAST_INTERP != 0
                 emit_const(mem_offset);
 #endif
