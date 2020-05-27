@@ -575,7 +575,7 @@ wasm_runtime_destory_registered_module_list()
         /*
          * now, it is time to release every module in the runtime
          */
-        wasm_unload(reg_module->module);
+        wasm_runtime_unload((WASMModuleCommon*)reg_module->module);
         if (destroyer && reg_module->orig_file_buf) {
             destroyer(reg_module->orig_file_buf,
                       reg_module->orig_file_buf_size);
