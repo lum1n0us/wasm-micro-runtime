@@ -22,6 +22,8 @@ extern "C" {
 #define VALUE_TYPE_VOID 0x40
 /* Used by AOT */
 #define VALUE_TYPE_I1  0x41
+/*  Used by loader to represent any type of i32/i64/f32/f64 */
+#define VALUE_TYPE_ANY 0x42
 
 /* Table Element Type */
 #define TABLE_ELEM_TYPE_ANY_FUNC 0x70

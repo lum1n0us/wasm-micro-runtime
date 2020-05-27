@@ -1871,6 +1871,12 @@ load_table_segment_section(const uint8 *buf, const uint8 *buf_end, WASMModule *m
             }
             for (j = 0; j < function_count; j++) {
                 read_leb_uint32(p, p_end, function_index);
+                if (function_index >= module->function_count + module->function_count) {
+                    set_error_buf(error_buf, error_buf_size,
+                                  "Load table segment section failed: "
+                                  "unknown function");
+                    return false;
+                }
                 table_segment->func_indexes[j] = function_index;
             }
         }
@@ -2952,6 +2958,7 @@ wasm_loader_find_block_addr(BlockAddr *block_addr_cache,
 #define REF_I64_2 VALUE_TYPE_I64
 #define REF_F64_1 VALUE_TYPE_F64
 #define REF_F64_2 VALUE_TYPE_F64
+#define REF_ANY   VALUE_TYPE_ANY
 
 #if WASM_ENABLE_FAST_INTERP != 0
 
@@ -2973,8 +2980,6 @@ typedef struct BranchBlockPatch {
 typedef struct BranchBlock {
     uint8 block_type;
     uint8 return_type;
-    bool is_block_reachable;
-    bool skip_else_branch;
     uint8 *start_addr;
     uint8 *else_addr;
     uint8 *end_addr;
@@ -2984,6 +2989,14 @@ typedef struct BranchBlock {
     uint8 *code_compiled;
     BranchBlockPatch *patch_list;
 #endif
+
+    /* Indicate the operand stack is in polymorphic state.
+     * If the opcode is one of unreachable/br/br_table/return, stack is marked
+     * to polymorphic state until the block's 'end' opcode is processed.
+     * If stack is in polymorphic state and stack is empty, instruction can
+     * pop any type of value directly without decreasing stack top pointer
+     * and stack cell num. */
+    bool is_stack_polymorphic;
 } BranchBlock;
 
 typedef struct WASMLoaderContext {
@@ -3088,17 +3101,26 @@ static bool
 check_offset_push(WASMLoaderContext *ctx,
                   char *error_buf, uint32 error_buf_size)
 {
+    uint32 cell_num = (ctx->frame_offset - ctx->frame_offset_bottom);
     if (ctx->frame_offset >= ctx->frame_offset_boundary) {
         MEM_REALLOC(ctx->frame_offset_bottom, ctx->frame_offset_size,
                     ctx->frame_offset_size + 16);
         ctx->frame_offset_size += 16;
         ctx->frame_offset_boundary = ctx->frame_offset_bottom +
                     ctx->frame_offset_size / sizeof(int16);
-        ctx->frame_offset = ctx->frame_offset_bottom + ctx->stack_cell_num;
+        ctx->frame_offset = ctx->frame_offset_bottom + cell_num;
     }
     return true;
 fail:
     return false;
+}
+
+static bool
+check_offset_pop(WASMLoaderContext *ctx, uint32 cells)
+{
+    if (ctx->frame_offset - cells < ctx->frame_offset_bottom)
+        return false;
+    return true;
 }
 
 static void free_label_patch_list(BranchBlock *frame_csp)
@@ -3141,38 +3163,58 @@ fail:
     return false;
 }
 
+
 static bool
-check_stack_pop(WASMLoaderContext *ctx, uint8 type,
-                char *error_buf, uint32 error_buf_size,
-                const char *type_str)
+check_stack_top_values(uint8 *frame_ref, int32 stack_cell_num, uint8 type,
+                       char *error_buf, uint32 error_buf_size)
 {
-    uint32 block_stack_cell_num = ctx->stack_cell_num
-                                  - (ctx->frame_csp - 1)->stack_cell_num;
+    char *type_str[] = { "f64", "f32", "i64", "i32" };
 
     if (((type == VALUE_TYPE_I32 || type == VALUE_TYPE_F32)
-         && block_stack_cell_num < 1)
+         && stack_cell_num < 1)
         || ((type == VALUE_TYPE_I64 || type == VALUE_TYPE_F64)
-            && block_stack_cell_num < 2)) {
+            && stack_cell_num < 2)) {
         set_error_buf(error_buf, error_buf_size,
                       "WASM module load failed: "
                       "type mismatch: expect data but stack was empty");
         return false;
     }
 
-    if ((type == VALUE_TYPE_I32 && *(ctx->frame_ref - 1) != REF_I32)
-        || (type == VALUE_TYPE_F32 && *(ctx->frame_ref - 1) != REF_F32)
+    if ((type == VALUE_TYPE_I32 && *(frame_ref - 1) != REF_I32)
+        || (type == VALUE_TYPE_F32 && *(frame_ref - 1) != REF_F32)
         || (type == VALUE_TYPE_I64
-            && (*(ctx->frame_ref - 2) != REF_I64_1
-            || *(ctx->frame_ref - 1) != REF_I64_2))
+            && (*(frame_ref - 2) != REF_I64_1
+                || *(frame_ref - 1) != REF_I64_2))
         || (type == VALUE_TYPE_F64
-            && (*(ctx->frame_ref - 2) != REF_F64_1
-            || *(ctx->frame_ref - 1) != REF_F64_2))) {
+            && (*(frame_ref - 2) != REF_F64_1
+                || *(frame_ref - 1) != REF_F64_2))) {
         if (error_buf != NULL)
             snprintf(error_buf, error_buf_size, "%s%s%s",
                      "WASM module load failed: type mismatch: expect ",
-                     type_str, " but got other");
+                     type_str[type - VALUE_TYPE_F64], " but got other");
         return false;
     }
+
+    return true;
+}
+
+static bool
+check_stack_pop(WASMLoaderContext *ctx, uint8 type,
+                char *error_buf, uint32 error_buf_size)
+{
+    int32 block_stack_cell_num = (int32)
+        (ctx->stack_cell_num - (ctx->frame_csp - 1)->stack_cell_num);
+
+    if (block_stack_cell_num > 0
+        && *(ctx->frame_ref - 1) == VALUE_TYPE_ANY) {
+        /* the stack top is a value of any type, return success */
+        return true;
+    }
+
+    if (!check_stack_top_values(ctx->frame_ref, block_stack_cell_num,
+                                type, error_buf, error_buf_size))
+        return false;
+
     return true;
 }
 
@@ -3262,7 +3304,9 @@ wasm_loader_push_frame_ref(WASMLoaderContext *ctx, uint8 type,
     if (ctx->stack_cell_num > ctx->max_stack_cell_num)
         ctx->max_stack_cell_num = ctx->stack_cell_num;
 
-    if (type == VALUE_TYPE_I32 ||  type == VALUE_TYPE_F32)
+    if (type == VALUE_TYPE_I32
+        || type == VALUE_TYPE_F32
+        || type == VALUE_TYPE_ANY)
         return true;
 
     if (!check_stack_push(ctx, error_buf, error_buf_size))
@@ -3278,18 +3322,27 @@ static bool
 wasm_loader_pop_frame_ref(WASMLoaderContext *ctx, uint8 type,
                           char *error_buf, uint32 error_buf_size)
 {
-    char *type_str[] = { "f64", "f32", "i64", "i32" };
+    BranchBlock *cur_block = ctx->frame_csp - 1;
+    int32 available_stack_cell = (int32)
+        (ctx->stack_cell_num - cur_block->stack_cell_num);
+
+    /* Directly return success if current block is in stack
+     * polymorphic state while stack is empty. */
+    if (available_stack_cell <= 0 && cur_block->is_stack_polymorphic)
+        return true;
+
     if (type == VALUE_TYPE_VOID)
         return true;
 
-    if (!check_stack_pop(ctx, type, error_buf, error_buf_size,
-                         type_str[type - VALUE_TYPE_F64]))
+    if (!check_stack_pop(ctx, type, error_buf, error_buf_size))
         return false;
 
     ctx->frame_ref--;
     ctx->stack_cell_num--;
 
-    if (type == VALUE_TYPE_I32 || type == VALUE_TYPE_F32)
+    if (type == VALUE_TYPE_I32
+        || type == VALUE_TYPE_F32
+        || *ctx->frame_ref == VALUE_TYPE_ANY)
         return true;
 
     ctx->frame_ref--;
@@ -3339,17 +3392,7 @@ static bool
 wasm_loader_pop_frame_csp(WASMLoaderContext *ctx,
                           char *error_buf, uint32 error_buf_size)
 {
-    uint8 block_return_type;
-
     CHECK_CSP_POP();
-
-    block_return_type = (ctx->frame_csp - 1)->return_type;
-    if (!wasm_loader_pop_frame_ref(ctx, block_return_type,
-                                   error_buf, error_buf_size)
-        || !wasm_loader_push_frame_ref(ctx, block_return_type,
-                                       error_buf, error_buf_size))
-        goto fail;
-
     ctx->frame_csp--;
     ctx->csp_num--;
     return true;
@@ -3361,32 +3404,30 @@ static bool
 wasm_loader_check_br(WASMLoaderContext *ctx, uint32 depth,
                      char *error_buf, uint32 error_buf_size)
 {
+    BranchBlock *target_block, *cur_block;
+    int32 available_stack_cell;
+
     if (ctx->csp_num < depth + 1) {
       set_error_buf(error_buf, error_buf_size,
                     "WASM module load failed: unknown label, "
                     "unexpected end of section or function");
       return false;
     }
-    if ((ctx->frame_csp - (depth + 1))->block_type != BLOCK_TYPE_LOOP) {
-        uint8 tmp_ret_type = (ctx->frame_csp - (depth + 1))->return_type;
-        if ((tmp_ret_type == VALUE_TYPE_I32
-                && (ctx->stack_cell_num < 1 || *(ctx->frame_ref - 1) != REF_I32))
-            || (tmp_ret_type == VALUE_TYPE_F32
-                && (ctx->stack_cell_num < 1 || *(ctx->frame_ref - 1) != REF_F32))
-            || (tmp_ret_type == VALUE_TYPE_I64
-                && (ctx->stack_cell_num < 2
-                    || *(ctx->frame_ref - 2) != REF_I64_1
-                    || *(ctx->frame_ref - 1) != REF_I64_2))
-            || (tmp_ret_type == VALUE_TYPE_F64
-                && (ctx->stack_cell_num < 2
-                    || *(ctx->frame_ref - 2) != REF_F64_1
-                    || *(ctx->frame_ref - 1) != REF_F64_2))) {
-            set_error_buf(error_buf, error_buf_size,
-                    "WASM module load failed: type mismatch: "
-                    "expect data but stack was empty or other type");
+
+    target_block = ctx->frame_csp - (depth + 1);
+    cur_block = ctx->frame_csp - 1;
+
+    available_stack_cell = (int32)
+        (ctx->stack_cell_num - cur_block->stack_cell_num);
+
+    if (available_stack_cell <= 0 && target_block->is_stack_polymorphic)
+        return true;
+
+    if (target_block->block_type != BLOCK_TYPE_LOOP) {
+        uint8 type = target_block->return_type;
+        if (!check_stack_top_values(ctx->frame_ref, available_stack_cell,
+                                    type, error_buf, error_buf_size))
             return false;
-        }
-        (ctx->frame_csp - (depth + 1))->is_block_reachable = true;
     }
     return true;
 }
@@ -3778,22 +3819,45 @@ wasm_loader_push_frame_offset(WASMLoaderContext *ctx, uint8 type,
     return true;
 }
 
-/* The frame_offset stack should always keep the same depth with
-    frame_ref, so we don't check pop of frame_offset */
+/* This function should be in front of wasm_loader_pop_frame_ref
+    as they both use ctx->stack_cell_num, and ctx->stack_cell_num
+    will be modified by wasm_loader_pop_frame_ref */
 static bool
 wasm_loader_pop_frame_offset(WASMLoaderContext *ctx, uint8 type,
                              char *error_buf, uint32 error_buf_size)
 {
+    /* if ctx->frame_csp equals ctx->frame_csp_bottom,
+        then current block is the function block */
+    uint32 depth = ctx->frame_csp > ctx->frame_csp_bottom ? 1 : 0;
+    BranchBlock *cur_block = ctx->frame_csp - depth;
+    int32 available_stack_cell = (int32)
+        (ctx->stack_cell_num - cur_block->stack_cell_num);
+
+    /* Directly return success if current block is in stack
+     * polymorphic state while stack is empty. */
+    if (available_stack_cell <= 0 && cur_block->is_stack_polymorphic)
+        return true;
+
     if (type == VALUE_TYPE_VOID)
         return true;
 
     if (type == VALUE_TYPE_I32 || type == VALUE_TYPE_F32) {
+        /* Check the offset stack bottom to ensure the frame offset
+            stack will not go underflow. But we don't thrown error
+            and return true here, because the error msg should be
+            given in wasm_loader_pop_frame_ref */
+        if (!check_offset_pop(ctx, 1))
+            return true;
+
         ctx->frame_offset -= 1;
         if ((*(ctx->frame_offset) > ctx->start_dynamic_offset)
             && (*(ctx->frame_offset) < ctx->max_dynamic_offset))
             ctx->dynamic_offset -= 1;
     }
     else {
+        if (!check_offset_pop(ctx, 2))
+            return true;
+
         ctx->frame_offset -= 2;
         if ((*(ctx->frame_offset) > ctx->start_dynamic_offset)
             && (*(ctx->frame_offset) < ctx->max_dynamic_offset))
@@ -3826,10 +3890,10 @@ wasm_loader_push_frame_ref_offset(WASMLoaderContext *ctx, uint8 type,
                                   bool disable_emit, int16 operand_offset,
                                   char *error_buf, uint32 error_buf_size)
 {
-    if (!(wasm_loader_push_frame_ref(ctx, type, error_buf, error_buf_size)))
-        return false;
     if (!(wasm_loader_push_frame_offset(ctx, type, disable_emit, operand_offset,
                                         error_buf, error_buf_size)))
+        return false;
+    if (!(wasm_loader_push_frame_ref(ctx, type, error_buf, error_buf_size)))
         return false;
 
     return true;
@@ -3839,9 +3903,10 @@ static bool
 wasm_loader_pop_frame_ref_offset(WASMLoaderContext *ctx, uint8 type,
                                  char *error_buf, uint32 error_buf_size)
 {
-    if (!wasm_loader_pop_frame_ref(ctx, type, error_buf, error_buf_size))
-        return false;
+    /* put wasm_loader_pop_frame_offset in front of wasm_loader_pop_frame_ref */
     if (!wasm_loader_pop_frame_offset(ctx, type, error_buf, error_buf_size))
+        return false;
+    if (!wasm_loader_pop_frame_ref(ctx, type, error_buf, error_buf_size))
         return false;
 
     return true;
@@ -3853,12 +3918,12 @@ wasm_loader_push_pop_frame_ref_offset(WASMLoaderContext *ctx, uint8 pop_cnt,
                                       bool disable_emit, int16 operand_offset,
                                       char *error_buf, uint32 error_buf_size)
 {
-    if (!wasm_loader_push_pop_frame_ref(ctx, pop_cnt, type_push, type_pop,
-                                        error_buf, error_buf_size))
-        return false;
     if (!wasm_loader_push_pop_frame_offset(ctx, pop_cnt, type_push, type_pop,
                                            disable_emit, operand_offset,
                                            error_buf, error_buf_size))
+        return false;
+    if (!wasm_loader_push_pop_frame_ref(ctx, pop_cnt, type_push, type_pop,
+                                        error_buf, error_buf_size))
         return false;
 
     return true;
@@ -4270,9 +4335,22 @@ check_branch_block_ret(WASMLoaderContext *loader_ctx,
                        BranchBlock *frame_csp_tmp,
                        char *error_buf, uint32 error_buf_size)
 {
-    frame_csp_tmp->is_block_reachable = true;
+#if WASM_ENABLE_FAST_INTERP != 0
+    BranchBlock *cur_block = loader_ctx->frame_csp - 1;
+    bool disable_emit = true;
+    int16 operand_offset = 0;
+#endif
     if (frame_csp_tmp->block_type != BLOCK_TYPE_LOOP) {
         uint8 block_return_type = frame_csp_tmp->return_type;
+#if WASM_ENABLE_FAST_INTERP != 0
+        /* If the stack is in polymorphic state, do fake pop and push on
+            offset stack to keep the depth of offset stack to be the same
+            with ref stack */
+        if (cur_block->is_stack_polymorphic) {
+            POP_OFFSET_TYPE(block_return_type);
+            PUSH_OFFSET_TYPE(block_return_type);
+        }
+#endif
         POP_TYPE(block_return_type);
         PUSH_TYPE(block_return_type);
     }
@@ -4280,6 +4358,92 @@ check_branch_block_ret(WASMLoaderContext *loader_ctx,
 fail:
     return false;
 }
+
+static bool
+check_block_stack(WASMLoaderContext *ctx, BranchBlock *block,
+                  char *error_buf, uint32 error_buf_size)
+{
+    uint8 type = block->return_type;
+    int32 available_stack_cell = (int32)
+        (ctx->stack_cell_num - block->stack_cell_num);
+
+    if (type != VALUE_TYPE_VOID
+        && available_stack_cell <= 0
+        && block->is_stack_polymorphic) {
+        if (!(wasm_loader_push_frame_ref(ctx, type, error_buf, error_buf_size))
+#if WASM_ENABLE_FAST_INTERP != 0
+            || !(wasm_loader_push_frame_offset(ctx, type, true, 0, error_buf, error_buf_size))
+#endif
+            )
+            return false;
+        return true;
+    }
+
+    if (type != VALUE_TYPE_VOID
+        && available_stack_cell == 1
+        && *(ctx->frame_ref - 1) == VALUE_TYPE_ANY) {
+        if (type == VALUE_TYPE_I32 || type == VALUE_TYPE_F32) {
+            /* If the stack top is a value of any type, change its type to the
+             * same as block return type and return success */
+            *(ctx->frame_ref - 1) = type;
+        }
+        else {
+            if (!(wasm_loader_push_frame_ref(ctx, VALUE_TYPE_I32,
+                                             error_buf, error_buf_size))
+#if WASM_ENABLE_FAST_INTERP != 0
+                || !(wasm_loader_push_frame_offset(ctx, VALUE_TYPE_I32,
+                                                   true, 0,
+                                                   error_buf, error_buf_size))
+#endif
+                                                   )
+                return false;
+            *(ctx->frame_ref - 1) = *(ctx->frame_ref - 2) = type;
+        }
+        return true;
+    }
+
+    if (((type == VALUE_TYPE_I32 || type == VALUE_TYPE_F32)
+         && available_stack_cell != 1)
+        || ((type == VALUE_TYPE_I64 || type == VALUE_TYPE_F64)
+            && available_stack_cell != 2)
+        || (type == VALUE_TYPE_VOID && available_stack_cell > 0)) {
+        set_error_buf(error_buf, error_buf_size,
+                      "WASM module load failed: "
+                      "type mismatch: stack size does not match block type");
+        return false;
+    }
+
+    if (!check_stack_top_values(ctx->frame_ref, available_stack_cell,
+                                type, error_buf, error_buf_size))
+        return false;
+
+    return true;
+}
+
+/* reset the stack to the state of before entering the last block */
+#if WASM_ENABLE_FAST_INTERP != 0
+#define RESET_STACK() do {                                                   \
+    loader_ctx->stack_cell_num =                                             \
+               (loader_ctx->frame_csp - 1)->stack_cell_num;                  \
+    loader_ctx->frame_ref =                                                  \
+               loader_ctx->frame_ref_bottom + loader_ctx->stack_cell_num;    \
+    loader_ctx->frame_offset =                                               \
+               loader_ctx->frame_offset_bottom + loader_ctx->stack_cell_num; \
+} while (0)
+#else
+#define RESET_STACK() do {                                                \
+    loader_ctx->stack_cell_num =                                          \
+               (loader_ctx->frame_csp - 1)->stack_cell_num;               \
+    loader_ctx->frame_ref =                                               \
+               loader_ctx->frame_ref_bottom + loader_ctx->stack_cell_num; \
+} while (0)
+#endif
+
+/* set current block's stack polymorphic state */
+#define SET_CUR_BLOCK_STACK_POLYMORPHIC_STATE(flag) do {                  \
+    BranchBlock *cur_block = loader_ctx->frame_csp - 1;                   \
+    cur_block->is_stack_polymorphic = flag;                               \
+} while (0)
 
 static bool
 wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
@@ -4294,7 +4458,7 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
     int32 i32, i32_const = 0;
     int64 i64;
     uint8 opcode, u8, block_return_type;
-    bool return_value = false, is_i32_const = false;
+    bool return_value = false;
     WASMLoaderContext *loader_ctx;
     BranchBlock *frame_csp_tmp;
 #if WASM_ENABLE_FAST_INTERP != 0
@@ -4344,7 +4508,6 @@ re_scan:
 #endif
 
     PUSH_CSP(BLOCK_TYPE_FUNCTION, ret_type, p);
-    (loader_ctx->frame_csp - 1)->is_block_reachable = true;
 
     while (p < p_end) {
         opcode = *p++;
@@ -4356,7 +4519,9 @@ re_scan:
 
         switch (opcode) {
             case WASM_OP_UNREACHABLE:
-                goto handle_next_reachable_block;
+                RESET_STACK();
+                SET_CUR_BLOCK_STACK_POLYMORPHIC_STATE(true);
+                break;
 
             case WASM_OP_NOP:
 #if WASM_ENABLE_FAST_INTERP != 0
@@ -4396,39 +4561,6 @@ re_scan:
                 emit_empty_label_addr_and_frame_ip(PATCH_ELSE);
                 emit_empty_label_addr_and_frame_ip(PATCH_END);
 #endif
-                if (!is_i32_const)
-                    (loader_ctx->frame_csp - 1)->is_block_reachable = true;
-                else {
-                    if (!wasm_loader_find_block_addr(block_addr_cache,
-                                        (loader_ctx->frame_csp - 1)->start_addr,
-                                        p_end,
-                                        (loader_ctx->frame_csp - 1)->block_type,
-                                        &(loader_ctx->frame_csp - 1)->else_addr,
-                                        &(loader_ctx->frame_csp - 1)->end_addr,
-                                        error_buf, error_buf_size))
-                        goto fail;
-
-                    if (!i32_const) {
-                        if ((loader_ctx->frame_csp - 1)->else_addr) {
-#if WASM_ENABLE_FAST_INTERP != 0
-                            loader_ctx->frame_offset = loader_ctx->frame_offset_bottom +
-                                                (loader_ctx->frame_csp - 1)->stack_cell_num;
-                            apply_label_patch(loader_ctx, 1, PATCH_ELSE);
-#endif
-                            p = (loader_ctx->frame_csp - 1)->else_addr + 1;
-                        }
-                        else {
-                            p = (loader_ctx->frame_csp - 1)->end_addr;
-                        }
-
-                        is_i32_const = false;
-                        continue;
-                    }
-                    else {
-                        /* The else branch cannot be reached, ignored it. */
-                        (loader_ctx->frame_csp - 1)->skip_else_branch = true;
-                    }
-                }
                 break;
 
             case WASM_OP_ELSE:
@@ -4440,32 +4572,43 @@ re_scan:
                     goto fail;
                 }
 
-                if ((loader_ctx->frame_csp - 1)->skip_else_branch) {
-                    /* The else branch is ignored. */
-                    is_i32_const = false;
-                    p = (loader_ctx->frame_csp - 1)->end_addr;
-#if WASM_ENABLE_FAST_INTERP != 0
-                    skip_label();
-#endif
-                    continue;
-                }
+                /* check whether if branch's stack matches its result type */
+                if (!check_block_stack(loader_ctx, loader_ctx->frame_csp - 1,
+                                       error_buf, error_buf_size))
+                    goto fail;
 
                 (loader_ctx->frame_csp - 1)->else_addr = p - 1;
-                loader_ctx->stack_cell_num = (loader_ctx->frame_csp - 1)->stack_cell_num;
-                loader_ctx->frame_ref = loader_ctx->frame_ref_bottom +
-                                            loader_ctx->stack_cell_num;
+
 #if WASM_ENABLE_FAST_INTERP != 0
                 /* if the result of if branch is in local or const area, add a copy op */
                 RESERVE_BLOCK_RET();
-                loader_ctx->frame_offset = loader_ctx->frame_offset_bottom +
-                                                loader_ctx->stack_cell_num;
+
                 emit_empty_label_addr_and_frame_ip(PATCH_END);
                 apply_label_patch(loader_ctx, 1, PATCH_ELSE);
 #endif
+                RESET_STACK();
+                SET_CUR_BLOCK_STACK_POLYMORPHIC_STATE(false);
                 break;
 
             case WASM_OP_END:
             {
+
+                /* check whether block stack matches its result type */
+                if (!check_block_stack(loader_ctx, loader_ctx->frame_csp - 1,
+                                       error_buf, error_buf_size))
+                    goto fail;
+
+                /* if has return value, but no else branch, fail */
+                if ((loader_ctx->frame_csp - 1)->block_type == BLOCK_TYPE_IF
+                     && (loader_ctx->frame_csp - 1)->return_type != VALUE_TYPE_VOID
+                     && !(loader_ctx->frame_csp - 1)->else_addr) {
+                    set_error_buf(error_buf, error_buf_size,
+                                  "WASM module load failed: "
+                                  "type mismatch: if has return value and else is missing");
+
+                    goto fail;
+                }
+
                 POP_CSP();
 
 #if WASM_ENABLE_FAST_INTERP != 0
@@ -4488,9 +4631,10 @@ re_scan:
                        ignore the following bytecodes */
                     p = p_end;
 
-                    is_i32_const = false;
                     continue;
                 }
+
+                SET_CUR_BLOCK_STACK_POLYMORPHIC_STATE(false);
                 break;
             }
 
@@ -4504,50 +4648,9 @@ re_scan:
                                             error_buf, error_buf_size))
                     goto fail;
 
-handle_next_reachable_block:
-                for (i = 1; i <= loader_ctx->csp_num; i++)
-                    if ((loader_ctx->frame_csp - i)->is_block_reachable)
-                        break;
-
-                block_return_type = (loader_ctx->frame_csp - i)->return_type;
-
-                if(!wasm_loader_find_block_addr(block_addr_cache,
-                                    (loader_ctx->frame_csp - i)->start_addr,
-                                    p_end,
-                                    (loader_ctx->frame_csp - i)->block_type,
-                                    &(loader_ctx->frame_csp - i)->else_addr,
-                                    &(loader_ctx->frame_csp - i)->end_addr,
-                                    error_buf, error_buf_size))
-                    goto fail;
-
-                loader_ctx->stack_cell_num = (loader_ctx->frame_csp - i)->stack_cell_num;
-                loader_ctx->frame_ref = loader_ctx->frame_ref_bottom +
-                                            loader_ctx->stack_cell_num;
-                loader_ctx->csp_num -= i - 1;
-                loader_ctx->frame_csp -= i - 1;
-
-                if ((loader_ctx->frame_csp - 1)->block_type == BLOCK_TYPE_IF
-                        && (loader_ctx->frame_csp - 1)->else_addr != NULL
-                        && p <= (loader_ctx->frame_csp - 1)->else_addr) {
-#if WASM_ENABLE_FAST_INTERP != 0
-                    loader_ctx->frame_offset = loader_ctx->frame_offset_bottom +
-                                                (loader_ctx->frame_csp - 1)->stack_cell_num;
-                    apply_label_patch(loader_ctx, 1, PATCH_ELSE);
-#endif
-                    p = (loader_ctx->frame_csp - 1)->else_addr + 1;
-
-                }
-                else {
-                    p = (loader_ctx->frame_csp - 1)->end_addr;
-                    PUSH_TYPE(block_return_type);
-#if WASM_ENABLE_FAST_INTERP != 0
-                    loader_ctx->frame_offset = loader_ctx->frame_offset_bottom +
-                                                    loader_ctx->stack_cell_num;
-#endif
-                }
-
-                is_i32_const = false;
-                continue;
+                RESET_STACK();
+                SET_CUR_BLOCK_STACK_POLYMORPHIC_STATE(true);
+                break;
             }
 
             case WASM_OP_BR_IF:
@@ -4558,19 +4661,17 @@ handle_next_reachable_block:
                                                          error_buf, error_buf_size)))
                     goto fail;
 
-                if (!is_i32_const || i32_const) {
-                    /* The branch can be reached */
-                    if (!check_branch_block_ret(loader_ctx, frame_csp_tmp,
-                                                error_buf, error_buf_size))
-                        goto fail;
-                }
-                if (is_i32_const && i32_const)
-                    goto handle_next_reachable_block;
+                if (!check_branch_block_ret(loader_ctx, frame_csp_tmp,
+                                            error_buf, error_buf_size))
+                    goto fail;
+
                 break;
             }
 
             case WASM_OP_BR_TABLE:
             {
+                uint8 ret_type;
+
                 read_leb_uint32(p, p_end, count);
 #if WASM_ENABLE_FAST_INTERP != 0
                 emit_const(count);
@@ -4580,15 +4681,34 @@ handle_next_reachable_block:
                 /* TODO: check the const */
                 for (i = 0; i <= count; i++) {
                     if (!(frame_csp_tmp = check_branch_block(loader_ctx, &p, p_end,
-                                                        error_buf, error_buf_size)))
+                                                             error_buf, error_buf_size)))
                         goto fail;
 
                     if (!check_branch_block_ret(loader_ctx, frame_csp_tmp,
                                                 error_buf, error_buf_size))
                         goto fail;
+
+                    if (i == 0) {
+                        ret_type = frame_csp_tmp->block_type == BLOCK_TYPE_LOOP ?
+                                   VALUE_TYPE_VOID : frame_csp_tmp->return_type;
+                    }
+                    else {
+                        /* Check whether all table items have the same return type */
+                        uint8 tmp_ret_type = frame_csp_tmp->block_type == BLOCK_TYPE_LOOP ?
+                                             VALUE_TYPE_VOID : frame_csp_tmp->return_type;
+                        if (ret_type != tmp_ret_type) {
+                            set_error_buf(error_buf, error_buf_size,
+                                          "WASM loader prepare bytecode failed: "
+                                          "type mismatch: br_table targets must "
+                                          "all use same result type");
+                            goto fail;
+                        }
+                    }
                 }
 
-                goto handle_next_reachable_block;
+                RESET_STACK();
+                SET_CUR_BLOCK_STACK_POLYMORPHIC_STATE(true);
+                break;
             }
 
             case WASM_OP_RETURN:
@@ -4599,12 +4719,11 @@ handle_next_reachable_block:
 #if WASM_ENABLE_FAST_INTERP != 0
                 // emit the offset after return opcode
                 POP_OFFSET_TYPE(ret_type);
-                loader_ctx->frame_offset = loader_ctx->frame_offset_bottom +
-                                                loader_ctx->stack_cell_num;
 #endif
 
-                is_i32_const = false;
-                goto handle_next_reachable_block;
+                RESET_STACK();
+                SET_CUR_BLOCK_STACK_POLYMORPHIC_STATE(true);
+                break;
             }
 
             case WASM_OP_CALL:
@@ -4714,8 +4833,12 @@ handle_next_reachable_block:
             case WASM_OP_DROP:
             case WASM_OP_DROP_64:
             {
-                if (loader_ctx->stack_cell_num
-                     - (loader_ctx->frame_csp - 1)->stack_cell_num <= 0) {
+                BranchBlock *cur_block = loader_ctx->frame_csp - 1;
+                int32 available_stack_cell = (int32)
+                    (loader_ctx->stack_cell_num - cur_block->stack_cell_num);
+
+                if (available_stack_cell <= 0
+                    && !cur_block->is_stack_polymorphic) {
                     set_error_buf(error_buf, error_buf_size,
                                   "WASM loader prepare bytecode failed: "
                                   "type mismatch, opcode drop was found "
@@ -4723,38 +4846,37 @@ handle_next_reachable_block:
                     goto fail;
                 }
 
-                if (*(loader_ctx->frame_ref - 1) == REF_I32
-                    || *(loader_ctx->frame_ref - 1) == REF_F32) {
-                    loader_ctx->frame_ref--;
-                    loader_ctx->stack_cell_num--;
+                if (available_stack_cell > 0) {
+                    if (*(loader_ctx->frame_ref - 1) == REF_I32
+                        || *(loader_ctx->frame_ref - 1) == REF_F32) {
+                        loader_ctx->frame_ref--;
+                        loader_ctx->stack_cell_num--;
 #if WASM_ENABLE_FAST_INTERP != 0
-                    skip_label();
-                    loader_ctx->frame_offset--;
-                    if (*(loader_ctx->frame_offset) >
-                            loader_ctx->start_dynamic_offset)
-                        loader_ctx->dynamic_offset --;
+                        skip_label();
+                        loader_ctx->frame_offset--;
+                        if (*(loader_ctx->frame_offset) >
+                                loader_ctx->start_dynamic_offset)
+                            loader_ctx->dynamic_offset --;
 #endif
+                    }
+                    else {
+                        loader_ctx->frame_ref -= 2;
+                        loader_ctx->stack_cell_num -= 2;
+#if (WASM_ENABLE_FAST_INTERP == 0) || (WASM_ENABLE_JIT != 0)
+                        *(p - 1) = WASM_OP_DROP_64;
+#endif
+#if WASM_ENABLE_FAST_INTERP != 0
+                        skip_label();
+                        loader_ctx->frame_offset -= 2;
+                        if (*(loader_ctx->frame_offset) >
+                                loader_ctx->start_dynamic_offset)
+                            loader_ctx->dynamic_offset -= 2;
+#endif
+                    }
                 }
                 else {
-                    if (loader_ctx->stack_cell_num
-                        - (loader_ctx->frame_csp - 1)->stack_cell_num <= 0) {
-                        set_error_buf(error_buf, error_buf_size,
-                                      "WASM loader prepare bytecode failed: "
-                                      "type mismatch, opcode drop was found "
-                                      "but stack was empty");
-                        goto fail;
-                    }
-                    loader_ctx->frame_ref -= 2;
-                    loader_ctx->stack_cell_num -= 2;
-#if (WASM_ENABLE_FAST_INTERP == 0) || (WASM_ENABLE_JIT != 0)
-                    *(p - 1) = WASM_OP_DROP_64;
-#endif
 #if WASM_ENABLE_FAST_INTERP != 0
                     skip_label();
-                    loader_ctx->frame_offset -= 2;
-                    if (*(loader_ctx->frame_offset) >
-                            loader_ctx->start_dynamic_offset)
-                        loader_ctx->dynamic_offset -= 2;
 #endif
                 }
                 break;
@@ -4764,10 +4886,16 @@ handle_next_reachable_block:
             case WASM_OP_SELECT_64:
             {
                 uint8 ref_type;
+                BranchBlock *cur_block = loader_ctx->frame_csp - 1;
+                int32 available_stack_cell;
 
                 POP_I32();
 
-                if (loader_ctx->stack_cell_num <= 0) {
+                available_stack_cell = (int32)
+                    (loader_ctx->stack_cell_num - cur_block->stack_cell_num);
+
+                if (available_stack_cell <= 0
+                    && !cur_block->is_stack_polymorphic) {
                     set_error_buf(error_buf, error_buf_size,
                                   "WASM loader prepare bytecode failed: "
                                   "type mismatch, opcode select was found "
@@ -4775,38 +4903,50 @@ handle_next_reachable_block:
                     goto fail;
                 }
 
-                switch (*(loader_ctx->frame_ref - 1)) {
-                    case REF_I32:
-                    case REF_F32:
-                        break;
-                    case REF_I64_2:
-                    case REF_F64_2:
+                if (available_stack_cell > 0) {
+                    switch (*(loader_ctx->frame_ref - 1)) {
+                        case REF_I32:
+                        case REF_F32:
+                            break;
+                        case REF_I64_2:
+                        case REF_F64_2:
 #if (WASM_ENABLE_FAST_INTERP == 0) || (WASM_ENABLE_JIT != 0)
-                        *(p - 1) = WASM_OP_SELECT_64;
+                            *(p - 1) = WASM_OP_SELECT_64;
 #endif
 #if WASM_ENABLE_FAST_INTERP != 0
-                        if (loader_ctx->p_code_compiled) {
+                            if (loader_ctx->p_code_compiled) {
 #if WASM_ENABLE_ABS_LABEL_ADDR != 0
-                            *(void**)(loader_ctx->p_code_compiled - 2 - sizeof(void*)) =
-                                handle_table[WASM_OP_SELECT_64];
+                                *(void**)(loader_ctx->p_code_compiled - 2 - sizeof(void*)) =
+                                    handle_table[WASM_OP_SELECT_64];
 #else
-                            *((int16*)loader_ctx->p_code_compiled - 2) = (int16)
-                                (handle_table[WASM_OP_SELECT_64] - handle_table[0]);
+                                *((int16*)loader_ctx->p_code_compiled - 2) = (int16)
+                                    (handle_table[WASM_OP_SELECT_64] - handle_table[0]);
 #endif
-                        }
+                            }
 #endif
-                        break;
-                }
+                            break;
+                    }
 
-                ref_type = *(loader_ctx->frame_ref - 1);
-                POP_TYPE(ref_type);
-                POP_TYPE(ref_type);
-                PUSH_TYPE(ref_type);
+                    ref_type = *(loader_ctx->frame_ref - 1);
 #if WASM_ENABLE_FAST_INTERP != 0
-                POP_OFFSET_TYPE(ref_type);
-                POP_OFFSET_TYPE(ref_type);
-                PUSH_OFFSET_TYPE(ref_type);
+                    POP_OFFSET_TYPE(ref_type);
 #endif
+                    POP_TYPE(ref_type);
+#if WASM_ENABLE_FAST_INTERP != 0
+                    POP_OFFSET_TYPE(ref_type);
+#endif
+                    POP_TYPE(ref_type);
+#if WASM_ENABLE_FAST_INTERP != 0
+                    PUSH_OFFSET_TYPE(ref_type);
+#endif
+                    PUSH_TYPE(ref_type);
+                }
+                else {
+#if WASM_ENABLE_FAST_INTERP != 0
+                    PUSH_OFFSET_TYPE(VALUE_TYPE_ANY);
+#endif
+                    PUSH_TYPE(VALUE_TYPE_ANY);
+                }
                 break;
             }
 
@@ -4904,6 +5044,16 @@ handle_next_reachable_block:
             {
                 p_org = p - 1;
                 GET_LOCAL_INDEX_TYPE_AND_OFFSET();
+#if WASM_ENABLE_FAST_INTERP != 0
+                /* If the stack is in polymorphic state, do fake pop and push on
+                    offset stack to keep the depth of offset stack to be the same
+                    with ref stack */
+                BranchBlock *cur_block = loader_ctx->frame_csp - 1;
+                if (cur_block->is_stack_polymorphic) {
+                    POP_OFFSET_TYPE(local_type);
+                    PUSH_OFFSET_TYPE(local_type);
+                }
+#endif
                 POP_TYPE(local_type);
                 PUSH_TYPE(local_type);
 
@@ -5140,12 +5290,12 @@ handle_next_reachable_block:
 
             case WASM_OP_I32_CONST:
                 read_leb_int32(p, p_end, i32_const);
-                /* Currently we only track simple I32_CONST opcode. */
-                is_i32_const = true;
 #if WASM_ENABLE_FAST_INTERP != 0
                 skip_label();
                 disable_emit = true;
                 GET_CONST_OFFSET(VALUE_TYPE_I32, i32_const);
+#else
+                (void)i32_const;
 #endif
                 PUSH_I32();
                 break;
@@ -5451,9 +5601,6 @@ handle_next_reachable_block:
                              "invalid opcode %02x.", opcode);
                 goto fail;
         }
-
-        if (opcode != WASM_OP_I32_CONST)
-            is_i32_const = false;
 
 #if WASM_ENABLE_FAST_INTERP != 0
         last_op = opcode;
