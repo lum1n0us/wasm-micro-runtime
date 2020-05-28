@@ -97,7 +97,7 @@ table_instantiate(AOTModuleInstance *module_inst, AOTModule *module,
             base_offset = (uint32)table_seg->offset.u.i32;
 
         /* Copy table data */
-        bh_assert(module_inst->table_data);
+        bh_assert(module_inst->table_data.ptr);
         /* base_offset only since length might negative */
         if (base_offset > module_inst->table_size) {
             LOG_DEBUG("base_offset(%d) > table_size(%d)", base_offset,
@@ -223,7 +223,7 @@ memory_instantiate(AOTModuleInstance *module_inst, AOTModule *module,
         }
 
         /* Copy memory data */
-        bh_assert(module_inst->memory_data);
+        bh_assert(module_inst->memory_data.ptr);
 
         /* Check memory data */
         /* check offset since length might negative */
