@@ -767,9 +767,6 @@ load_global_import(const WASMModule *parent_module,
     uint8 declare_mutable = 0;
     bool is_mutable = false;
     bool ret = false;
-#if WASM_ENABLE_MULTI_MODULE != 0
-    WASMGlobal *linked_global = NULL;
-#endif
 
     CHECK_BUF(p, p_end, 2);
     declare_type = read_uint8(p);
@@ -791,44 +788,41 @@ load_global_import(const WASMModule *parent_module,
         /* check built-in modules */
         ret = wasm_native_lookup_libc_builtin_global(sub_module_name,
                                                      global_name, global);
-        if (!ret) {
-            goto fail;
+        if (ret) {
+            LOG_DEBUG("(%s, %s) is a global of a built-in module",
+                      sub_module_name, global_name);
         }
-
-        LOG_VERBOSE("(%s, %s) is a global of a built-in module",
-                    sub_module_name, global_name);
-
-        global->module_name = sub_module_name;
-        global->field_name = global_name;
-        global->type = declare_type;
-        global->is_mutable = is_mutable;
-        return true;
     }
 #endif /* WASM_ENABLE_LIBC_BUILTIN */
 
 #if WASM_ENABLE_MULTI_MODULE != 0
-    /* check sub modules */
-    linked_global =
-        wasm_runtime_resolve_global(sub_module_name, global_name,
-                                    declare_type, declare_mutable,
-                                    error_buf, error_buf_size);
-    if (linked_global) {
-        LOG_VERBOSE("(%s, %s) is a global of external module",
-                    sub_module_name, global_name);
-        global->module_name = sub_module_name;
-        global->field_name = global_name;
-        global->type = declare_type;
-        global->is_mutable = is_mutable;
-        global->import_module = sub_module;
-        global->import_global_linked = linked_global;
-        return true;
+    if (!ret) {
+        /* check sub modules */
+        WASMGlobal *linked_global =
+            wasm_runtime_resolve_global(sub_module_name, global_name,
+                                        declare_type, declare_mutable,
+                                        error_buf, error_buf_size);
+        if (linked_global) {
+            LOG_DEBUG("(%s, %s) is a global of external module",
+                      sub_module_name, global_name);
+            global->import_module = sub_module;
+            global->import_global_linked = linked_global;
+            ret = true;
+        }
     }
 #endif
 
-fail:
-    set_error_buf_v(error_buf, error_buf_size,
-                    "unknown import or incompatible import type");
-    return false;
+    if (!ret) {
+        set_error_buf_v(error_buf, error_buf_size,
+                        "unknown import or incompatible import type");
+        return false;
+    }
+
+    global->module_name = sub_module_name;
+    global->field_name = global_name;
+    global->type = declare_type;
+    global->is_mutable = is_mutable;
+    return true;
 }
 
 static bool
