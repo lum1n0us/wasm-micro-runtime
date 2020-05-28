@@ -30,7 +30,6 @@ typedef struct LoadingModule {
 
 static bh_list loading_module_list_head;
 static bh_list *const loading_module_list = &loading_module_list_head;
-// TODO: might merge with registered_module_list_lock
 static korp_mutex loading_module_list_lock;
 
 /*

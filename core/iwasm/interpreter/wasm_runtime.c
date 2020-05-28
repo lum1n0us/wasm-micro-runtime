@@ -901,7 +901,7 @@ wasm_instantiate(WASMModule *module,
 {
     WASMModuleInstance *module_inst;
     WASMGlobalInstance *globals = NULL, *global;
-    uint32 global_count, global_data_size = 0, i, j;
+    uint32 global_count, global_data_size = 0, i;
     uint32 base_offset, length;
     uint8 *global_data, *global_data_end;
 #if WASM_ENABLE_MULTI_MODULE != 0
@@ -1071,7 +1071,11 @@ wasm_instantiate(WASMModule *module,
 
         /* has check it in loader */
         memory = module_inst->memories[data_seg->memory_index];
+        bh_assert(memory);
+
         memory_data = memory->memory_data;
+        bh_assert(memory_data);
+
         memory_size = memory->num_bytes_per_page * memory->cur_page_count;
 
         bh_assert(data_seg->base_offset.init_expr_type
@@ -1089,23 +1093,25 @@ wasm_instantiate(WASMModule *module,
                 .initial_value.i32;
         }
 
+        /* check offset since length might negative */
         base_offset = (uint32)data_seg->base_offset.u.i32;
         if (base_offset > memory_size) {
             LOG_DEBUG("base_offset(%d) > memory_size(%d)", base_offset,
-                        memory_size);
+                      memory_size);
             set_error_buf(error_buf, error_buf_size,
-                            "data segment does not fit.");
+                          "data segment does not fit.");
             wasm_deinstantiate(module_inst);
             return NULL;
         }
 
+        /* check offset + length(could be zero) */
         length = data_seg->data_length;
         if (base_offset + length > memory_size) {
             LOG_DEBUG("base_offset(%d) + length(%d) > memory_size(%d)",
-                        base_offset, length, memory_size);
+                      base_offset, length, memory_size);
             set_error_buf(
-                error_buf, error_buf_size,
-                "Instantiate module failed: data segment does not fit.");
+              error_buf, error_buf_size,
+              "Instantiate module failed: data segment does not fit.");
             wasm_deinstantiate(module_inst);
             return NULL;
         }
@@ -1121,13 +1127,15 @@ wasm_instantiate(WASMModule *module,
         WASMTableSeg *table_seg = module->table_segments + i;
         /* has check it in loader */
         WASMTableInstance *table = module_inst->tables[table_seg->table_index];
-        uint32 *table_data = (uint32*)table->base_addr;
+        bh_assert(table);
 
+        uint32 *table_data = (uint32 *)table->base_addr;
 #if WASM_ENABLE_MULTI_MODULE != 0
         table_data = table->table_inst_linked
                         ? (uint32 *)table->table_inst_linked->base_addr
                         : table_data;
 #endif
+        bh_assert(table_data);
 
         /* init vec(funcidx) */
         bh_assert(table_seg->base_offset.init_expr_type
@@ -1144,7 +1152,7 @@ wasm_instantiate(WASMModule *module,
               globals[table_seg->base_offset.u.global_index].initial_value.i32;
         }
 
-        /* check offset */
+        /* check offset since length might negative */
         if ((uint32)table_seg->base_offset.u.i32 > table->cur_size) {
             LOG_DEBUG("base_offset(%d) > table->cur_size(%d)",
                       table_seg->base_offset.u.i32, table->cur_size);
@@ -1154,7 +1162,7 @@ wasm_instantiate(WASMModule *module,
             return NULL;
         }
 
-        /* check offset + length */
+        /* check offset + length(could be zero) */
         length = table_seg->function_count;
         if ((uint32)table_seg->base_offset.u.i32 + length > table->cur_size) {
             LOG_DEBUG("base_offset(%d) + length(%d)> table->cur_size(%d)",
@@ -1167,16 +1175,9 @@ wasm_instantiate(WASMModule *module,
 
         /**
          * Check function index in the current module inst for now.
-         * will check the linked table inst owner in future
+         * will check the linked table inst owner in future.
+         * so loader check is enough
          */
-        for (j = 0; j < length; j++) {
-            if (table_seg->func_indexes[j] >= module_inst->function_count) {
-                set_error_buf(error_buf, error_buf_size, "unknown function");
-                wasm_deinstantiate(module_inst);
-                return NULL;
-            }
-        }
-
         bh_memcpy_s(
           table_data + table_seg->base_offset.u.i32,
           (uint32)((table->cur_size - (uint32)table_seg->base_offset.u.i32)
