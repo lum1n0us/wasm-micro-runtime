@@ -52,7 +52,8 @@ typedef struct {
     REG_SYM(floorf),                      \
     REG_SYM(trunc),                       \
     REG_SYM(truncf),                      \
-    REG_SYM(rint)
+    REG_SYM(rint),                        \
+    REG_SYM(rintf)
 #endif
 
 #define CHECK_RELOC_OFFSET(data_size) do {                                  \
