@@ -785,48 +785,49 @@ load_global_import(const WASMModule *parent_module,
 
     is_mutable = declare_mutable & 1 ? true : false;
 
+#if WASM_ENABLE_LIBC_BUILTIN != 0
     ret = wasm_runtime_is_built_in_module(sub_module_name);
     if (ret) {
         /* check built-in modules */
-#if WASM_ENABLE_LIBC_BUILTIN != 0
         ret = wasm_native_lookup_libc_builtin_global(sub_module_name,
                                                      global_name, global);
         if (!ret) {
-            set_error_buf_v(error_buf, error_buf_size,
-                            "unknown import or incompatible import type");
-            return false;
+            goto fail;
         }
 
-        LOG_VERBOSE("(%s, %s) is a global of a built-in module", sub_module_name,
-                    global_name);
+        LOG_VERBOSE("(%s, %s) is a global of a built-in module",
+                    sub_module_name, global_name);
 
         global->module_name = sub_module_name;
         global->field_name = global_name;
         global->type = declare_type;
         global->is_mutable = is_mutable;
         return true;
-#endif /* WASM_ENABLE_LIBC_BUILTIN */
     }
+#endif /* WASM_ENABLE_LIBC_BUILTIN */
 
 #if WASM_ENABLE_MULTI_MODULE != 0
     /* check sub modules */
     linked_global =
-      wasm_runtime_resolve_global(sub_module_name, global_name, declare_type,
-                                  declare_mutable, error_buf, error_buf_size);
+        wasm_runtime_resolve_global(sub_module_name, global_name,
+                                    declare_type, declare_mutable,
+                                    error_buf, error_buf_size);
     if (linked_global) {
-        LOG_VERBOSE("(%s, %s) is a global of external module", sub_module_name,
-                    global_name);
-        memset(error_buf, 0, error_buf_size);
+        LOG_VERBOSE("(%s, %s) is a global of external module",
+                    sub_module_name, global_name);
         global->module_name = sub_module_name;
         global->field_name = global_name;
         global->type = declare_type;
         global->is_mutable = is_mutable;
-        memset(&(global->global_data_linked), 0, sizeof(WASMGlobalImport));
         global->import_module = sub_module;
         global->import_global_linked = linked_global;
         return true;
     }
 #endif
+
+fail:
+    set_error_buf_v(error_buf, error_buf_size,
+                    "unknown import or incompatible import type");
     return false;
 }
 
@@ -1239,9 +1240,7 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                                               sub_module_name, field_name, &p,
                                               p_end, &import->u.function,
                                               error_buf, error_buf_size)) {
-#if WASM_ENABLE_WAMR_COMPILER == 0
                         return false;
-#endif
                     }
                     break;
 
