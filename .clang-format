@@ -39,7 +39,7 @@ AllowAllArgumentsOnNextLine: false
 AlignConsecutiveMacros: true
 AllowShortBlocksOnASingleLine: true
 AlwaysBreakAfterReturnType: All
-BinPackArguments: false
+BinPackArguments: true
 BinPackParameters: false
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Custom

@@ -592,7 +592,6 @@ load_table_import(WASMModule *sub_module, const char *sub_module_name,
     }
 #endif
 
-#if WASM_ENABLE_SPEC_TEST != 0
     /* (table (export "table") 10 20 funcref) */
     if (!strcmp("spectest", sub_module_name)) {
         uint32 spectest_table_init_size = 10;
@@ -614,7 +613,6 @@ load_table_import(WASMModule *sub_module, const char *sub_module_name,
         declare_init_size = spectest_table_init_size;
         declare_max_size = spectest_table_max_size;
     }
-#endif
 
     /* now we believe all declaration are ok */
     table->elem_type = declare_elem_type;
@@ -720,7 +718,6 @@ load_memory_import(WASMModule *sub_module, const char *sub_module_name,
     }
 #endif
 
-#if WASM_ENABLE_SPEC_TEST != 0
     /* (memory (export "memory") 1 2) */
     if (!strcmp("spectest", sub_module_name)) {
         uint32 spectest_memory_init_page = 1;
@@ -742,7 +739,6 @@ load_memory_import(WASMModule *sub_module, const char *sub_module_name,
         declare_init_page_count = spectest_memory_init_page;
         declare_max_page_count = spectest_memory_max_page;
     }
-#endif
 
     /* now we believe all declaration are ok */
     memory->flags = declare_max_page_count_flag;

@@ -783,8 +783,7 @@ load_import_funcs(const uint8 **p_buf, const uint8 *buf_end,
         read_uint16(buf, buf_end, import_funcs[i].func_type_index);
         if (import_funcs[i].func_type_index >= module->func_type_count) {
             set_error_buf(error_buf, error_buf_size,
-                          "AOT module load failed: "
-                          "invalid function type index.");
+                          "AOT module load failed: unknown type.");
             return false;
         }
         import_funcs[i].func_type = module->func_types[import_funcs[i].func_type_index];
@@ -1077,8 +1076,7 @@ load_function_section(const uint8 *buf, const uint8 *buf_end,
         read_uint32(p, p_end, module->func_type_indexes[i]);
         if (module->func_type_indexes[i] >= module->func_type_count) {
             set_error_buf(error_buf, error_buf_size,
-                          "AOT module load failed: "
-                          "invalid function type index.");
+                          "AOT module load failed: unknown type.");
             return false;
         }
     }
