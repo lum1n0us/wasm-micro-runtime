@@ -363,11 +363,11 @@ load_mem_init_data_list(const uint8 **p_buf, const uint8 *buf_end,
     for (i = 0; i < module->mem_init_data_count; i++) {
         uint32 init_expr_type, byte_count;
         uint64 init_expr_value;
-#if WASM_ENABLE_BULK_MEMORY != 0
-        bool is_passive;
+        uint32 is_passive;
+        uint32 memory_index;
 
         read_uint32(buf, buf_end, is_passive);
-#endif
+        read_uint32(buf, buf_end, memory_index);
         read_uint32(buf, buf_end, init_expr_type);
         read_uint64(buf, buf_end, init_expr_value);
         read_uint32(buf, buf_end, byte_count);
@@ -381,7 +381,9 @@ load_mem_init_data_list(const uint8 **p_buf, const uint8 *buf_end,
         }
 
 #if WASM_ENABLE_BULK_MEMORY != 0
+        /* is_passive and memory_index is only used in bulk memory mode */
         data_list[i]->is_passive = (bool)is_passive;
+        data_list[i]->memory_index = memory_index;
 #endif
         data_list[i]->offset.init_expr_type = (uint8)init_expr_type;
         data_list[i]->offset.u.i64 = (int64)init_expr_value;
