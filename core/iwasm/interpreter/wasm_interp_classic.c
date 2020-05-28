@@ -2796,7 +2796,7 @@ wasm_interp_call_wasm(WASMModuleInstance *module_inst,
             LOG_DEBUG("no return value");
         }
     } else {
-        LOG_WARNING("meet an exception %s", wasm_get_exception(module_inst));
+        LOG_DEBUG("meet an exception %s", wasm_get_exception(module_inst));
     }
 
     wasm_exec_env_set_cur_frame(exec_env, prev_frame);

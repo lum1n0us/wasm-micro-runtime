@@ -846,7 +846,7 @@ sub_module_instantiate(WASMModule *module, WASMModuleInstance *module_inst,
         WASMModuleInstance *sub_module_inst = wasm_instantiate(
           sub_module, stack_size, heap_size, error_buf, error_buf_size);
         if (!sub_module_inst) {
-            LOG_ERROR("instantiate %s failed",
+            LOG_DEBUG("instantiate %s failed",
                       sub_module_list_node->module_name);
             set_error_buf_v(error_buf, error_buf_size, "instantiate %s failed",
                             sub_module_list_node->module_name);
@@ -856,7 +856,7 @@ sub_module_instantiate(WASMModule *module, WASMModuleInstance *module_inst,
         WASMSubModInstLNode *sub_module_inst_list_node =
           wasm_runtime_malloc(sizeof(WASMSubModInstLNode));
         if (!sub_module_inst_list_node) {
-            LOG_ERROR("Malloc WASMSubModInstLNode failed, SZ:%d",
+            LOG_DEBUG("Malloc WASMSubModInstLNode failed, SZ:%d",
                       sizeof(WASMSubModInstLNode));
             set_error_buf_v(error_buf, error_buf_size, "malloc failed");
             wasm_deinstantiate(sub_module_inst);
@@ -937,7 +937,7 @@ wasm_instantiate(WASMModule *module,
     ret = sub_module_instantiate(module, module_inst, stack_size, heap_size,
                                  error_buf, error_buf_size);
     if (!ret) {
-        LOG_ERROR("build a sub module list failed");
+        LOG_DEBUG("build a sub module list failed");
         wasm_deinstantiate(module_inst);
         return NULL;
     }

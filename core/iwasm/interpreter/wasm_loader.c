@@ -452,7 +452,7 @@ load_function_import(const WASMModule *parent_module, WASMModule *sub_module,
     if (declare_type_index >= parent_module->type_count) {
         set_error_buf(error_buf, error_buf_size,
                       "Load import section failed: unknown type.");
-        LOG_ERROR("the type index is out of range");
+        LOG_DEBUG("the type index is out of range");
         return false;
     }
 
@@ -571,11 +571,12 @@ load_table_import(WASMModule *sub_module, const char *sub_module_name,
 #if WASM_ENABLE_MULTI_MODULE != 0
     if (!wasm_runtime_is_built_in_module(sub_module_name)) {
         linked_table = wasm_runtime_resolve_table(
-          sub_module_name, table_name, declare_init_size, declare_max_size,
-          error_buf, error_buf_size);
+                            sub_module_name, table_name,
+                            declare_init_size, declare_max_size,
+                            error_buf, error_buf_size);
         if (!linked_table) {
-            LOG_ERROR("(%s, %s) is not an exported from one of modules",
-                        table_name, sub_module_name);
+            LOG_DEBUG("(%s, %s) is not an exported from one of modules",
+                      table_name, sub_module_name);
             return false;
         }
 
@@ -928,7 +929,7 @@ register_sub_module(const WASMModule *parent_module,
 
     node = wasm_runtime_malloc(sizeof(WASMRegisteredModule));
     if (!node) {
-        LOG_ERROR("malloc WASMRegisteredModule failed. SZ %d\n",
+        LOG_DEBUG("malloc WASMRegisteredModule failed. SZ %d\n",
                   sizeof(WASMRegisteredModule));
         return false;
     }
@@ -971,7 +972,7 @@ load_depended_module(const WASMModule *parent_module,
     LOG_VERBOSE("to load %s", sub_module_name);
 
     if (!reader) {
-        LOG_ERROR("error: there is no sub_module reader to load %s",
+        LOG_DEBUG("error: there is no sub_module reader to load %s",
                   sub_module_name);
         set_error_buf_v(error_buf, error_buf_size,
                         "error: there is no sub_module reader to load %s",
@@ -982,8 +983,7 @@ load_depended_module(const WASMModule *parent_module,
     /* start to maintain a loading module list */
     ret = wasm_runtime_is_loading_module(sub_module_name);
     if (ret) {
-        LOG_ERROR("find a circular dependency on %s", sub_module_name);
-        // TODO: need current sub_module name
+        LOG_DEBUG("find a circular dependency on %s", sub_module_name);
         set_error_buf_v(error_buf, error_buf_size,
                         "error: find a circular dependency on %s",
                         sub_module_name);
@@ -993,14 +993,14 @@ load_depended_module(const WASMModule *parent_module,
     ret = wasm_runtime_add_loading_module(sub_module_name, error_buf,
                                           error_buf_size);
     if (!ret) {
-        LOG_ERROR("can not add %s into loading module list\n",
+        LOG_DEBUG("can not add %s into loading module list\n",
                   sub_module_name);
         return NULL;
     }
 
     ret = reader(sub_module_name, &buffer, &buffer_size);
     if (!ret) {
-        LOG_ERROR("read the file of %s failed", sub_module_name);
+        LOG_DEBUG("read the file of %s failed", sub_module_name);
         set_error_buf_v(error_buf, error_buf_size,
                         "error: can not read the module file of %s",
                         sub_module_name);
@@ -1010,7 +1010,7 @@ load_depended_module(const WASMModule *parent_module,
     sub_module =
       wasm_loader_load(buffer, buffer_size, error_buf, error_buf_size);
     if (!sub_module) {
-        LOG_ERROR("error: can not load the sub_module %s", sub_module_name);
+        LOG_DEBUG("error: can not load the sub_module %s", sub_module_name);
         /*
          * others will be destroyed in runtime_destroy()
          */
@@ -1024,7 +1024,7 @@ load_depended_module(const WASMModule *parent_module,
                                                 buffer, buffer_size, error_buf,
                                                 error_buf_size);
     if (!ret) {
-        LOG_ERROR("error: can not register module %s globally\n",
+        LOG_DEBUG("error: can not register module %s globally\n",
                   sub_module_name);
         /*
          * others will be unload in runtime_destroy()
@@ -1036,8 +1036,8 @@ load_depended_module(const WASMModule *parent_module,
 REGISTER_SUB_MODULE:
     ret = register_sub_module(parent_module, sub_module_name, sub_module);
     if (!ret) {
-        LOG_WARNING("error: can not register a sub module %s with its parent",
-                    sizeof(WASMRegisteredModule));
+        LOG_DEBUG("error: can not register a sub module %s with its parent",
+                  sizeof(WASMRegisteredModule));
         set_error_buf_v(
           error_buf, error_buf_size,
           "error: can not register a sub module %s with its parent",
@@ -1256,8 +1256,8 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
                                            &import->u.table,
                                            error_buf,
                                            error_buf_size)) {
-                        LOG_WARNING("can not import such a table (%s,%s)",
-                                    sub_module_name, field_name);
+                        LOG_DEBUG("can not import such a table (%s,%s)",
+                                  sub_module_name, field_name);
                         return false;
                     }
                     break;
@@ -1821,7 +1821,7 @@ load_table_segment_section(const uint8 *buf, const uint8 *buf_end, WASMModule *m
             read_leb_uint32(p, p_end, table_index);
             if (table_index
                 >= module->import_table_count + module->table_count) {
-                LOG_ERROR("table#%d does not exist", table_index);
+                LOG_DEBUG("table#%d does not exist", table_index);
                 set_error_buf(error_buf, error_buf_size, "unknown table");
                 return false;
             }
@@ -1926,7 +1926,7 @@ load_data_segment_section(const uint8 *buf, const uint8 *buf_end,
 check_mem_index:
                     if (mem_index
                         >= module->import_memory_count + module->memory_count) {
-                        LOG_ERROR("memory#%d does not exist", mem_index);
+                        LOG_DEBUG("memory#%d does not exist", mem_index);
                         set_error_buf(error_buf, error_buf_size, "unknown memory");
                         return false;
                     }
@@ -1940,7 +1940,7 @@ check_mem_index:
 #else
             if (mem_index
                 >= module->import_memory_count + module->memory_count) {
-                LOG_ERROR("memory#%d does not exist", mem_index);
+                LOG_DEBUG("memory#%d does not exist", mem_index);
                 set_error_buf(error_buf, error_buf_size, "unknown memory");
                 return false;
             }
