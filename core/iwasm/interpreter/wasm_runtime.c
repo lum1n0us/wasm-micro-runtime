@@ -45,7 +45,7 @@ get_sub_module_inst(const WASMModuleInstance *parent_module_inst,
                     const WASMModule *sub_module)
 {
     bh_list *sub_module_inst_list = parent_module_inst->sub_module_inst_list;
-    WASMSubModInstLNode *node = bh_list_first_elem(sub_module_inst_list);
+    WASMSubModInstNode *node = bh_list_first_elem(sub_module_inst_list);
 
     while (node && sub_module != node->module_inst->module) {
         node = bh_list_elem_next(node);
@@ -842,7 +842,7 @@ sub_module_instantiate(WASMModule *module, WASMModuleInstance *module_inst,
       bh_list_first_elem(module->import_module_list);
 
     while (sub_module_list_node) {
-        WASMModule *sub_module = sub_module_list_node->module;
+        WASMModule *sub_module = (WASMModule*)sub_module_list_node->module;
         WASMModuleInstance *sub_module_inst = wasm_instantiate(
           sub_module, stack_size, heap_size, error_buf, error_buf_size);
         if (!sub_module_inst) {
@@ -853,11 +853,11 @@ sub_module_instantiate(WASMModule *module, WASMModuleInstance *module_inst,
             return false;
         }
 
-        WASMSubModInstLNode *sub_module_inst_list_node =
-          wasm_runtime_malloc(sizeof(WASMSubModInstLNode));
+        WASMSubModInstNode *sub_module_inst_list_node =
+          wasm_runtime_malloc(sizeof(WASMSubModInstNode));
         if (!sub_module_inst_list_node) {
-            LOG_DEBUG("Malloc WASMSubModInstLNode failed, SZ:%d",
-                      sizeof(WASMSubModInstLNode));
+            LOG_DEBUG("Malloc WASMSubModInstNode failed, SZ:%d",
+                      sizeof(WASMSubModInstNode));
             set_error_buf_v(error_buf, error_buf_size, "malloc failed");
             wasm_deinstantiate(sub_module_inst);
             return false;
@@ -881,9 +881,9 @@ static void
 sub_module_deinstantiate(WASMModuleInstance *module_inst)
 {
     bh_list *list = module_inst->sub_module_inst_list;
-    WASMSubModInstLNode *node = bh_list_first_elem(list);
+    WASMSubModInstNode *node = bh_list_first_elem(list);
     while (node) {
-        WASMSubModInstLNode *next_node = bh_list_elem_next(node);
+        WASMSubModInstNode *next_node = bh_list_elem_next(node);
         bh_list_remove(list, node);
         wasm_deinstantiate(node->module_inst);
         node = next_node;

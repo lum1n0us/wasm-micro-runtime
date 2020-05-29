@@ -212,12 +212,12 @@ struct WASMInterpFrame;
 typedef struct WASMInterpFrame WASMRuntimeFrame;
 
 #if WASM_ENABLE_MULTI_MODULE != 0
-typedef struct WASMSubModInstLNode {
+typedef struct WASMSubModInstNode {
     bh_list_link l;
     /* point to a string pool */
     const char *module_name;
     WASMModuleInstance *module_inst;
-} WASMSubModInstLNode;
+} WASMSubModInstNode;
 #endif
 
 /**

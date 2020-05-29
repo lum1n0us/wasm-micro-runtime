@@ -168,6 +168,7 @@ get_package_type(const uint8 *buf, uint32 size)
 #if WASM_ENABLE_MULTI_MODULE != 0
 static module_reader reader;
 static module_destroyer destroyer;
+
 void
 wasm_runtime_set_module_reader(const module_reader reader_cb,
                                const module_destroyer destroyer_cb)
@@ -188,23 +189,8 @@ wasm_runtime_get_module_destroyer()
     return destroyer;
 }
 
-bool
-wasm_runtime_register_module(const char *module_name, WASMModuleCommon *module,
-                             char *error_buf, uint32_t error_buf_size)
-{
-    if (wasm_runtime_is_built_in_module(module_name)) {
-        LOG_DEBUG("%s is a built-in module name", module_name);
-        set_error_buf(error_buf,
-                      error_buf_size, "can not register as a built-in module");
-        return false;
-    }
-
-    return wasm_runtime_register_module_internal(
-      module_name, (WASMModule *)module, NULL, 0, error_buf, error_buf_size);
-}
-
 static WASMRegisteredModule *
-wasm_runtime_find_module_registered_by_reference(WASMModule *module)
+wasm_runtime_find_module_registered_by_reference(WASMModuleCommon *module)
 {
     WASMRegisteredModule *reg_module = NULL;
 
@@ -220,33 +206,40 @@ wasm_runtime_find_module_registered_by_reference(WASMModule *module)
 
 bool
 wasm_runtime_register_module_internal(const char *module_name,
-                                      WASMModule *module, uint8 *orig_file_buf,
+                                      WASMModuleCommon *module,
+                                      uint8 *orig_file_buf,
                                       uint32 orig_file_buf_size,
                                       char *error_buf,
                                       uint32_t error_buf_size)
 {
     WASMRegisteredModule *node = NULL;
 
-    if (!error_buf || !error_buf_size) {
-        LOG_ERROR("error buffer is required");
-        return false;
-    }
-
-    if (!module_name || !module) {
-        LOG_DEBUG("module_name and module are required");
-        set_error_buf_v(error_buf, error_buf_size,
-                        "module_name and module are required");
-        return false;
-    }
-
     node = wasm_runtime_find_module_registered_by_reference(module);
-    if (node && node->module_name && strcmp(node->module_name, module_name)) {
-        LOG_DEBUG("the module(%p) has been registered before with a name %s",
-                  module, node->module_name);
-        set_error_buf_v(error_buf, error_buf_size, "can not rename a module");
-        return false;
+    if (node) { /* module has been registered */
+        if (node->module_name) { /* module has name */
+           if (strcmp(node->module_name, module_name)) {
+               /* module has different name */
+               LOG_DEBUG("module(%p) has been registered with name %s",
+                         module, node->module_name);
+               set_error_buf_v(error_buf, error_buf_size,
+                               "can not rename the module");
+               return false;
+           }
+           else {
+               /* module has the same name */
+               LOG_DEBUG("module(%p) has been registered with the same name %s",
+                         module, node->module_name);
+               return true;
+           }
+        }
+        else {
+            /* module has empyt name, reset it */
+            node->module_name = module_name;
+            return true;
+        }
     }
 
+    /* module hasn't been registered */
     node = wasm_runtime_malloc(sizeof(WASMRegisteredModule));
     if (!node) {
         LOG_DEBUG("malloc WASMRegisteredModule failed. SZ=%d",
@@ -271,8 +264,36 @@ wasm_runtime_register_module_internal(const char *module_name,
     return true;
 }
 
+bool
+wasm_runtime_register_module(const char *module_name, WASMModuleCommon *module,
+                             char *error_buf, uint32_t error_buf_size)
+{
+    if (!error_buf || !error_buf_size) {
+        LOG_ERROR("error buffer is required");
+        return false;
+    }
+
+    if (!module_name || !module) {
+        LOG_DEBUG("module_name and module are required");
+        set_error_buf_v(error_buf, error_buf_size,
+                        "module_name and module are required");
+        return false;
+    }
+
+    if (wasm_runtime_is_built_in_module(module_name)) {
+        LOG_DEBUG("%s is a built-in module name", module_name);
+        set_error_buf(error_buf, error_buf_size,
+                      "can not register as a built-in module");
+        return false;
+    }
+
+    return wasm_runtime_register_module_internal(
+                            module_name, module, NULL, 0,
+                            error_buf, error_buf_size);
+}
+
 void
-wasm_runtime_unregister_module(const WASMModule *module)
+wasm_runtime_unregister_module(const WASMModuleCommon *module)
 {
     WASMRegisteredModule *registered_module = NULL;
 
@@ -293,263 +314,27 @@ wasm_runtime_unregister_module(const WASMModule *module)
 WASMModuleCommon *
 wasm_runtime_find_module_registered(const char *module_name)
 {
-    WASMRegisteredModule *module = NULL;
+    WASMRegisteredModule *module = NULL, *module_next;
 
     os_mutex_lock(&registered_module_list_lock);
     module = bh_list_first_elem(registered_module_list);
-    while (module && strcmp(module_name, module->module_name)) {
-        module = bh_list_elem_next(module);
+    while (module) {
+        module_next = bh_list_elem_next(module);
+        if (module->module_name
+            && !strcmp(module_name, module->module_name)) {
+            break;
+        }
+        module = module_next;
     }
     os_mutex_unlock(&registered_module_list_lock);
 
-    return module ? (WASMModuleCommon*)(module->module) : NULL;
-}
-
-/* locate an indicated kind exported field in a module with the same name */
-static WASMExport *
-wasm_runtime_find_export(const WASMModule *module,
-                         const char *module_name,
-                         const char *field_name,
-                         uint8 export_kind,
-                         uint32 export_index_boundary,
-                         char *error_buf,
-                         uint32 error_buf_size)
-{
-    WASMExport *export;
-    uint32 i;
-
-    for (i = 0, export = module->exports; i < module->export_count;
-         ++i, ++export) {
-        /**
-         * need to consider a scenario that different kinds of exports
-         * may have the same name, like
-         * (table (export "m1" "exported") 10 funcref)
-         * (memory (export "m1" "exported") 10)
-         **/
-        if (export->kind == export_kind && !strcmp(field_name, export->name)) {
-            break;
-        }
-    }
-
-    if (i == module->export_count) {
-        LOG_DEBUG("can not find an export %d named %s in the module %s",
-                  export_kind, field_name, module_name);
-        set_error_buf_v(error_buf, error_buf_size,
-                        "unknown import or incompatible import type");
-        return NULL;
-    }
-
-    if (export->index >= export_index_boundary) {
-        LOG_DEBUG("%s in the module %s is out of index (%d >= %d )",
-                  field_name, module_name,
-                  export->index, export_index_boundary);
-        set_error_buf_v(error_buf, error_buf_size, "incompatible import type");
-        return NULL;
-    }
-
-    return export;
+    return module ? module->module : NULL;
 }
 
 bool
 wasm_runtime_is_module_registered(const char *module_name)
 {
     return NULL != wasm_runtime_find_module_registered(module_name);
-}
-
-WASMFunction *
-wasm_runtime_resolve_function(const char *module_name,
-                              const char *function_name,
-                              const WASMType *expected_function_type,
-                              char *error_buf, uint32 error_buf_size)
-{
-    WASMFunction *function = NULL;
-    WASMExport *export = NULL;
-    WASMModule *module = NULL;
-    WASMType *target_function_type = NULL;
-
-    module = (WASMModule *)wasm_runtime_find_module_registered(module_name);
-    if (!module) {
-        LOG_DEBUG("can not find a module named %s for function", module_name);
-        set_error_buf_v(error_buf, error_buf_size, "unknown import");
-        return NULL;
-    }
-
-    export = wasm_runtime_find_export(module,
-                                      module_name,
-                                      function_name,
-                                      EXPORT_KIND_FUNC,
-                                      module->import_function_count
-                                        + module->function_count,
-                                      error_buf,
-                                      error_buf_size);
-    if (!export) {
-        return NULL;
-    }
-
-    /* run a function type check */
-    if (export->index < module->import_function_count) {
-        target_function_type =
-          module->import_functions[export->index].u.function.func_type;
-        function = module->import_functions[export->index]
-                     .u.function.import_func_linked;
-    }
-    else {
-        target_function_type =
-          module->functions[export->index - module->import_function_count]
-            ->func_type;
-        function =
-          module->functions[export->index - module->import_function_count];
-    }
-
-    if (!wasm_type_equal(expected_function_type, target_function_type)) {
-        LOG_DEBUG("%s.%s failed the type check", module_name, function_name);
-        set_error_buf_v(error_buf, error_buf_size, "incompatible import type");
-        return NULL;
-    }
-
-    return function;
-}
-
-WASMTable *
-wasm_runtime_resolve_table(const char *module_name, const char *table_name,
-                           uint32 init_size, uint32 max_size, char *error_buf,
-                           uint32 error_buf_size)
-{
-    WASMTable *table = NULL;
-    WASMExport *export = NULL;
-    WASMModule *module = NULL;
-
-    module = (WASMModule *)wasm_runtime_find_module_registered(module_name);
-    if (!module) {
-        LOG_DEBUG("can not find a module named %s for table", module_name);
-        set_error_buf_v(error_buf, error_buf_size, "unknown import");
-        return NULL;
-    }
-
-    export = wasm_runtime_find_export(module,
-                                      module_name,
-                                      table_name,
-                                      EXPORT_KIND_TABLE,
-                                      module->table_count
-                                        + module->import_table_count,
-                                      error_buf,
-                                      error_buf_size);
-    if (!export) {
-        return NULL;
-    }
-
-    /* run a table type check */
-    if (export->index < module->import_table_count) {
-        table =
-          module->import_tables[export->index].u.table.import_table_linked;
-    }
-    else {
-        table = &(module->tables[export->index - module->import_table_count]);
-    }
-    if (table->init_size < init_size || table->max_size > max_size) {
-        LOG_DEBUG("%s,%s failed type check(%d-%d), expected(%d-%d)",
-                  module_name, table_name, table->init_size, table->max_size,
-                  init_size, max_size);
-        set_error_buf_v(error_buf, error_buf_size, "incompatible import type");
-        return NULL;
-    }
-
-    return table;
-}
-
-WASMMemory *
-wasm_runtime_resolve_memory(const char *module_name, const char *memory_name,
-                            uint32 init_page_count, uint32 max_page_count,
-                            char *error_buf, uint32 error_buf_size)
-{
-    WASMMemory *memory = NULL;
-    WASMExport *export = NULL;
-    WASMModule *module = NULL;
-
-    module = (WASMModule *)wasm_runtime_find_module_registered(module_name);
-    if (!module) {
-        LOG_DEBUG("can not find a module named %s for memory", module_name);
-        set_error_buf_v(error_buf, error_buf_size, "unknown import");
-        return NULL;
-    }
-
-    export = wasm_runtime_find_export(module,
-                                      module_name,
-                                      memory_name,
-                                      EXPORT_KIND_MEMORY,
-                                      module->import_memory_count
-                                        + module->memory_count,
-                                      error_buf,
-                                      error_buf_size);
-    if (!export) {
-        return NULL;
-    }
-
-
-    /* run a memory check */
-    if (export->index < module->import_memory_count) {
-        memory =
-          module->import_memories[export->index].u.memory.import_memory_linked;
-    }
-    else {
-        memory =
-          &(module->memories[export->index - module->import_memory_count]);
-    }
-    if (memory->init_page_count < init_page_count ||
-        memory->max_page_count > max_page_count) {
-        LOG_DEBUG("%s,%s failed type check(%d-%d), expected(%d-%d)",
-                  module_name, memory_name, memory->init_page_count,
-                  memory->max_page_count, init_page_count, max_page_count);
-        set_error_buf_v(error_buf, error_buf_size, "incompatible import type");
-        return NULL;
-    }
-    return memory;
-}
-
-WASMGlobal *
-wasm_runtime_resolve_global(const char *module_name, const char *global_name,
-                            uint8 type, bool is_mutable, char *error_buf,
-                            uint32 error_buf_size)
-{
-    WASMGlobal *global = NULL;
-    WASMExport *export = NULL;
-    WASMModule *module = NULL;
-
-    module = (WASMModule *)wasm_runtime_find_module_registered(module_name);
-    if (!module) {
-        LOG_DEBUG("can not find a module named %s for global", module_name);
-        set_error_buf_v(error_buf, error_buf_size, "unknown import");
-        return NULL;
-    }
-
-    export = wasm_runtime_find_export(module,
-                                      module_name,
-                                      global_name,
-                                      EXPORT_KIND_GLOBAL,
-                                      module->import_global_count
-                                        + module->global_count,
-                                      error_buf,
-                                      error_buf_size);
-    if (!export) {
-        return NULL;
-    }
-
-    /* run a global check */
-    if (export->index < module->import_global_count) {
-        global =
-          module->import_globals[export->index].u.global.import_global_linked;
-    } else {
-        global =
-          &(module->globals[export->index - module->import_global_count]);
-    }
-    if (global->type != type || global->is_mutable != is_mutable) {
-        LOG_DEBUG("%s,%s failed type check(%d, %d), expected(%d, %d)",
-                  module_name, global_name, global->type, global->is_mutable,
-                  type, is_mutable);
-        set_error_buf_v(error_buf, error_buf_size, "incompatible import type");
-        return NULL;
-    }
-    return global;
 }
 
 /*
@@ -566,10 +351,14 @@ wasm_runtime_destroy_registered_module_list()
         WASMRegisteredModule *next_reg_module = bh_list_elem_next(reg_module);
 
         bh_list_remove(registered_module_list, reg_module);
-        /*
-         * now, it is time to release every module in the runtime
-         */
-        wasm_runtime_unload((WASMModuleCommon*)reg_module->module);
+
+        /* now, it is time to release every module in the runtime */
+        if (reg_module->module->module_type == Wasm_Module_Bytecode)
+            wasm_unload((WASMModule *)reg_module->module);
+        else
+            aot_unload((AOTModule *)reg_module->module);
+
+        /* destroy the file buffer */
         if (destroyer && reg_module->orig_file_buf) {
             destroyer(reg_module->orig_file_buf,
                       reg_module->orig_file_buf_size);
@@ -589,6 +378,7 @@ wasm_runtime_add_loading_module(const char *module_name, char *error_buf,
 {
     LOG_DEBUG("add %s into a loading list", module_name);
     LoadingModule *loadingModule = wasm_runtime_malloc(sizeof(LoadingModule));
+
     if (!loadingModule) {
         set_error_buf_v(error_buf, error_buf_size,
                         "malloc LoadingModule failed. SZ=%d",
@@ -679,10 +469,34 @@ wasm_runtime_is_built_in_module(const char *module_name)
             );
 }
 
+static WASMModuleCommon *
+register_module_with_null_name(WASMModuleCommon *module_common,
+                               char *error_buf, uint32 error_buf_size)
+{
+#if WASM_ENABLE_MULTI_MODULE != 0
+    if (module_common) {
+        if (!wasm_runtime_register_module_internal(NULL, module_common,
+                                                   NULL, 0,
+                                                   error_buf,
+                                                   error_buf_size)) {
+            wasm_runtime_unload(module_common);
+            return NULL;
+        }
+        return module_common;
+    }
+    else
+        return NULL;
+#else
+    return module_common;
+#endif
+}
+
 WASMModuleCommon *
 wasm_runtime_load(const uint8 *buf, uint32 size,
                   char *error_buf, uint32 error_buf_size)
 {
+    WASMModuleCommon *module_common = NULL;
+
     if (get_package_type(buf, size) == Wasm_Module_Bytecode) {
 #if WASM_ENABLE_AOT != 0 && WASM_ENABLE_JIT != 0
         AOTModule *aot_module;
@@ -696,17 +510,22 @@ wasm_runtime_load(const uint8 *buf, uint32 size,
             return NULL;
         }
 
-        return (WASMModuleCommon*)aot_module;
+        module_common = (WASMModuleCommon*)aot_module;
+        return register_module_with_null_name(module_common,
+                                              error_buf, error_buf_size);
 #elif WASM_ENABLE_INTERP != 0
-        return (WASMModuleCommon*)
+        module_common = (WASMModuleCommon*)
                wasm_load(buf, size, error_buf, error_buf_size);
+        return register_module_with_null_name(module_common,
+                                              error_buf, error_buf_size);
 #endif
     }
     else if (get_package_type(buf, size) == Wasm_Module_AoT) {
 #if WASM_ENABLE_AOT != 0
-        return (WASMModuleCommon*)
+        module_common = (WASMModuleCommon*)
                aot_load_from_aot_file(buf, size, error_buf, error_buf_size);
-
+        return register_module_with_null_name(module_common,
+                                              error_buf, error_buf_size);
 #endif
     }
 
@@ -723,17 +542,25 @@ WASMModuleCommon *
 wasm_runtime_load_from_sections(WASMSection *section_list, bool is_aot,
                                 char *error_buf, uint32_t error_buf_size)
 {
+    WASMModuleCommon *module_common;
+
 #if WASM_ENABLE_INTERP != 0
-    if (!is_aot)
-        return (WASMModuleCommon*)
+    if (!is_aot) {
+        module_common = (WASMModuleCommon*)
                wasm_load_from_sections(section_list,
                                        error_buf, error_buf_size);
+        return register_module_with_null_name(module_common,
+                                              error_buf, error_buf_size);
+    }
 #endif
 #if WASM_ENABLE_AOT != 0
-    if (is_aot)
-        return (WASMModuleCommon*)
+    if (is_aot) {
+        module_common = (WASMModuleCommon*)
                aot_load_from_sections(section_list,
                                       error_buf, error_buf_size);
+        return register_module_with_null_name(module_common,
+                                              error_buf, error_buf_size);
+    }
 #endif
 
     set_error_buf(error_buf, error_buf_size,
@@ -1756,7 +1583,7 @@ static WASMModuleInstance *
 get_sub_module_inst(const WASMModuleInstance *parent_module_inst,
                     const char *sub_module_name)
 {
-    WASMSubModInstLNode *node =
+    WASMSubModInstNode *node =
       bh_list_first_elem(parent_module_inst->sub_module_inst_list);
 
     while (node && strcmp(node->module_name, sub_module_name)) {

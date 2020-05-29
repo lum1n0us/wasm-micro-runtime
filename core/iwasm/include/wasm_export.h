@@ -183,8 +183,8 @@ get_package_type(const uint8_t *buf, uint32_t size);
  * It is a callback for WAMR providing by embedding to load a module file
  * into a buffer
  */
-typedef bool (*module_reader)(const char *module_name, uint8_t **p_buffer,
-                              uint32_t *p_size);
+typedef bool (*module_reader)(const char *module_name,
+                              uint8_t **p_buffer, uint32_t *p_size);
 
 /**
  * It is a callback for WAMR providing by embedding to release the buffer which

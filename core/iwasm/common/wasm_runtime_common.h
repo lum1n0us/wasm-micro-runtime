@@ -60,7 +60,7 @@ typedef struct WASMRegisteredModule {
     bh_list_link l;
     /* point to a string pool */
     const char *module_name;
-    WASMModule *module;
+    WASMModuleCommon *module;
     /* to store the original module file buffer address */
     uint8 *orig_file_buf;
     uint32 orig_file_buf_size;
@@ -99,7 +99,7 @@ wasm_runtime_load(const uint8 *buf, uint32 size,
 /* See wasm_export.h for description */
 WASMModuleCommon *
 wasm_runtime_load_from_sections(WASMSection *section_list, bool is_aot,
-                                char *error_buf, uint32_t error_buf_size);
+                                char *error_buf, uint32 error_buf_size);
 
 /* See wasm_export.h for description */
 void
@@ -135,15 +135,15 @@ wasm_runtime_get_module_inst(WASMExecEnv *exec_env);
 
 /* See wasm_export.h for description */
 void *
-wasm_runtime_get_function_attachment(wasm_exec_env_t exec_env);
+wasm_runtime_get_function_attachment(WASMExecEnv *exec_env);
 
 /* See wasm_export.h for description */
 void
-wasm_runtime_set_user_data(wasm_exec_env_t exec_env, void *user_data);
+wasm_runtime_set_user_data(WASMExecEnv *exec_env, void *user_data);
 
 /* See wasm_export.h for description */
 void *
-wasm_runtime_get_user_data(wasm_exec_env_t exec_env);
+wasm_runtime_get_user_data(WASMExecEnv *exec_env);
 
 /* See wasm_export.h for description */
 bool
@@ -278,6 +278,10 @@ wasm_runtime_set_llvm_stack(WASMModuleInstanceCommon *module_inst,
                             uint32 llvm_stack);
 
 #if WASM_ENABLE_MULTI_MODULE != 0
+void
+wasm_runtime_set_module_reader(const module_reader reader,
+                               const module_destroyer destroyer);
+
 module_reader
 wasm_runtime_get_module_reader();
 
@@ -286,40 +290,21 @@ wasm_runtime_get_module_destroyer();
 
 bool
 wasm_runtime_register_module_internal(const char *module_name,
-                                      WASMModule *module, uint8 *orig_file_buf,
+                                      WASMModuleCommon *module,
+                                      uint8 *orig_file_buf,
                                       uint32 orig_file_buf_size,
                                       char *error_buf,
-                                      uint32_t error_buf_size);
+                                      uint32 error_buf_size);
+
 void
-wasm_runtime_unregister_module(const WASMModule *module);
+wasm_runtime_unregister_module(const WASMModuleCommon *module);
 
 bool
 wasm_runtime_is_module_registered(const char *module_name);
 
-WASMFunction *
-wasm_runtime_resolve_function(const char *module_name,
-                              const char *function_name,
-                              const WASMType *func_type, char *error_buf,
-                              uint32 error_buf_size);
-
-WASMTable *
-wasm_runtime_resolve_table(const char *module_name, const char *table_name,
-                           uint32 init_size, uint32 max_size,
-                           char *error_buf, uint32 error_buf_size);
-
-WASMMemory *
-wasm_runtime_resolve_memory(const char *module_name, const char *memory_name,
-                            uint32 init_page_count, uint32 max_page_count,
-                            char *error_buf, uint32 error_buf_size);
-
-WASMGlobal *
-wasm_runtime_resolve_global(const char *module_name, const char *global_name,
-                            uint8 type, bool is_mutable, char *error_buf,
-                            uint32 error_buf_size);
-
 bool
-wasm_runtime_add_loading_module(const char *module_name, char *error_buf,
-                                uint32 error_buf_size);
+wasm_runtime_add_loading_module(const char *module_name,
+                                char *error_buf, uint32 error_buf_size);
 
 void
 wasm_runtime_delete_loading_module(const char *module_name);
