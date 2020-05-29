@@ -353,10 +353,14 @@ wasm_runtime_destroy_registered_module_list()
         bh_list_remove(registered_module_list, reg_module);
 
         /* now, it is time to release every module in the runtime */
+#if WASM_ENABLE_INTERP != 0
         if (reg_module->module->module_type == Wasm_Module_Bytecode)
             wasm_unload((WASMModule *)reg_module->module);
-        else
+#endif
+#if WASM_ENABLE_AOT != 0
+        if (reg_module->module->module_type == Wasm_Module_AoT)
             aot_unload((AOTModule *)reg_module->module);
+#endif
 
         /* destroy the file buffer */
         if (destroyer && reg_module->orig_file_buf) {
