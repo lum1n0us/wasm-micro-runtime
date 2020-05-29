@@ -328,7 +328,7 @@ bool
 wasm_runtime_is_loading_module(const char *module_name);
 
 void
-wasm_runtime_destory_loading_module_list();
+wasm_runtime_destroy_loading_module_list();
 #endif /* WASM_ENALBE_MULTI_MODULE */
 
 bool

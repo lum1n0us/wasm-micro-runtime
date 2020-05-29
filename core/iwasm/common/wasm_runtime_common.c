@@ -40,7 +40,7 @@ static bh_list registered_module_list_head;
 static bh_list *const registered_module_list = &registered_module_list_head;
 static korp_mutex registered_module_list_lock;
 static void
-wasm_runtime_destory_registered_module_list();
+wasm_runtime_destroy_registered_module_list();
 #endif /* WASM_ENABLE_MULTI_MODULE */
 
 void
@@ -118,10 +118,10 @@ wasm_runtime_destroy()
 {
     /* runtime env destroy */
 #if WASM_ENABLE_MULTI_MODULE
-    wasm_runtime_destory_loading_module_list();
+    wasm_runtime_destroy_loading_module_list();
     os_mutex_destroy(&loading_module_list_lock);
 
-    wasm_runtime_destory_registered_module_list();
+    wasm_runtime_destroy_registered_module_list();
     os_mutex_destroy(&registered_module_list_lock);
 #endif
     wasm_native_destroy();
@@ -556,7 +556,7 @@ wasm_runtime_resolve_global(const char *module_name, const char *global_name,
  * simply destroy all
  */
 static void
-wasm_runtime_destory_registered_module_list()
+wasm_runtime_destroy_registered_module_list()
 {
     WASMRegisteredModule *reg_module = NULL;
 
@@ -646,7 +646,7 @@ wasm_runtime_is_loading_module(const char *module_name)
 }
 
 void
-wasm_runtime_destory_loading_module_list()
+wasm_runtime_destroy_loading_module_list()
 {
     LoadingModule *module = NULL;
 

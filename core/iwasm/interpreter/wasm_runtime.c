@@ -979,15 +979,6 @@ wasm_instantiate(WASMModule *module,
         memset(module_inst->global_data, 0, global_data_size);
     }
 
-    if (global_count > 0) {
-        if (!(module_inst->global_data =
-                    wasm_runtime_malloc(global_data_size))) {
-            wasm_deinstantiate(module_inst);
-            return NULL;
-        }
-        memset(module_inst->global_data, 0, global_data_size);
-    }
-
     /* Instantiate memories/tables/functions */
     if ((module_inst->memory_count > 0
          && !(module_inst->memories =
