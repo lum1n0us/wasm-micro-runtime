@@ -22,11 +22,12 @@ iwasm VM core
 
 - 100% compliant to the W3C WASM MVP
 - Small runtime binary size (85K for interpreter and 50K for AoT) and low memory usage
-- Near to native speed by AoT 
+- Near to native speed by AoT
 - Self-implemented module loader enables AoT working cross Linux, SGX and MCU systems
 - Choices of WASM application libc support: the built-in libc subset for the embedded environment or [WASI](https://github.com/WebAssembly/WASI) for standard libc
 - [Embeddable with the supporting C API's](./doc/embed_wamr.md)
 - [The mechanism for exporting native API's to WASM applications](./doc/export_native_api.md)
+- [Multiple modules as dependencies](./doc/multi_module.md)
 
 ### Performance and memory usage
 The WAMR performance, footprint and memory usage data are available at the [performance](../../wiki/Performance) wiki page.
