@@ -29,6 +29,11 @@ iwasm VM core
 - [The mechanism for exporting native API's to WASM applications](./doc/export_native_api.md)
 - [Multiple modules as dependencies](./doc/multi_module.md)
 
+### post-MVP features
+- [Non-trapping float-to-int conversions](https://github.com/WebAssembly/nontrapping-float-to-int-conversions)
+- [Sign-extension operators](https://github.com/WebAssembly/sign-extension-ops)
+- [Bulk memory operations](https://github.com/WebAssembly/bulk-memory-operations)
+
 ### Performance and memory usage
 The WAMR performance, footprint and memory usage data are available at the [performance](../../wiki/Performance) wiki page.
 
