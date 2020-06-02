@@ -1419,14 +1419,19 @@ aot_resolve_target_info(AOTCompContext *comp_ctx, AOTObjectData *obj_data)
     if (bin_type != LLVMBinaryTypeELF32L
         && bin_type != LLVMBinaryTypeELF32B
         && bin_type != LLVMBinaryTypeELF64L
-        && bin_type != LLVMBinaryTypeELF64B) {
+        && bin_type != LLVMBinaryTypeELF64B
+        && bin_type != LLVMBinaryTypeMachO32L
+        && bin_type != LLVMBinaryTypeMachO32B
+        && bin_type != LLVMBinaryTypeMachO64L
+        && bin_type != LLVMBinaryTypeMachO64B) {
         aot_set_last_error("invaid llvm binary bin_type.");
         return false;
     }
 
     obj_data->target_info.bin_type = bin_type - LLVMBinaryTypeELF32L;
 
-    if (bin_type == LLVMBinaryTypeELF32L || bin_type == LLVMBinaryTypeELF32B) {
+    if (bin_type == LLVMBinaryTypeELF32L
+        || bin_type == LLVMBinaryTypeELF32B) {
         struct elf32_ehdr *elf_header;
         bool is_little_bin = bin_type == LLVMBinaryTypeELF32L;
 
@@ -1441,7 +1446,8 @@ aot_resolve_target_info(AOTCompContext *comp_ctx, AOTObjectData *obj_data)
         SET_TARGET_INFO(e_version, e_version, uint32, is_little_bin);
         SET_TARGET_INFO(e_flags, e_flags, uint32, is_little_bin);
     }
-    else {
+    else if (bin_type == LLVMBinaryTypeELF64L
+             || bin_type == LLVMBinaryTypeELF64B) {
         struct elf64_ehdr *elf_header;
         bool is_little_bin = bin_type == LLVMBinaryTypeELF64L;
 
@@ -1456,6 +1462,19 @@ aot_resolve_target_info(AOTCompContext *comp_ctx, AOTObjectData *obj_data)
         SET_TARGET_INFO(e_version, e_version, uint32, is_little_bin);
         SET_TARGET_INFO(e_flags, e_flags, uint32, is_little_bin);
     }
+    else if (bin_type == LLVMBinaryTypeMachO32L
+             || bin_type == LLVMBinaryTypeMachO32B) {
+        /* TODO: parse file type of Mach-O 32 */
+        aot_set_last_error("invaid llvm binary bin_type.");
+        return false;
+    }
+    else if (bin_type == LLVMBinaryTypeMachO64L
+             || bin_type == LLVMBinaryTypeMachO64B) {
+        /* TODO: parse file type of Mach-O 64 */
+        aot_set_last_error("invaid llvm binary bin_type.");
+        return false;
+    }
+
 
     strncpy(obj_data->target_info.arch, comp_ctx->target_arch,
             sizeof(obj_data->target_info.arch));
