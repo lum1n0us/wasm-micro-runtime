@@ -91,12 +91,12 @@ wasm_runtime_env_init()
 static bool
 wasm_runtime_exec_env_check(WASMExecEnv *exec_env)
 {
-    return !(!exec_env
-        || !exec_env->module_inst
-        || exec_env->wasm_stack_size == 0
-        || exec_env->wasm_stack.s.top_boundary !=
+    return exec_env
+           && exec_env->module_inst
+           && exec_env->wasm_stack_size > 0
+           && exec_env->wasm_stack.s.top_boundary ==
                 exec_env->wasm_stack.s.bottom + exec_env->wasm_stack_size
-        || exec_env->wasm_stack.s.top > exec_env->wasm_stack.s.top_boundary);
+           && exec_env->wasm_stack.s.top <= exec_env->wasm_stack.s.top_boundary;
 }
 
 bool
