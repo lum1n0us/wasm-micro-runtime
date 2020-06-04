@@ -4902,7 +4902,6 @@ re_scan:
                               error_buf, error_buf_size))) {
         goto fail;
     }
-    memset(func->consts, 0, func->const_cell_num * 4);
     func_const_end = func->consts + func->const_cell_num * 4;
     // reverse the const buf
     for (int i = loader_ctx->num_const - 1; i >= 0; i--) {
