@@ -1518,13 +1518,17 @@ wasm_enlarge_memory(WASMModuleInstance *module, uint32 inc_page_count)
         return false;
     }
 
-    /* Destroy heap's lock firstly, if its memory is re-allocated,
-       we cannot access its lock again. */
-    mem_allocator_destroy_lock(memory->heap_handle);
+    if (heap_size > 0) {
+        /* Destroy heap's lock firstly, if its memory is re-allocated,
+           we cannot access its lock again. */
+        mem_allocator_destroy_lock(memory->heap_handle);
+    }
     if (!(new_memory = wasm_runtime_realloc(memory, (uint32)total_size))) {
         if (!(new_memory = wasm_runtime_malloc((uint32)total_size))) {
-            /* Restore heap's lock if memory re-alloc failed */
-            mem_allocator_reinit_lock(memory->heap_handle);
+            if (heap_size > 0) {
+                /* Restore heap's lock if memory re-alloc failed */
+                mem_allocator_reinit_lock(memory->heap_handle);
+            }
             wasm_set_exception(module, "fail to enlarge memory.");
             return false;
         }
@@ -1536,12 +1540,14 @@ wasm_enlarge_memory(WASMModuleInstance *module, uint32 inc_page_count)
     memset((uint8*)new_memory + total_size_old,
            0, (uint32)total_size - total_size_old);
 
-    new_memory->heap_handle = (uint8*)heap_handle_old +
-                              ((uint8*)new_memory - (uint8*)memory);
-    if (mem_allocator_migrate(new_memory->heap_handle,
-                              heap_handle_old) != 0) {
-        wasm_set_exception(module, "fail to enlarge memory.");
-        return false;
+    if (heap_size > 0) {
+        new_memory->heap_handle = (uint8*)heap_handle_old +
+                                  ((uint8*)new_memory - (uint8*)memory);
+        if (mem_allocator_migrate(new_memory->heap_handle,
+                                  heap_handle_old) != 0) {
+            wasm_set_exception(module, "fail to enlarge memory.");
+            return false;
+        }
     }
 
     new_memory->cur_page_count = total_page_count;
@@ -1553,7 +1559,6 @@ wasm_enlarge_memory(WASMModuleInstance *module, uint32 inc_page_count)
     module->memories[0] = module->default_memory = new_memory;
     return true;
 }
-
 
 bool
 wasm_call_indirect(WASMExecEnv *exec_env,
@@ -1571,7 +1576,7 @@ wasm_call_indirect(WASMExecEnv *exec_env,
 
     table_inst = module_inst->default_table;
     if (!table_inst) {
-        wasm_set_exception(module_inst, "there is no table");
+        wasm_set_exception(module_inst, "unknown table");
         goto got_exception;
     }
 

@@ -1536,8 +1536,11 @@ load_from_sections(WASMModule *module, WASMSection *sections,
     for (i = 0; i < module->function_count; i++) {
         WASMFunction *func = module->functions[i];
         memset(block_addr_cache, 0, (uint32)total_size);
-        if (!wasm_loader_prepare_bytecode(module, func, block_addr_cache, error_buf, error_buf_size))
+        if (!wasm_loader_prepare_bytecode(module, func, block_addr_cache,
+                                          error_buf, error_buf_size)) {
+            wasm_runtime_free(block_addr_cache);
             return false;
+        }
     }
     wasm_runtime_free(block_addr_cache);
 
@@ -2479,7 +2482,8 @@ check_offset_pop(WASMLoaderContext *ctx, uint32 cells)
     return true;
 }
 
-static void free_label_patch_list(BranchBlock *frame_csp)
+static void
+free_label_patch_list(BranchBlock *frame_csp)
 {
     BranchBlockPatch *label_patch = frame_csp->patch_list;
     BranchBlockPatch *next;
@@ -2491,7 +2495,8 @@ static void free_label_patch_list(BranchBlock *frame_csp)
     frame_csp->patch_list = NULL;
 }
 
-static void free_all_label_patch_lists(BranchBlock *frame_csp, uint32 csp_num)
+static void
+free_all_label_patch_lists(BranchBlock *frame_csp, uint32 csp_num)
 {
     BranchBlock *tmp_csp = frame_csp;
 
@@ -2560,7 +2565,8 @@ check_stack_pop(WASMLoaderContext *ctx, uint8 type,
     return true;
 }
 
-static void wasm_loader_ctx_destroy(WASMLoaderContext *ctx)
+static void
+wasm_loader_ctx_destroy(WASMLoaderContext *ctx)
 {
     if (ctx) {
         if (ctx->frame_ref_bottom)
@@ -4618,8 +4624,6 @@ re_scan:
                 POP2_AND_PUSH(VALUE_TYPE_F64, VALUE_TYPE_I32);
                 break;
 
-                break;
-
             case WASM_OP_I32_CLZ:
             case WASM_OP_I32_CTZ:
             case WASM_OP_I32_POPCNT:
@@ -4822,8 +4826,8 @@ re_scan:
 #if WASM_ENABLE_FAST_INTERP != 0
                     emit_const(segment_index);
 #endif
-                    if (module->import_memory_count == 0 && module->memory_count == 0)
-                        goto fail_unknown_memory;
+                    bh_assert(module->import_memory_count
+                              + module->memory_count > 0);
 
                     bh_assert(*p == 0x00);
                     p++;
