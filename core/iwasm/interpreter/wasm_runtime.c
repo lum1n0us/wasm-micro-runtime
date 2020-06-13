@@ -134,11 +134,7 @@ memory_instantiate(uint32 num_bytes_per_page,
         return NULL;
     }
 
-#if WASM_ENABLE_SPEC_TEST == 0
     memory->heap_base_offset = -(int32)heap_size;
-#else
-    memory->heap_base_offset = 0;
-#endif
     return memory;
 }
 
@@ -887,10 +883,6 @@ wasm_instantiate(WASMModule *module,
 
     /* Check heap size */
     heap_size = align_uint(heap_size, 8);
-    if (heap_size == 0)
-        heap_size = APP_HEAP_SIZE_DEFAULT;
-    if (heap_size < APP_HEAP_SIZE_MIN)
-        heap_size = APP_HEAP_SIZE_MIN;
     if (heap_size > APP_HEAP_SIZE_MAX)
         heap_size = APP_HEAP_SIZE_MAX;
 
@@ -1149,16 +1141,17 @@ wasm_instantiate(WASMModule *module,
     }
 
 #if WASM_ENABLE_LIBC_WASI != 0
-    if (!wasm_runtime_init_wasi((WASMModuleInstanceCommon*)module_inst,
-                                module->wasi_args.dir_list,
-                                module->wasi_args.dir_count,
-                                module->wasi_args.map_dir_list,
-                                module->wasi_args.map_dir_count,
-                                module->wasi_args.env,
-                                module->wasi_args.env_count,
-                                module->wasi_args.argv,
-                                module->wasi_args.argc,
-                                error_buf, error_buf_size)) {
+    if (heap_size > 0
+        && !wasm_runtime_init_wasi((WASMModuleInstanceCommon*)module_inst,
+                                   module->wasi_args.dir_list,
+                                   module->wasi_args.dir_count,
+                                   module->wasi_args.map_dir_list,
+                                   module->wasi_args.map_dir_count,
+                                   module->wasi_args.env,
+                                   module->wasi_args.env_count,
+                                   module->wasi_args.argv,
+                                   module->wasi_args.argc,
+                                   error_buf, error_buf_size)) {
         wasm_deinstantiate(module_inst);
         return NULL;
     }
