@@ -125,6 +125,10 @@ app_instance_repl(wasm_module_inst_t module_inst)
             else
                 cmd[n - 1] = '\0';
         }
+        if (!strcmp(cmd, "__exit__")) {
+            printf("exit repl mode\n");
+            break;
+        }
         app_argv = split_string(cmd, &app_argc);
         if (app_argv == NULL) {
             LOG_ERROR("Wasm prepare param failed: split string failed.\n");
