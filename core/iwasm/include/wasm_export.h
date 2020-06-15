@@ -319,7 +319,7 @@ wasm_runtime_lookup_wasi_start_function(wasm_module_inst_t module_inst);
  * @param name the name of the function
  * @param signature the signature of the function, ignored currently
  *
- * @return the function instance found
+ * @return the function instance found, NULL if not found
  */
 wasm_function_inst_t
 wasm_runtime_lookup_function(wasm_module_inst_t const module_inst,
@@ -331,7 +331,8 @@ wasm_runtime_lookup_function(wasm_module_inst_t const module_inst,
  * @param module_inst the module instance
  * @param stack_size the stack size to execute a WASM function
  *
- * @return the execution environment
+ * @return the execution environment, NULL if failed, e.g. invalid
+ *         stack size is passed
  */
 wasm_exec_env_t
 wasm_runtime_create_exec_env(wasm_module_inst_t module_inst,
