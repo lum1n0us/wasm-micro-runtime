@@ -357,7 +357,7 @@ execute_start_function(AOTModuleInstance *module_inst)
 }
 
 AOTModuleInstance*
-aot_instantiate(AOTModule *module,
+aot_instantiate(AOTModule *module, bool is_sub_inst,
                 uint32 stack_size, uint32 heap_size,
                 char *error_buf, uint32 error_buf_size)
 {
@@ -448,19 +448,21 @@ aot_instantiate(AOTModule *module,
     return module_inst;
 
 fail:
-    aot_deinstantiate(module_inst);
+    aot_deinstantiate(module_inst, is_sub_inst);
     return NULL;
 }
 
 void
-aot_deinstantiate(AOTModuleInstance *module_inst)
+aot_deinstantiate(AOTModuleInstance *module_inst, bool is_sub_inst)
 {
 #if WASM_ENABLE_LIBC_WASI != 0
     /* Destroy wasi resource before freeing app heap, since some fields of
        wasi contex are allocated from app heap, and if app heap is freed,
        these fields will be set to NULL, we cannot free their internal data
        which may allocated from global heap. */
-    wasm_runtime_destroy_wasi((WASMModuleInstanceCommon*)module_inst);
+    /* Only destroy wasi ctx in the main module instance */
+    if (!is_sub_inst)
+        wasm_runtime_destroy_wasi((WASMModuleInstanceCommon*)module_inst);
 #endif
 
     if (module_inst->heap_handle.ptr)

@@ -387,7 +387,7 @@ wasm_runtime_call_wasm(wasm_exec_env_t exec_env,
  * @param argv the arguments array
  *
  * @return true if the main function is called, false otherwise and exception
- *   will be thrown, the caller can call wasm_runtime_get_exception to get 
+ *   will be thrown, the caller can call wasm_runtime_get_exception to get
  *   the exception info.
  */
 bool
@@ -679,6 +679,16 @@ wasm_runtime_set_user_data(wasm_exec_env_t exec_env,
  */
 void *
 wasm_runtime_get_user_data(wasm_exec_env_t exec_env);
+
+#if WASM_ENABLE_THREAD_MGR != 0
+/**
+ * Set the max thread num per cluster.
+ *
+ * @param num maximum thread num
+ */
+void
+wasm_runtime_set_max_thread_num(uint32_t num);
+#endif
 
 #ifdef __cplusplus
 }
