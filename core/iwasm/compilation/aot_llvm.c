@@ -936,6 +936,11 @@ aot_create_comp_context(AOTCompData *comp_data,
         comp_ctx->is_jit_mode = true;
         comp_ctx->target_machine =
                 LLVMGetExecutionEngineTargetMachine(comp_ctx->exec_engine);
+#ifndef OS_ENABLE_HW_BOUND_CHECK
+        comp_ctx->enable_bound_check = true;
+#else
+        comp_ctx->enable_bound_check = false;
+#endif
     }
     else {
         /* Create LLVM target machine */
@@ -1048,6 +1053,21 @@ aot_create_comp_context(AOTCompData *comp_data,
         /* Save target arch */
         get_target_arch_from_triple(triple_norm, comp_ctx->target_arch,
                                     sizeof(comp_ctx->target_arch));
+
+        if (option->bounds_checks == 1 || option->bounds_checks == 0) {
+            /* Set by user */
+            comp_ctx->enable_bound_check =
+                (option->bounds_checks == 1) ? true : false;
+        }
+        else {
+            /* Unset by user, use default value */
+            if (strstr(comp_ctx->target_arch, "64") && !option->is_sgx_platform) {
+                comp_ctx->enable_bound_check = false;
+            }
+            else {
+                comp_ctx->enable_bound_check = true;
+            }
+        }
 
         os_printf("Create AoT compiler with:\n");
         os_printf("  target:        %s\n", comp_ctx->target_arch);

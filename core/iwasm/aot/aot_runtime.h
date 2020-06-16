@@ -469,6 +469,11 @@ bool
 aot_data_drop(AOTModuleInstance *module_inst, uint32 seg_index);
 #endif
 
+#ifdef OS_ENABLE_HW_BOUND_CHECK
+bool
+aot_signal_init();
+#endif
+
 #ifdef __cplusplus
 } /* end of extern "C" */
 #endif

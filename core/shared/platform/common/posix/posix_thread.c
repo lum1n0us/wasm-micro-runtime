@@ -264,3 +264,78 @@ uint8 *os_thread_get_stack_boundary()
 
     return addr;
 }
+
+#ifdef OS_ENABLE_HW_BOUND_CHECK
+/* The signal handler passed to os_signal_init() */
+static os_signal_handler signal_handler;
+
+static void
+mask_signals(int how)
+{
+    sigset_t set;
+
+    sigemptyset(&set);
+    sigaddset(&set, SIGSEGV);
+    sigaddset(&set, SIGBUS);
+    pthread_sigmask(how, &set, NULL);
+}
+
+__attribute__((noreturn)) static void
+signal_callback(int sig_num, siginfo_t *sig_info, void *sig_ucontext)
+{
+    int i;
+    void *sig_addr = sig_info->si_addr;
+
+    mask_signals(SIG_BLOCK);
+
+    if (signal_handler
+        && (sig_num == SIGSEGV || sig_num == SIGBUS)) {
+        signal_handler(sig_addr);
+    }
+
+    /* signal unhandled */
+    switch (sig_num) {
+        case SIGSEGV:
+            os_printf("unhandled SIGSEGV, si_addr: %p\n", sig_addr);
+            break;
+        case SIGBUS:
+            os_printf("unhandled SIGBUS, si_addr: %p\n", sig_addr);
+            break;
+        default:
+            os_printf("unhandle signal %d, si_addr: %p\n",
+                      sig_num, sig_addr);
+            break;
+    }
+
+    /* divived by 0 to make it abort */
+    i = os_printf(" ");
+    os_printf("%d\n", i / (i - 1));
+    /* access NULL ptr to make it abort */
+    os_printf("%d\n", *(uint32*)(uintptr_t)(i - 1));
+    exit(1);
+}
+
+int
+os_signal_init(os_signal_handler handler)
+{
+    int ret;
+    struct sigaction sig_act;
+
+    sig_act.sa_sigaction = signal_callback;
+    sig_act.sa_flags = SA_SIGINFO | SA_NODEFER;
+    sigemptyset(&sig_act.sa_mask);
+    if ((ret = sigaction(SIGSEGV, &sig_act, NULL)) != 0
+        || (ret = sigaction(SIGBUS, &sig_act, NULL)) != 0) {
+        return ret;
+    }
+    signal_handler = handler;
+    return 0;
+}
+
+void
+os_signal_unmask()
+{
+    mask_signals(SIG_UNBLOCK);
+}
+#endif
+

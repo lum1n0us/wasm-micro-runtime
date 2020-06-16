@@ -188,6 +188,9 @@ typedef struct AOTCompContext {
   /* Bulk memory feature */
   bool enable_bulk_memory;
 
+  /* Bounday Check */
+  bool enable_bound_check;
+
   /* Whether optimize the JITed code */
   bool optimize;
 
@@ -227,9 +230,11 @@ typedef struct AOTCompOption{
     char *target_cpu;
     char *cpu_features;
     bool enable_bulk_memory;
+    bool is_sgx_platform;
     uint32 opt_level;
     uint32 size_level;
     uint32 output_format;
+    uint32 bounds_checks;
 } AOTCompOption, *aot_comp_option_t;
 
 AOTCompContext *

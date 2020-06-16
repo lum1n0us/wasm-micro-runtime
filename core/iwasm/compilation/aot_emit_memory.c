@@ -155,9 +155,10 @@ check_memory_overflow(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
         SET_BUILD_POS(check_mem_space);
     }
 
-    if (!(aot_value->is_local
-          && aot_checked_addr_list_find(func_ctx, aot_value->local_idx,
-                                        offset, bytes))) {
+    if (comp_ctx->enable_bound_check
+        && !(aot_value->is_local
+             && aot_checked_addr_list_find(func_ctx, aot_value->local_idx,
+                                           offset, bytes))) {
         /* offset2 = offset1 - heap_base_offset; */
         BUILD_OP(Sub, offset1, heap_base_offset, offset2, "offset2");
 

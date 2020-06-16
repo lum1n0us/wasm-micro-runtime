@@ -1445,6 +1445,8 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
               if ((global_idx == (uint32)aux_stack_top_global_idx)
                   && (*(uint32*)(frame_sp - 1) < exec_env->aux_stack_boundary))
                 goto out_of_bounds;
+              *(int32*)global_addr = POP_I32();
+              break;
             case VALUE_TYPE_F32:
               *(int32*)global_addr = POP_I32();
               break;

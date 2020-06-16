@@ -149,6 +149,12 @@ enum {
 #define WASM_ENABLE_MINI_LOADER 0
 #endif
 
+/* Disable boundary check with hardware trap or not,
+ * enable it by default if it is supported */
+#ifndef WASM_DISABLE_HW_BOUND_CHECK
+#define WASM_DISABLE_HW_BOUND_CHECK 0
+#endif
+
 /* Heap and stack profiling */
 #define BH_ENABLE_MEMORY_PROFILING 0
 
