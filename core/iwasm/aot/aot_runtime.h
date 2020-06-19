@@ -198,14 +198,12 @@ typedef struct AOTModuleInstance {
     /* WASI context */
     AOTPointer wasi_ctx;
 
-    /* total memory size: heap and linear memory */
-    uint32 total_mem_size;
-
     /* boundary check constants for aot code */
-    uint32 mem_bound_check_1byte;
-    uint32 mem_bound_check_2bytes;
-    uint32 mem_bound_check_4bytes;
-    uint32 mem_bound_check_8bytes;
+    int64 mem_bound_check_heap_base;
+    int64 mem_bound_check_1byte;
+    int64 mem_bound_check_2bytes;
+    int64 mem_bound_check_4bytes;
+    int64 mem_bound_check_8bytes;
 
     /* others */
     int32 temp_ret;

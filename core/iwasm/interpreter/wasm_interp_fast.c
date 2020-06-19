@@ -226,11 +226,9 @@ LOAD_I16(void *addr)
 #endif  /* WASM_CPU_SUPPORTS_UNALIGNED_64BIT_ACCESS != 0 */
 
 #define CHECK_MEMORY_OVERFLOW(bytes) do {                                \
-    int32 offset1 = (int32)(offset + addr);                              \
-    uint64 offset2 = (uint64)(uint32)(offset1 - heap_base_offset);       \
-    /* if (flags != 2)                                                   \
-      LOG_VERBOSE("unaligned load/store, flag: %d.\n", flags); */        \
-    if (offset2 + bytes <= total_mem_size)                               \
+    int64 offset1 = (int64)(uint32)offset + (int64)(int32)addr;          \
+    if (heap_base_offset <= offset1                                      \
+        && offset1 <= (int64)linear_mem_size - bytes)                    \
       /* If offset1 is in valid range, maddr must also be in valid range,\
          no need to check it again. */                                   \
       maddr = memory->memory_data + offset1;                             \
@@ -965,12 +963,8 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
   WASMMemoryInstance *memory = module->default_memory;
   int32 heap_base_offset = memory ? memory->heap_base_offset : 0;
   uint32 num_bytes_per_page = memory ? memory->num_bytes_per_page : 0;
-  uint32 total_mem_size = memory ? num_bytes_per_page * memory->cur_page_count
-                                   - heap_base_offset : 0;
   uint8 *global_data = module->global_data;
-#if WASM_ENABLE_BULK_MEMORY != 0
   uint32 linear_mem_size = memory ? num_bytes_per_page * memory->cur_page_count : 0;
-#endif
   WASMTableInstance *table = module->default_table;
   WASMGlobalInstance *globals = module->globals;
   uint8 opcode_IMPDEP = WASM_OP_IMPDEP;
@@ -1565,11 +1559,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
           frame_lp[addr_ret] = prev_page_count;
           /* update the memory instance ptr */
           memory = module->default_memory;
-          total_mem_size = num_bytes_per_page * memory->cur_page_count
-                           - heap_base_offset;
-#if WASM_ENABLE_BULK_MEMORY != 0
           linear_mem_size = num_bytes_per_page * memory->cur_page_count;
-#endif
         }
 
         (void)reserved;

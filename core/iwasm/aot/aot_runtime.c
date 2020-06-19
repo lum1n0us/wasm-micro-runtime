@@ -212,15 +212,15 @@ memory_instantiate(AOTModuleInstance *module_inst, AOTModule *module,
     p += (uint32)memory_data_size;
     module_inst->memory_data_end.ptr = p;
     module_inst->memory_data_size = (uint32)memory_data_size;
-    module_inst->total_mem_size = (uint32)(heap_size + memory_data_size);
     module_inst->mem_cur_page_count = module->mem_init_page_count;
     module_inst->mem_max_page_count = module->mem_max_page_count;
 
-    if (module_inst->total_mem_size > 0) {
-        module_inst->mem_bound_check_1byte = module_inst->total_mem_size - 1;
-        module_inst->mem_bound_check_2bytes = module_inst->total_mem_size - 2;
-        module_inst->mem_bound_check_4bytes = module_inst->total_mem_size - 4;
-        module_inst->mem_bound_check_8bytes = module_inst->total_mem_size - 8;
+    module_inst->mem_bound_check_heap_base = module_inst->heap_base_offset;
+    if (module_inst->memory_data_size > 0) {
+        module_inst->mem_bound_check_1byte = module_inst->memory_data_size - 1;
+        module_inst->mem_bound_check_2bytes = module_inst->memory_data_size - 2;
+        module_inst->mem_bound_check_4bytes = module_inst->memory_data_size - 4;
+        module_inst->mem_bound_check_8bytes = module_inst->memory_data_size - 8;
     }
 
     for (i = 0; i < module->mem_init_data_count; i++) {
@@ -1023,15 +1023,14 @@ aot_enlarge_memory(AOTModuleInstance *module_inst, uint32 inc_page_count)
 
     module_inst->mem_cur_page_count = total_page_count;
     module_inst->memory_data_size = (uint32)memory_data_size;
-    module_inst->total_mem_size = (uint32)(heap_size + memory_data_size);
     module_inst->memory_data.ptr = (uint8*)heap_data + heap_size;
     module_inst->memory_data_end.ptr = (uint8*)module_inst->memory_data.ptr
                                        + (uint32)memory_data_size;
 
-    module_inst->mem_bound_check_1byte = module_inst->total_mem_size - 1;
-    module_inst->mem_bound_check_2bytes = module_inst->total_mem_size - 2;
-    module_inst->mem_bound_check_4bytes = module_inst->total_mem_size - 4;
-    module_inst->mem_bound_check_8bytes = module_inst->total_mem_size - 8;
+    module_inst->mem_bound_check_1byte = module_inst->memory_data_size - 1;
+    module_inst->mem_bound_check_2bytes = module_inst->memory_data_size - 2;
+    module_inst->mem_bound_check_4bytes = module_inst->memory_data_size - 4;
+    module_inst->mem_bound_check_8bytes = module_inst->memory_data_size - 8;
     return true;
 }
 #else
@@ -1066,14 +1065,13 @@ aot_enlarge_memory(AOTModuleInstance *module_inst, uint32 inc_page_count)
 
     module_inst->mem_cur_page_count = total_page_count;
     module_inst->memory_data_size = (uint32)memory_data_size;
-    module_inst->total_mem_size += num_bytes_per_page * inc_page_count;
     module_inst->memory_data_end.ptr = (uint8*)module_inst->memory_data.ptr
                                        + (uint32)memory_data_size;
 
-    module_inst->mem_bound_check_1byte = module_inst->total_mem_size - 1;
-    module_inst->mem_bound_check_2bytes = module_inst->total_mem_size - 2;
-    module_inst->mem_bound_check_4bytes = module_inst->total_mem_size - 4;
-    module_inst->mem_bound_check_8bytes = module_inst->total_mem_size - 8;
+    module_inst->mem_bound_check_1byte = module_inst->memory_data_size - 1;
+    module_inst->mem_bound_check_2bytes = module_inst->memory_data_size - 2;
+    module_inst->mem_bound_check_4bytes = module_inst->memory_data_size - 4;
+    module_inst->mem_bound_check_8bytes = module_inst->memory_data_size - 8;
     return true;
 }
 #endif

@@ -105,9 +105,8 @@ typedef struct AOTFuncContext {
   LLVMValueRef native_stack_bound;
   LLVMValueRef last_alloca;
 
-  LLVMValueRef heap_base_offset;
   LLVMValueRef mem_base_addr;
-  LLVMValueRef total_mem_size;
+  LLVMValueRef mem_bound_check_heap_base;
   LLVMValueRef mem_bound_check_1byte;
   LLVMValueRef mem_bound_check_2bytes;
   LLVMValueRef mem_bound_check_4bytes;

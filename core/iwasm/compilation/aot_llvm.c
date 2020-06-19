@@ -182,29 +182,6 @@ create_memory_info(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
         }
     }
 
-    /* Load total memory size */
-    offset = I32_CONST(offsetof(AOTModuleInstance, total_mem_size));
-    if (!(func_ctx->total_mem_size =
-                LLVMBuildInBoundsGEP(comp_ctx->builder, func_ctx->aot_inst,
-                                     &offset, 1, "bound_check_1byte_offset"))) {
-        aot_set_last_error("llvm build in bounds gep failed");
-        return false;
-    }
-    if (!(func_ctx->total_mem_size =
-                LLVMBuildBitCast(comp_ctx->builder, func_ctx->total_mem_size,
-                                 INT32_PTR_TYPE, "bound_check_1byte_ptr"))) {
-        aot_set_last_error("llvm build bit cast failed");
-        return false;
-    }
-    if (mem_space_unchanged) {
-        if (!(func_ctx->total_mem_size =
-                    LLVMBuildLoad(comp_ctx->builder, func_ctx->total_mem_size,
-                                  "bound_check_1byte"))) {
-            aot_set_last_error("llvm build load failed");
-            return false;
-        }
-    }
-
     /* Load memory bound check constants */
     offset = I32_CONST(offsetof(AOTModuleInstance, mem_bound_check_1byte));
     if (!(func_ctx->mem_bound_check_1byte =
@@ -215,7 +192,7 @@ create_memory_info(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
     }
     if (!(func_ctx->mem_bound_check_1byte =
                 LLVMBuildBitCast(comp_ctx->builder, func_ctx->mem_bound_check_1byte,
-                                 INT32_PTR_TYPE, "bound_check_1byte_ptr"))) {
+                                 INT64_PTR_TYPE, "bound_check_1byte_ptr"))) {
         aot_set_last_error("llvm build bit cast failed");
         return false;
     }
@@ -237,7 +214,7 @@ create_memory_info(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
     }
     if (!(func_ctx->mem_bound_check_2bytes =
                 LLVMBuildBitCast(comp_ctx->builder, func_ctx->mem_bound_check_2bytes,
-                                 INT32_PTR_TYPE, "bound_check_2bytes_ptr"))) {
+                                 INT64_PTR_TYPE, "bound_check_2bytes_ptr"))) {
         aot_set_last_error("llvm build bit cast failed");
         return false;
     }
@@ -259,7 +236,7 @@ create_memory_info(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
     }
     if (!(func_ctx->mem_bound_check_4bytes =
                 LLVMBuildBitCast(comp_ctx->builder, func_ctx->mem_bound_check_4bytes,
-                                 INT32_PTR_TYPE, "bound_check_4bytes_ptr"))) {
+                                 INT64_PTR_TYPE, "bound_check_4bytes_ptr"))) {
         aot_set_last_error("llvm build bit cast failed");
         return false;
     }
@@ -281,7 +258,7 @@ create_memory_info(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
     }
     if (!(func_ctx->mem_bound_check_8bytes =
                 LLVMBuildBitCast(comp_ctx->builder, func_ctx->mem_bound_check_8bytes,
-                                 INT32_PTR_TYPE, "bound_check_8bytes_ptr"))) {
+                                 INT64_PTR_TYPE, "bound_check_8bytes_ptr"))) {
         aot_set_last_error("llvm build bit cast failed");
         return false;
     }
@@ -294,23 +271,23 @@ create_memory_info(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
         }
     }
 
-    /* Load heap base offset */
-    offset = I32_CONST(offsetof(AOTModuleInstance, heap_base_offset));
-    if (!(func_ctx->heap_base_offset =
+    /* Load bound_check_heap_base */
+    offset = I32_CONST(offsetof(AOTModuleInstance, mem_bound_check_heap_base));
+    if (!(func_ctx->mem_bound_check_heap_base =
                 LLVMBuildInBoundsGEP(comp_ctx->builder, func_ctx->aot_inst,
-                                     &offset, 1, "heap_base_offset_offset"))) {
+                                     &offset, 1, "bound_check_heap_base_offset"))) {
         aot_set_last_error("llvm build in bounds gep failed");
         return false;
     }
-    if (!(func_ctx->heap_base_offset =
-                LLVMBuildBitCast(comp_ctx->builder, func_ctx->heap_base_offset,
-                                 INT32_PTR_TYPE, "heap_base_offset_tmp"))) {
+    if (!(func_ctx->mem_bound_check_heap_base =
+                LLVMBuildBitCast(comp_ctx->builder, func_ctx->mem_bound_check_heap_base,
+                                 INT64_PTR_TYPE, "bound_check_heap_base_tmp"))) {
         aot_set_last_error("llvm build bit cast failed");
         return false;
     }
-    if (!(func_ctx->heap_base_offset =
-                LLVMBuildLoad(comp_ctx->builder, func_ctx->heap_base_offset,
-                              "heap_base_offset"))) {
+    if (!(func_ctx->mem_bound_check_heap_base =
+                LLVMBuildLoad(comp_ctx->builder, func_ctx->mem_bound_check_heap_base,
+                              "bound_check_heap_base"))) {
         aot_set_last_error("llvm build load failed");
         return false;
     }
