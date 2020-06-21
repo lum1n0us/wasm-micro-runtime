@@ -205,7 +205,7 @@ enum {
 
 /* Default/min/max stack size of each app thread */
 #if !defined(BH_PLATFORM_ZEPHYR) && !defined(BH_PLATFORM_ALIOS_THINGS)
-#define APP_THREAD_STACK_SIZE_DEFAULT (20 * 1024)
+#define APP_THREAD_STACK_SIZE_DEFAULT (24 * 1024)
 #define APP_THREAD_STACK_SIZE_MIN (16 * 1024)
 #define APP_THREAD_STACK_SIZE_MAX (256 * 1024)
 #else

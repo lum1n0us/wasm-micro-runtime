@@ -130,7 +130,6 @@ wasm_exec_env_set_thread_info(WASMExecEnv *exec_env)
     exec_env->handle = os_self_thread();
     exec_env->native_stack_boundary = os_thread_get_stack_boundary()
                                       + RESERVED_BYTES_TO_NATIVE_STACK_BOUNDARY;
-
 }
 
 #if WASM_ENABLE_THREAD_MGR != 0

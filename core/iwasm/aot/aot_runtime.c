@@ -554,24 +554,49 @@ aot_lookup_function(const AOTModuleInstance *module_inst,
 
 static os_thread_local_attribute WASMExecEnv *aot_exec_env = NULL;
 
+static inline uint8 *
+get_stack_min_addr(WASMExecEnv *exec_env, uint32 page_size)
+{
+    uintptr_t stack_bound = (uintptr_t)exec_env->native_stack_boundary;
+    return (uint8*)(stack_bound & ~(uintptr_t)(page_size -1 ));
+}
+
 static void
 aot_signal_handler(void *sig_addr)
 {
     AOTModuleInstance *module_inst;
-    uint8 *mapped_mem_start_addr, *mapped_mem_end_addr;
     WASMJmpBuf *jmpbuf_node;
+    uint8 *mapped_mem_start_addr, *mapped_mem_end_addr;
+    uint8 *stack_min_addr;
+    uint32 page_size;
 
+    /* Check whether current thread is running aot function */
     if (aot_exec_env
-        && aot_exec_env->handle == os_self_thread()) {
+        && aot_exec_env->handle == os_self_thread()
+        && (jmpbuf_node = aot_exec_env->jmpbuf_stack_top)) {
+        /* Get mapped mem info of current instance */
         module_inst = (AOTModuleInstance *)aot_exec_env->module_inst;
         mapped_mem_start_addr = (uint8*)module_inst->memory_data.ptr
                                 - 2 * (uint64)BH_GB;
         mapped_mem_end_addr = (uint8*)module_inst->memory_data.ptr
                               + 6 * (uint64)BH_GB;
 
+        /* Get stack info of current thread */
+        page_size = os_getpagesize();
+        stack_min_addr = get_stack_min_addr(aot_exec_env, page_size);
+
         if (mapped_mem_start_addr <= (uint8*)sig_addr
-            && (uint8*)sig_addr < mapped_mem_end_addr
-            && (jmpbuf_node = aot_exec_env->jmpbuf_stack_top)) {
+            && (uint8*)sig_addr < mapped_mem_end_addr) {
+            /* The address which causes segmentation fault is inside
+               aot instance's guard regions */
+            aot_set_exception_with_id(module_inst, EXCE_OUT_OF_BOUNDS_MEMORY_ACCESS);
+            os_longjmp(jmpbuf_node->jmpbuf, 1);
+        }
+        else if (stack_min_addr <= (uint8*)sig_addr
+                 && (uint8*)sig_addr < stack_min_addr + page_size) {
+            /* The address which causes segmentation fault is inside
+               native thread's guard page */
+            aot_set_exception_with_id(module_inst, EXCE_NATIVE_STACK_OVERFLOW);
             os_longjmp(jmpbuf_node->jmpbuf, 1);
         }
     }
@@ -583,6 +608,30 @@ aot_signal_init()
     return os_signal_init(aot_signal_handler) == 0 ? true : false;
 }
 
+void
+aot_signal_destroy()
+{
+    os_signal_destroy();
+}
+
+#if defined(__GNUC__)
+__attribute__((no_sanitize_address)) static uint32
+#else
+static uint32
+#endif
+touch_pages(uint8 *stack_min_addr, uint32 page_size)
+{
+    uint8 sum = 0;
+    while (1) {
+        uint8 *touch_addr = os_alloca(page_size / 2);
+        sum += *touch_addr;
+        if (touch_addr < stack_min_addr + page_size) {
+            break;
+        }
+    }
+    return sum;
+}
+
 static bool
 invoke_native_with_hw_bound_check(WASMExecEnv *exec_env, void *func_ptr,
                                  const WASMType *func_type, const char *signature,
@@ -592,12 +641,25 @@ invoke_native_with_hw_bound_check(WASMExecEnv *exec_env, void *func_ptr,
     AOTModuleInstance *module_inst = (AOTModuleInstance*)exec_env->module_inst;
     WASMExecEnv **p_aot_exec_env = &aot_exec_env;
     WASMJmpBuf *jmpbuf_node, *jmpbuf_node_pop;
+    uint32 page_size = os_getpagesize();
+    uint8 *stack_min_addr = get_stack_min_addr(exec_env, page_size);
     bool ret;
 
     if (aot_exec_env
         && (aot_exec_env != exec_env)) {
         aot_set_exception(module_inst, "Invalid exec env.");
         return false;
+    }
+
+    if (!exec_env->jmpbuf_stack_top) {
+        /* Touch each stack page to ensure that it has been mapped: the OS may
+           lazily grow the stack mapping as a guard page is hit. */
+        touch_pages(stack_min_addr, page_size);
+        /* First time to call aot function, protect one page */
+        if (os_mprotect(stack_min_addr, page_size, MMAP_PROT_NONE) != 0) {
+            aot_set_exception(module_inst, "Set protected page failed.");
+            return false;
+        }
     }
 
     if (!(jmpbuf_node = wasm_runtime_malloc(sizeof(WASMJmpBuf)))) {
@@ -614,15 +676,19 @@ invoke_native_with_hw_bound_check(WASMExecEnv *exec_env, void *func_ptr,
                                          argv, argc, argv);
     }
     else {
-        aot_set_exception_with_id(module_inst, EXCE_OUT_OF_BOUNDS_MEMORY_ACCESS);
+        /* Exception has been set in signal handler before calling longjmp */
         ret = false;
     }
 
     jmpbuf_node_pop = wasm_exec_env_pop_jmpbuf(exec_env);
     bh_assert(jmpbuf_node == jmpbuf_node_pop);
     wasm_runtime_free(jmpbuf_node);
-    if (!exec_env->jmpbuf_stack_top)
+    if (!exec_env->jmpbuf_stack_top) {
+        /* Unprotect the guard page when the nested call depth is zero */
+        os_mprotect(stack_min_addr, page_size,
+                    MMAP_PROT_READ | MMAP_PROT_WRITE);
         *p_aot_exec_env = NULL;
+    }
     os_sigreturn();
     os_signal_unmask();
     (void)jmpbuf_node_pop;

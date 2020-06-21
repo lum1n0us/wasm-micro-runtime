@@ -185,6 +185,12 @@ wasm_runtime_init()
 void
 wasm_runtime_destroy()
 {
+#if WASM_ENABLE_AOT != 0
+#ifdef OS_ENABLE_HW_BOUND_CHECK
+    aot_signal_destroy();
+#endif
+#endif
+
     /* runtime env destroy */
 #if WASM_ENABLE_MULTI_MODULE
     wasm_runtime_destroy_loading_module_list();

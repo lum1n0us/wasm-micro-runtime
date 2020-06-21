@@ -67,12 +67,15 @@ typedef jmp_buf korp_jmpbuf;
 
 #define os_setjmp setjmp
 #define os_longjmp longjmp
+#define os_alloca alloca
 
 #define os_getpagesize getpagesize
 
 typedef void (*os_signal_handler)(void *sig_addr);
 
 int os_signal_init(os_signal_handler handler);
+
+void os_signal_destroy();
 
 void os_signal_unmask();
 
