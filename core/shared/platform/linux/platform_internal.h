@@ -75,6 +75,8 @@ typedef void (*os_signal_handler)(void *sig_addr);
 int os_signal_init(os_signal_handler handler);
 
 void os_signal_unmask();
+
+void os_sigreturn();
 #endif /* end of BUILD_TARGET_X86_64/AMD_64/AARCH64 */
 #endif /* end of WASM_DISABLE_HW_BOUND_CHECK */
 

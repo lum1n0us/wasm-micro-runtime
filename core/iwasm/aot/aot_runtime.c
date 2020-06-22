@@ -623,6 +623,7 @@ invoke_native_with_hw_bound_check(WASMExecEnv *exec_env, void *func_ptr,
     wasm_runtime_free(jmpbuf_node);
     if (!exec_env->jmpbuf_stack_top)
         *p_aot_exec_env = NULL;
+    os_sigreturn();
     os_signal_unmask();
     (void)jmpbuf_node_pop;
     return ret;

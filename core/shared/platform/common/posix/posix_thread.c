@@ -337,5 +337,18 @@ os_signal_unmask()
 {
     mask_signals(SIG_UNBLOCK);
 }
+
+void
+os_sigreturn()
+{
+#if defined(__APPLE__)
+    #define UC_RESET_ALT_STACK 0x80000000
+    extern int __sigreturn(void *, int);
+
+    /* It's necessary to call __sigreturn to restore the sigaltstack state
+       after exiting the signal handler. */
+    __sigreturn(NULL, UC_RESET_ALT_STACK);
 #endif
+}
+#endif /* end of OS_ENABLE_HW_BOUND_CHECK */
 
