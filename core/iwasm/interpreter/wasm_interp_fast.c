@@ -2337,23 +2337,13 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
       HANDLE_OP (EXT_OP_COPY_STACK_TOP):
         addr1 = GET_OFFSET();
         addr2 = GET_OFFSET();
-#if defined(BUILD_TARGET_X86_32)
-        bh_memcpy_s(frame_lp + addr2, sizeof(int32),
-                    frame_lp + addr1, sizeof(int32));
-#else
         frame_lp[addr2] = frame_lp[addr1];
-#endif
         HANDLE_OP_END ();
 
       HANDLE_OP (EXT_OP_COPY_STACK_TOP_I64):
         addr1 = GET_OFFSET();
         addr2 = GET_OFFSET();
-#if defined(BUILD_TARGET_X86_32)
-        bh_memcpy_s(frame_lp + addr2, sizeof(int64),
-                    frame_lp + addr1, sizeof(int64));
-#else
-        *(float64*)(frame_lp + addr2) = *(float64*)(frame_lp + addr1);
-#endif
+        *(uint64*)(frame_lp + addr2) = *(uint64*)(frame_lp + addr1);
         HANDLE_OP_END ();
 
       HANDLE_OP (WASM_OP_SET_LOCAL):
