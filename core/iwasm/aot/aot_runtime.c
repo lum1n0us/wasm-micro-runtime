@@ -592,8 +592,8 @@ aot_signal_handler(void *sig_addr)
             aot_set_exception_with_id(module_inst, EXCE_OUT_OF_BOUNDS_MEMORY_ACCESS);
             os_longjmp(jmpbuf_node->jmpbuf, 1);
         }
-        else if (stack_min_addr <= (uint8*)sig_addr
-                 && (uint8*)sig_addr < stack_min_addr + page_size) {
+        else if (stack_min_addr - page_size <= (uint8*)sig_addr
+                 && (uint8*)sig_addr < stack_min_addr + page_size * 3) {
             /* The address which causes segmentation fault is inside
                native thread's guard page */
             aot_set_exception_with_id(module_inst, EXCE_NATIVE_STACK_OVERFLOW);
@@ -656,7 +656,7 @@ invoke_native_with_hw_bound_check(WASMExecEnv *exec_env, void *func_ptr,
            lazily grow the stack mapping as a guard page is hit. */
         touch_pages(stack_min_addr, page_size);
         /* First time to call aot function, protect one page */
-        if (os_mprotect(stack_min_addr, page_size, MMAP_PROT_NONE) != 0) {
+        if (os_mprotect(stack_min_addr, page_size * 3, MMAP_PROT_NONE) != 0) {
             aot_set_exception(module_inst, "Set protected page failed.");
             return false;
         }
@@ -685,7 +685,7 @@ invoke_native_with_hw_bound_check(WASMExecEnv *exec_env, void *func_ptr,
     wasm_runtime_free(jmpbuf_node);
     if (!exec_env->jmpbuf_stack_top) {
         /* Unprotect the guard page when the nested call depth is zero */
-        os_mprotect(stack_min_addr, page_size,
+        os_mprotect(stack_min_addr, page_size * 3,
                     MMAP_PROT_READ | MMAP_PROT_WRITE);
         *p_aot_exec_env = NULL;
     }
