@@ -26,12 +26,12 @@ print_help()
   printf("                            Use +feature to enable a feature, or -feature to disable it\n");
   printf("                            For example, --cpu-features=+feature1,-feature2\n");
   printf("                            Use --cpu-features=+help to list all the features supported\n");
-  printf("  --opt-level=n             Set the optimization level (0 to 3, default: 3, which is fastest)\n");
-  printf("  --size-level=n            Set the code size level (0 to 3, default: 3, which is smallest)\n");
+  printf("  --opt-level=n             Set the optimization level (0 to 3, default is 3)\n");
+  printf("  --size-level=n            Set the code size level (0 to 3, default is 3)\n");
   printf("  -sgx                      Generate code for SGX platform (Intel Software Guard Extention)\n");
   printf("  --bounds-checks=1/0       Enable or disable the bounds checks for memory access:\n");
-  printf("                              by default it is disabled in all 64-bit platforms except SGX,\n");
-  printf("                              in which runtime will do bounds checks with hardware trap,\n");
+  printf("                              by default it is disabled in all 64-bit platforms except SGX and\n");
+  printf("                              in these platforms runtime does bounds checks with hardware trap,\n");
   printf("                              and by default it is enabled in all 32-bit platforms\n");
   printf("  --format=<format>         Specifies the format of the output file\n");
   printf("                            The format supported:\n");
