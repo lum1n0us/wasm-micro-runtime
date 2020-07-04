@@ -621,11 +621,13 @@ touch_pages(uint8 *stack_min_addr, uint32 page_size)
 {
     uint8 sum = 0;
     while (1) {
-        uint8 *touch_addr = os_alloca(page_size / 2);
-        sum += *touch_addr;
+        volatile uint8 *touch_addr =
+            (volatile uint8*)os_alloca(page_size / 2);
         if (touch_addr < stack_min_addr + page_size) {
+            sum += *(stack_min_addr + page_size - 1);
             break;
         }
+        sum += *touch_addr;
     }
     return sum;
 }
@@ -671,7 +673,7 @@ invoke_native_with_hw_bound_check(WASMExecEnv *exec_env, void *func_ptr,
     if (os_setjmp(jmpbuf_node->jmpbuf) == 0) {
         ret = wasm_runtime_invoke_native(exec_env, func_ptr, func_type,
                                          signature, attachment,
-                                         argv, argc, argv);
+                                         argv, argc, argv_ret);
     }
     else {
         /* Exception has been set in signal handler before calling longjmp */
