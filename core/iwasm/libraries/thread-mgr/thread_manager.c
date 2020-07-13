@@ -290,6 +290,11 @@ thread_manager_start_routine(void *arg)
     exec_env->handle = os_self_thread();
     ret = exec_env->thread_start_routine(exec_env);
 
+#ifdef OS_ENABLE_HW_BOUND_CHECK
+    if (exec_env->suspend_flags.flags & 0x08)
+        ret = exec_env->thread_ret_value;
+#endif
+
     /* Routine exit */
     /* Free aux stack space */
     free_aux_stack(cluster,
@@ -379,6 +384,11 @@ wasm_cluster_exit_thread(WASMExecEnv *exec_env, void *retval)
 #ifdef OS_ENABLE_HW_BOUND_CHECK
     if (exec_env->jmpbuf_stack_top) {
         WASMJmpBuf *jmpbuf_node;
+
+        /* Store the return value in exec_env */
+        exec_env->thread_ret_value = retval;
+        exec_env->suspend_flags.flags |= 0x08;
+
         /* Free all jmpbuf_node except the last one */
         while (exec_env->jmpbuf_stack_top->prev) {
             jmpbuf_node = wasm_exec_env_pop_jmpbuf(exec_env);
