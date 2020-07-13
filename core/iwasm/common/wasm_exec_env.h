@@ -57,7 +57,10 @@ typedef struct WASMExecEnv {
         bit 0: need terminate
         bit 1: need suspend
         bit 2: need to go into breakpoint */
-    uintptr_t suspend_flags;
+    union {
+        uint32 flags;
+        uintptr_t __padding__;
+    } suspend_flags;
 
     /* Must be provided by thread library */
     void* (*thread_start_routine)(void *);

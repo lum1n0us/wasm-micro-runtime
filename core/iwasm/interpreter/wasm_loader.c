@@ -2538,10 +2538,10 @@ load_from_sections(WASMModule *module, WASMSection *sections,
                         && global->is_mutable
                         && global->init_expr.init_expr_type ==
                                     INIT_EXPR_TYPE_I32_CONST
-                        && (global->init_expr.u.i32 ==
+                        && (global->init_expr.u.i32 <=
                                     llvm_heap_base_global->init_expr.u.i32
-                            || global->init_expr.u.i32 ==
-                                    llvm_data_end_global->init_expr.u.i32)) {
+                            && llvm_data_end_global->init_expr.u.i32 <=
+                                    llvm_heap_base_global->init_expr.u.i32)) {
                         llvm_stack_top_global = global;
                         llvm_stack_top = global->init_expr.u.i32;
                         stack_top_global_index = global_index;

@@ -420,11 +420,27 @@ load_memory_info(const uint8 **p_buf, const uint8 *buf_end,
                  AOTModule *module,
                  char *error_buf, uint32 error_buf_size)
 {
+    uint32 i;
+    uint64 total_size;
     const uint8 *buf = *p_buf;
 
-    read_uint32(buf, buf_end, module->num_bytes_per_page);
-    read_uint32(buf, buf_end, module->mem_init_page_count);
-    read_uint32(buf, buf_end, module->mem_max_page_count);
+    read_uint32(buf, buf_end, module->memory_count);
+    total_size = sizeof(AOTMemory) * (uint64)module->memory_count;
+    if (!(module->memories =
+            loader_malloc(total_size, error_buf, error_buf_size))) {
+        return false;
+    }
+
+    for (i = 0; i < module->memory_count; i++) {
+        read_uint32(buf, buf_end, module->memories[i].memory_flags);
+        read_uint32(buf, buf_end, module->memories[i].num_bytes_per_page);
+        read_uint32(buf, buf_end, module->memories[i].mem_init_page_count);
+        read_uint32(buf, buf_end, module->memories[i].mem_max_page_count);
+    }
+
+    if (module->memory_count != 0)
+        module->num_bytes_per_page = module->memories[0].num_bytes_per_page;
+
     read_uint32(buf, buf_end, module->mem_init_data_count);
 
     /* load memory init data list */
@@ -1621,16 +1637,12 @@ static void aot_free(void *ptr)
 static AOTModule*
 create_module(char *error_buf, uint32 error_buf_size)
 {
-    AOTModule *module = wasm_runtime_malloc(sizeof(AOTModule));
+    AOTModule *module =
+        loader_malloc(sizeof(AOTModule), error_buf, error_buf_size);
 
     if (!module) {
-        set_error_buf(error_buf, error_buf_size,
-                      "AOT module load failed: "
-                      "allocate memory failed.");
         return NULL;
     }
-
-    memset(module, 0, sizeof(AOTModule));
 
     module->module_type = Wasm_Module_AoT;
 
@@ -1703,10 +1715,9 @@ create_sections(const uint8 *buf, uint32 size,
             read_uint32(p, p_end, section_size);
             CHECK_BUF(p, p_end, section_size);
 
-            if (!(section = wasm_runtime_malloc(sizeof(AOTSection)))) {
-                set_error_buf(error_buf, error_buf_size,
-                              "AOT module load failed: "
-                              "allocate memory failed.");
+            if (!(section =
+                    loader_malloc(sizeof(AOTSection),
+                                  error_buf, error_buf_size))) {
                 goto fail;
             }
 
@@ -1858,18 +1869,23 @@ aot_load_from_comp_data(AOTCompData *comp_data, AOTCompContext *comp_ctx,
     AOTModule *module;
 
     /* Allocate memory for module */
-    if (!(module = wasm_runtime_malloc(sizeof(AOTModule)))) {
-        set_error_buf(error_buf, error_buf_size,
-                      "Allocate memory for AOT module failed.");
+    if (!(module =
+            loader_malloc(sizeof(AOTModule), error_buf, error_buf_size))) {
         return NULL;
     }
 
-    memset(module, 0, sizeof(AOTModule));
-
     module->module_type = Wasm_Module_AoT;
-    module->num_bytes_per_page = comp_data->num_bytes_per_page;
-    module->mem_init_page_count = comp_data->mem_init_page_count;
-    module->mem_max_page_count = comp_data->mem_max_page_count;
+    module->memory_count = comp_data->memory_count;
+
+    if (module->memory_count) {
+        size = sizeof(AOTMemory) * (uint64)module->memory_count;
+        if (!(module->memories =
+                loader_malloc(size, error_buf, error_buf_size))) {
+            goto fail1;
+        }
+
+        bh_memcpy_s(module->memories, size, comp_data->memories, size);
+    }
 
     module->mem_init_data_list = comp_data->mem_init_data_list;
     module->mem_init_data_count = comp_data->mem_init_data_count;
@@ -1899,15 +1915,13 @@ aot_load_from_comp_data(AOTCompData *comp_data, AOTCompContext *comp_ctx,
 
     /* Allocate memory for function pointers */
     size = (uint64)module->func_count * sizeof(void *);
-    if (size >= UINT32_MAX
-        || !(module->func_ptrs = wasm_runtime_malloc((uint32)size))) {
-        set_error_buf(error_buf, error_buf_size, "Create func ptrs fail.");
-        goto fail1;
+    if (!(module->func_ptrs =
+            loader_malloc(size, error_buf, error_buf_size))) {
+        goto fail2;
     }
 
     /* Resolve function addresses */
     bh_assert(comp_ctx->exec_engine);
-    memset(module->func_ptrs, 0, (uint32)size);
     for (i = 0; i < comp_data->func_count; i++) {
         snprintf(func_name, sizeof(func_name), "%s%d", AOT_FUNC_PREFIX, i);
         if (!(module->func_ptrs[i] =
@@ -1915,18 +1929,16 @@ aot_load_from_comp_data(AOTCompData *comp_data, AOTCompContext *comp_ctx,
                                                    func_name))) {
             set_error_buf(error_buf, error_buf_size,
                           "Get function address fail.");
-            goto fail2;
+            goto fail3;
         }
     }
 
     /* Allocation memory for function type indexes */
     size = (uint64)module->func_count * sizeof(uint32);
-    if (size >= UINT32_MAX
-        || !(module->func_type_indexes = wasm_runtime_malloc((uint32)size))) {
-        set_error_buf(error_buf, error_buf_size, "Create func type indexes fail.");
-        goto fail2;
+    if (!(module->func_type_indexes =
+            loader_malloc(size, error_buf, error_buf_size))) {
+        goto fail3;
     }
-    memset(module->func_type_indexes, 0, (uint32)size);
     for (i = 0; i < comp_data->func_count; i++)
         module->func_type_indexes[i] = comp_data->funcs[i]->func_type_index;
 
@@ -1974,9 +1986,11 @@ aot_load_from_comp_data(AOTCompData *comp_data, AOTCompContext *comp_ctx,
 #endif
 
     return module;
-
-fail2:
+fail3:
     wasm_runtime_free(module->func_ptrs);
+fail2:
+    if (module->memory_count > 0)
+        wasm_runtime_free(module->memories);
 fail1:
     wasm_runtime_free(module);
     return NULL;
@@ -2001,6 +2015,9 @@ aot_convert_wasm_module(WASMModule *wasm_module,
     }
 
     option.is_jit_mode = true;
+#if WASM_ENABLE_THREAD_MGR != 0
+    option.enable_thread_mgr = true;
+#endif
     comp_ctx = aot_create_comp_context(comp_data, &option);
     if (!comp_ctx) {
         aot_last_error = aot_get_last_error();
@@ -2045,6 +2062,9 @@ aot_unload(AOTModule *module)
     if (module->wasm_module)
         wasm_loader_unload(module->wasm_module);
 #endif
+
+    if (module->memories)
+        wasm_runtime_free(module->memories);
 
     if (module->mem_init_data_list)
         destroy_mem_init_data_list(module->mem_init_data_list,

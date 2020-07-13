@@ -381,6 +381,7 @@ aot_create_comp_data(WASMModule *module)
 {
   AOTCompData *comp_data;
   uint32 import_global_data_size = 0, global_data_size = 0, i;
+  uint64 size;
 
   /* Allocate memory */
   if (!(comp_data = wasm_runtime_malloc(sizeof(AOTCompData)))) {
@@ -390,22 +391,47 @@ aot_create_comp_data(WASMModule *module)
 
   memset(comp_data, 0, sizeof(AOTCompData));
 
-  /* Set memory page count */
-  if (module->import_memory_count) {
-    comp_data->num_bytes_per_page =
-      module->import_memories[0].u.memory.num_bytes_per_page;
-    comp_data->mem_init_page_count =
-      module->import_memories[0].u.memory.init_page_count;
-    comp_data->mem_max_page_count =
-      module->import_memories[0].u.memory.max_page_count;
+  comp_data->memory_count = module->import_memory_count + module->memory_count;
+
+  /* Allocate memory for memory array, reserve one AOTMemory space at least */
+  if (comp_data->memory_count)
+    size = (uint64)comp_data->memory_count * sizeof(AOTMemory);
+  else
+    size = 1 * sizeof(AOTMemory);
+
+  if (size >= UINT32_MAX
+      || !(comp_data->memories = wasm_runtime_malloc((uint32)size))) {
+    aot_set_last_error("create memories array failed.\n");
+    goto fail;
   }
-  else if (module->memory_count) {
-    comp_data->num_bytes_per_page =
-      module->memories[0].num_bytes_per_page;
-    comp_data->mem_init_page_count =
-      module->memories[0].init_page_count;
-    comp_data->mem_max_page_count =
-      module->memories[0].max_page_count;
+  memset(comp_data->memories, 0, size);
+
+  /* Set memory page count */
+  for (i = 0; i < comp_data->memory_count; i++) {
+    if (i < module->import_memory_count) {
+      comp_data->memories[i].memory_flags =
+        module->import_memories[i].u.memory.flags;
+      comp_data->memories[i].num_bytes_per_page =
+        module->import_memories[i].u.memory.num_bytes_per_page;
+      comp_data->memories[i].mem_init_page_count =
+        module->import_memories[i].u.memory.init_page_count;
+      comp_data->memories[i].mem_max_page_count =
+        module->import_memories[i].u.memory.max_page_count;
+      comp_data->num_bytes_per_page =
+        module->import_memories[i].u.memory.num_bytes_per_page;
+    }
+    else if (i < module->memory_count) {
+      comp_data->memories[i].memory_flags =
+        module->memories[i].flags;
+      comp_data->memories[i].num_bytes_per_page =
+        module->memories[i].num_bytes_per_page;
+      comp_data->memories[i].mem_init_page_count =
+        module->memories[i].init_page_count;
+      comp_data->memories[i].mem_max_page_count =
+        module->memories[i].max_page_count;
+      comp_data->num_bytes_per_page =
+        module->memories[i].num_bytes_per_page;
+    }
   }
 
   /* Create memory data segments */
@@ -473,6 +499,12 @@ aot_create_comp_data(WASMModule *module)
             (module, comp_data->export_func_count)))
     goto fail;
 
+  /* Create llvm aux stack informations */
+  comp_data->llvm_aux_stack_global_index = module->llvm_aux_stack_global_index;
+  comp_data->llvm_aux_data_end = module->llvm_aux_data_end;
+  comp_data->llvm_aux_stack_bottom = module->llvm_aux_stack_bottom;
+  comp_data->llvm_aux_stack_size = module->llvm_aux_stack_size;
+
   comp_data->start_func_index = module->start_function;
   comp_data->wasm_module = module;
 
@@ -489,6 +521,9 @@ aot_destroy_comp_data(AOTCompData *comp_data)
 {
   if (!comp_data)
     return;
+
+  if (comp_data->memories)
+    wasm_runtime_free(comp_data->memories);
 
   if (comp_data->mem_init_data_list)
     aot_destroy_mem_init_data_list(comp_data->mem_init_data_list,

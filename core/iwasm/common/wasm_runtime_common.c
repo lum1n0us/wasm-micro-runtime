@@ -115,7 +115,7 @@ wasm_runtime_env_init()
     }
 #endif
 
-#if WASM_ENABLE_THREAD_MGR != 0
+#if (WASM_ENABLE_WAMR_COMPILER == 0) && (WASM_ENABLE_THREAD_MGR != 0)
     if (!thread_manager_init()) {
         goto fail5;
     }
@@ -136,7 +136,7 @@ wasm_runtime_env_init()
 fail6:
 #endif
 #endif
-#if WASM_ENABLE_THREAD_MGR != 0
+#if (WASM_ENABLE_WAMR_COMPILER == 0) && (WASM_ENABLE_THREAD_MGR != 0)
     thread_manager_destroy();
 fail5:
 #endif
@@ -204,7 +204,7 @@ wasm_runtime_destroy()
     wasm_shared_memory_destroy();
 #endif
 
-#if WASM_ENABLE_THREAD_MGR != 0
+#if (WASM_ENABLE_WAMR_COMPILER == 0) && (WASM_ENABLE_THREAD_MGR != 0)
     thread_manager_destroy();
 #endif
 
@@ -565,8 +565,9 @@ wasm_exec_env_set_aux_stack(WASMExecEnv *exec_env,
     }
 #endif
 #if WASM_ENABLE_AOT != 0
-    /* TODO: implement set aux stack in AoT mode */
-    (void)module_inst;
+    if (module_inst->module_type == Wasm_Module_AoT) {
+        return aot_set_aux_stack(exec_env, start_offset, size);
+    }
 #endif
     return false;
 }
@@ -583,8 +584,9 @@ wasm_exec_env_get_aux_stack(WASMExecEnv *exec_env,
     }
 #endif
 #if WASM_ENABLE_AOT != 0
-    /* TODO: implement get aux stack in AoT mode */
-    (void)module_inst;
+    if (module_inst->module_type == Wasm_Module_AoT) {
+        return aot_get_aux_stack(exec_env, start_offset, size);
+    }
 #endif
     return false;
 }
@@ -1298,7 +1300,8 @@ wasm_runtime_init_wasi(WASMModuleInstanceCommon *module_inst,
 #endif
 #if WASM_ENABLE_AOT != 0
     if (module_inst->module_type == Wasm_Module_AoT
-        && !((AOTModuleInstance*)module_inst)->memory_data.ptr)
+        && !((AOTModuleInstance*)module_inst)->
+                global_table_data.memory_instances[0].memory_data.ptr)
         return true;
 #endif
 
@@ -2845,4 +2848,3 @@ wasm_runtime_call_indirect(WASMExecEnv *exec_env,
 #endif
     return false;
 }
-

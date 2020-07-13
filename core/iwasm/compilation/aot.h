@@ -21,6 +21,17 @@ typedef InitializerExpression AOTInitExpr;
 typedef WASMType AOTFuncType;
 
 /**
+ * Memory information
+ */
+typedef struct AOTMemory {
+  /* memory info */
+  uint32 memory_flags;
+  uint32 num_bytes_per_page;
+  uint32 mem_init_page_count;
+  uint32 mem_max_page_count;
+} AOTMemory;
+
+/**
  * A segment of memory init data
  */
 typedef struct AOTMemInitData {
@@ -123,9 +134,9 @@ typedef struct AOTExportFunc {
 
 typedef struct AOTCompData {
   /* Memory and memory init data info */
+  uint32 memory_count;
+  AOTMemory *memories;
   uint32 num_bytes_per_page;
-  uint32 mem_init_page_count;
-  uint32 mem_max_page_count;
   uint32 mem_init_data_count;
   AOTMemInitData **mem_init_data_list;
 

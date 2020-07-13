@@ -155,9 +155,12 @@ get_mem_init_data_list_size(AOTMemInitData **mem_init_data_list,
 static uint32
 get_mem_info_size(AOTCompData *comp_data)
 {
-    /* num bytes per page + init page count + max page count
-       + init data count + init data list */
-    return (uint32)sizeof(uint32) * 4
+    /* memory_count + count * (memory_flags + num_bytes_per_page +
+        init_page_count + max_page_count)
+        + init_data_count + init_data_list */
+    return (uint32)(sizeof(uint32)
+                    + comp_data->memory_count * sizeof(uint32) * 4
+                    + sizeof(uint32))
            + get_mem_init_data_list_size(comp_data->mem_init_data_list,
                                          comp_data->mem_init_data_count);
 }
@@ -887,9 +890,16 @@ aot_emit_mem_info(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
 
     *p_offset = offset = align_uint(offset, 4);
 
-    EMIT_U32(comp_data->num_bytes_per_page);
-    EMIT_U32(comp_data->mem_init_page_count);
-    EMIT_U32(comp_data->mem_max_page_count);
+    /* Emit memory count */
+    EMIT_U32(comp_data->memory_count);
+    /* Emit memory information */
+    for (i = 0; i < comp_data->memory_count; i++) {
+        EMIT_U32(comp_data->memories[i].memory_flags);
+        EMIT_U32(comp_data->memories[i].num_bytes_per_page);
+        EMIT_U32(comp_data->memories[i].mem_init_page_count);
+        EMIT_U32(comp_data->memories[i].mem_max_page_count);
+    }
+    /* Emit mem init data count */
     EMIT_U32(comp_data->mem_init_data_count);
 
     for (i = 0; i < comp_data->mem_init_data_count; i++) {
