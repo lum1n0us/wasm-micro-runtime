@@ -19,6 +19,7 @@ extern "C" {
 
 typedef InitializerExpression AOTInitExpr;
 typedef WASMType AOTFuncType;
+typedef WASMExport AOTExport;
 
 /**
  * Memory information
@@ -121,17 +122,6 @@ typedef struct AOTFunc {
   uint8 *code;
 } AOTFunc;
 
-/**
- * Export function
- */
-typedef struct AOTExportFunc {
-  char *func_name;
-  AOTFuncType *func_type;
-  /* function pointer linked */
-  void *func_ptr;
-  uint32 func_index;
-} AOTExportFunc;
-
 typedef struct AOTCompData {
   /* Memory and memory init data info */
   uint32 memory_count;
@@ -159,9 +149,6 @@ typedef struct AOTCompData {
 
   AOTFunc **funcs;
   uint32 func_count;
-
-  AOTExportFunc *export_funcs;
-  uint32 export_func_count;
 
   uint32 start_func_index;
   uint32 addr_data_size;
