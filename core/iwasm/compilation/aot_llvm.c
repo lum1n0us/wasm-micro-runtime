@@ -186,7 +186,7 @@ static bool
 create_memory_info(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
                    LLVMTypeRef int8_ptr_type, uint32 func_index)
 {
-    LLVMValueRef offset;
+    LLVMValueRef offset, mem_info_base;
     uint32 memory_count;
     WASMModule *module = comp_ctx->comp_data->wasm_module;
     WASMFunction *func = module->functions[func_index];
@@ -292,6 +292,9 @@ create_memory_info(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
             return false;
         }
     }
+    /* Store mem info base address before cast */
+    mem_info_base = func_ctx->mem_info[0].mem_base_addr;
+
     if (!(func_ctx->mem_info[0].mem_base_addr =
                 LLVMBuildBitCast(comp_ctx->builder,
                                  func_ctx->mem_info[0].mem_base_addr,
@@ -337,10 +340,10 @@ create_memory_info(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
 #endif
 
     /* Load memory bound check constants */
-    offset = I32_CONST(offsetof(AOTModuleInstance, global_table_data)
-                       + offsetof(AOTMemoryInstance, mem_bound_check_1byte));
+    offset = I32_CONST(offsetof(AOTMemoryInstance, mem_bound_check_1byte)
+                       - offsetof(AOTMemoryInstance, memory_data.ptr));
     if (!(func_ctx->mem_info[0].mem_bound_check_1byte =
-                LLVMBuildInBoundsGEP(comp_ctx->builder, func_ctx->aot_inst,
+                LLVMBuildInBoundsGEP(comp_ctx->builder, mem_info_base,
                                      &offset, 1, "bound_check_1byte_offset"))) {
         aot_set_last_error("llvm build in bounds gep failed");
         return false;
@@ -362,10 +365,10 @@ create_memory_info(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
         }
     }
 
-    offset = I32_CONST(offsetof(AOTModuleInstance, global_table_data)
-                       + offsetof(AOTMemoryInstance, mem_bound_check_2bytes));
+    offset = I32_CONST(offsetof(AOTMemoryInstance, mem_bound_check_2bytes)
+                       - offsetof(AOTMemoryInstance, memory_data.ptr));
     if (!(func_ctx->mem_info[0].mem_bound_check_2bytes =
-                LLVMBuildInBoundsGEP(comp_ctx->builder, func_ctx->aot_inst,
+                LLVMBuildInBoundsGEP(comp_ctx->builder, mem_info_base,
                                      &offset, 1, "bound_check_2bytes_offset"))) {
         aot_set_last_error("llvm build in bounds gep failed");
         return false;
@@ -387,10 +390,10 @@ create_memory_info(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
         }
     }
 
-    offset = I32_CONST(offsetof(AOTModuleInstance, global_table_data)
-                       + offsetof(AOTMemoryInstance, mem_bound_check_4bytes));
+    offset = I32_CONST(offsetof(AOTMemoryInstance, mem_bound_check_4bytes)
+                       - offsetof(AOTMemoryInstance, memory_data.ptr));
     if (!(func_ctx->mem_info[0].mem_bound_check_4bytes =
-                LLVMBuildInBoundsGEP(comp_ctx->builder, func_ctx->aot_inst,
+                LLVMBuildInBoundsGEP(comp_ctx->builder, mem_info_base,
                                      &offset, 1, "bound_check_4bytes_offset"))) {
         aot_set_last_error("llvm build in bounds gep failed");
         return false;
@@ -412,10 +415,10 @@ create_memory_info(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
         }
     }
 
-    offset = I32_CONST(offsetof(AOTModuleInstance, global_table_data)
-                       + offsetof(AOTMemoryInstance, mem_bound_check_8bytes));
+    offset = I32_CONST(offsetof(AOTMemoryInstance, mem_bound_check_8bytes)
+                       - offsetof(AOTMemoryInstance, memory_data.ptr));
     if (!(func_ctx->mem_info[0].mem_bound_check_8bytes =
-                LLVMBuildInBoundsGEP(comp_ctx->builder, func_ctx->aot_inst,
+                LLVMBuildInBoundsGEP(comp_ctx->builder, mem_info_base,
                                      &offset, 1, "bound_check_8bytes_offset"))) {
         aot_set_last_error("llvm build in bounds gep failed");
         return false;
@@ -438,10 +441,10 @@ create_memory_info(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
     }
 
     /* Load bound_check_heap_base */
-    offset = I32_CONST(offsetof(AOTModuleInstance, global_table_data)
-                       + offsetof(AOTMemoryInstance, mem_bound_check_heap_base));
+    offset = I32_CONST(offsetof(AOTMemoryInstance, mem_bound_check_heap_base)
+                       - offsetof(AOTMemoryInstance, memory_data.ptr));
     if (!(func_ctx->mem_info[0].mem_bound_check_heap_base =
-                LLVMBuildInBoundsGEP(comp_ctx->builder, func_ctx->aot_inst,
+                LLVMBuildInBoundsGEP(comp_ctx->builder, mem_info_base,
                                      &offset, 1, "bound_check_heap_base_offset"))) {
         aot_set_last_error("llvm build in bounds gep failed");
         return false;
