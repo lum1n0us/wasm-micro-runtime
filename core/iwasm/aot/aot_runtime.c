@@ -619,7 +619,9 @@ aot_instantiate(AOTModule *module, bool is_sub_inst,
         offsetof(AOTModuleInstance, global_table_data.bytes);
     uint64 module_inst_mem_inst_size =
         (uint64)module->memory_count * sizeof(AOTMemoryInstance);
-    uint64 table_data_size = (uint64)module->table_size * sizeof(uint32);
+    uint32 table_size = module->table_count > 0 ?
+                        module->tables[0].table_init_size : 0;
+    uint64 table_data_size = (uint64)table_size * sizeof(uint32);
     uint64 total_size = (uint64)module_inst_struct_size
                         + module_inst_mem_inst_size
                         + module->global_data_size
@@ -654,7 +656,7 @@ aot_instantiate(AOTModule *module, bool is_sub_inst,
     /* Initialize table info */
     p += module->global_data_size;
     module_inst->table_data.ptr = p;
-    module_inst->table_size = module->table_size;
+    module_inst->table_size = table_size;
     /* Set all elements to -1 to mark them as uninitialized elements */
     memset(module_inst->table_data.ptr, -1, (uint32)table_data_size);
     if (!table_instantiate(module_inst, module, error_buf, error_buf_size))
@@ -1304,7 +1306,7 @@ aot_enlarge_memory(AOTModuleInstance *module_inst, uint32 inc_page_count)
     AOTMemoryInstance *memory_inst = aot_get_default_memory(module_inst);
     uint8 *heap_data_old = memory_inst->heap_data.ptr, *heap_data;
     uint32 num_bytes_per_page =
-        ((AOTModule*)module_inst->aot_module.ptr)->num_bytes_per_page;
+        ((AOTModule*)module_inst->aot_module.ptr)->memories[0].num_bytes_per_page;
     uint32 cur_page_count = memory_inst->mem_cur_page_count;
     uint32 max_page_count = memory_inst->mem_max_page_count;
     uint32 total_page_count = cur_page_count + inc_page_count;

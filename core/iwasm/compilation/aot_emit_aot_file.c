@@ -153,14 +153,29 @@ get_mem_init_data_list_size(AOTMemInitData **mem_init_data_list,
 }
 
 static uint32
-get_mem_info_size(AOTCompData *comp_data)
+get_import_memory_size(AOTCompData *comp_data)
+{
+    /* currently we only emit import_memory_count = 0 */
+    return sizeof(uint32);
+}
+
+static uint32
+get_memory_size(AOTCompData *comp_data)
 {
     /* memory_count + count * (memory_flags + num_bytes_per_page +
-        init_page_count + max_page_count)
-        + init_data_count + init_data_list */
+                               init_page_count + max_page_count) */
     return (uint32)(sizeof(uint32)
-                    + comp_data->memory_count * sizeof(uint32) * 4
-                    + sizeof(uint32))
+                    + comp_data->memory_count * sizeof(uint32) * 4);
+}
+
+static uint32
+get_mem_info_size(AOTCompData *comp_data)
+{
+    /* import_memory_size + memory_size
+       + init_data_count + init_data_list */
+    return get_import_memory_size(comp_data)
+           + get_memory_size(comp_data)
+           + (uint32)sizeof(uint32)
            + get_mem_init_data_list_size(comp_data->mem_init_data_list,
                                          comp_data->mem_init_data_count);
 }
@@ -168,9 +183,10 @@ get_mem_info_size(AOTCompData *comp_data)
 static uint32
 get_table_init_data_size(AOTTableInitData *table_init_data)
 {
-    /* init expr type (4 bytes) + init expr value (8 bytes)
+    /* table_index + init expr type (4 bytes) + init expr value (8 bytes)
        + func index count (4 bytes) + func indexes */
-    return (uint32)(sizeof(uint32) + sizeof(uint64) + sizeof(uint32)
+    return (uint32)(sizeof(uint32) + sizeof(uint32)
+                    + sizeof(uint64) + sizeof(uint32)
                     + sizeof(uint32) * table_init_data->func_index_count);
 }
 
@@ -189,10 +205,29 @@ get_table_init_data_list_size(AOTTableInitData **table_init_data_list,
 }
 
 static uint32
+get_import_table_size(AOTCompData *comp_data)
+{
+    /* currently we only emit import_table_count = 0 */
+    return sizeof(uint32);
+}
+
+static uint32
+get_table_size(AOTCompData *comp_data)
+{
+    /* table_count + table_count * (elem_type + table_flags
+     *                              + init_size + max_size) */
+    return (uint32)(sizeof(uint32)
+                    + comp_data->table_count * sizeof(uint32) * 4);
+}
+
+static uint32
 get_table_info_size(AOTCompData *comp_data)
 {
-    /* table size + init data count + init data list */
-    return (uint32)sizeof(uint32) * 2
+    /* import_table size + table_size
+       + init data count + init data list */
+    return get_import_table_size(comp_data)
+           + get_table_size(comp_data)
+           + (uint32)sizeof(uint32)
            + get_table_init_data_list_size(comp_data->table_init_data_list,
                                            comp_data->table_init_data_count);
 }
@@ -889,18 +924,24 @@ aot_emit_mem_info(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
 
     *p_offset = offset = align_uint(offset, 4);
 
+    /* Emit import memory count, only emit 0 currently.
+       TODO: emit the actual import memory count and
+             the full import memory info. */
+    EMIT_U32(0);
+
     /* Emit memory count */
     EMIT_U32(comp_data->memory_count);
-    /* Emit memory information */
+    /* Emit memory items */
     for (i = 0; i < comp_data->memory_count; i++) {
         EMIT_U32(comp_data->memories[i].memory_flags);
         EMIT_U32(comp_data->memories[i].num_bytes_per_page);
         EMIT_U32(comp_data->memories[i].mem_init_page_count);
         EMIT_U32(comp_data->memories[i].mem_max_page_count);
     }
+
     /* Emit mem init data count */
     EMIT_U32(comp_data->mem_init_data_count);
-
+    /* Emit mem init data items */
     for (i = 0; i < comp_data->mem_init_data_count; i++) {
         offset = align_uint(offset, 4);
 #if WASM_ENABLE_BULK_MEMORY != 0
@@ -940,11 +981,27 @@ aot_emit_table_info(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
 
     *p_offset = offset = align_uint(offset, 4);
 
-    EMIT_U32(comp_data->table_size);
-    EMIT_U32(comp_data->table_init_data_count);
+    /* Emit import table count, only emit 0 currently.
+       TODO: emit the actual import table count and
+             the full import table info. */
+    EMIT_U32(0);
 
+    /* Emit table count */
+    EMIT_U32(comp_data->table_count);
+    /* Emit table items */
+    for (i = 0; i < comp_data->table_count; i++) {
+        EMIT_U32(comp_data->tables[i].elem_type);
+        EMIT_U32(comp_data->tables[i].table_flags);
+        EMIT_U32(comp_data->tables[i].table_init_size);
+        EMIT_U32(comp_data->tables[i].table_max_size);
+    }
+
+    /* Emit table init data count */
+    EMIT_U32(comp_data->table_init_data_count);
+    /* Emit table init data items */
     for (i = 0; i < comp_data->table_init_data_count; i++) {
         offset = align_uint(offset, 4);
+        EMIT_U32(init_datas[i]->table_index);
         EMIT_U32(init_datas[i]->offset.init_expr_type);
         EMIT_U64(init_datas[i]->offset.u.i64);
         EMIT_U32(init_datas[i]->func_index_count);
