@@ -1482,17 +1482,18 @@ wasm_runtime_lookup_wasi_start_function(WASMModuleInstanceCommon *module_inst)
 #if WASM_ENABLE_AOT != 0
     if (module_inst->module_type == Wasm_Module_AoT) {
         AOTModuleInstance *aot_inst = (AOTModuleInstance*)module_inst;
-        AOTModule *module = (AOTModule*)aot_inst->aot_module.ptr;
-        for (i = 0; i < module->export_func_count; i++) {
-            if (!strcmp(module->export_funcs[i].func_name, "_start")) {
-                AOTFuncType *func_type = module->export_funcs[i].func_type;
+        AOTFunctionInstance *export_funcs = (AOTFunctionInstance *)
+                                            aot_inst->export_funcs.ptr;
+        for (i = 0; i < aot_inst->export_func_count; i++) {
+            if (!strcmp(export_funcs[i].func_name, "_start")) {
+                AOTFuncType *func_type = export_funcs[i].u.func.func_type;
                 if (func_type->param_count != 0
                     || func_type->result_count != 0) {
                     LOG_ERROR("Lookup wasi _start function failed: "
                               "invalid function type.\n");
                     return NULL;
                 }
-                return (WASMFunctionInstanceCommon*)&module->export_funcs[i];
+                return (WASMFunctionInstanceCommon*)&export_funcs[i];
             }
         }
         return NULL;
@@ -1666,7 +1667,7 @@ wasm_application_execute_main(WASMModuleInstanceCommon *module_inst,
 #endif
 #if WASM_ENABLE_AOT != 0
     if (module_inst->module_type == Wasm_Module_AoT)
-        func_type = ((AOTFunctionInstance*)func)->func_type;
+        func_type = ((AOTFunctionInstance*)func)->u.func.func_type;
 #endif
 
     if (!check_main_func_type(func_type)) {
@@ -1820,10 +1821,11 @@ resolve_function(const WASMModuleInstanceCommon *module_inst,
 #if WASM_ENABLE_AOT != 0
     if (module_inst->module_type == Wasm_Module_AoT) {
         AOTModuleInstance *aot_inst = (AOTModuleInstance*)module_inst;
-        AOTModule *module = (AOTModule*)aot_inst->aot_module.ptr;
-        for (i = 0; i < module->export_func_count; i++) {
-            if (!strcmp(module->export_funcs[i].func_name, function_name)) {
-                ret = (WASMFunctionInstance*)&module->export_funcs[i];
+        AOTFunctionInstance *export_funcs = (AOTFunctionInstance *)
+                                            aot_inst->export_funcs.ptr;
+        for (i = 0; i < aot_inst->export_func_count; i++) {
+            if (!strcmp(export_funcs[i].func_name, function_name)) {
+                ret = &export_funcs[i];
                 break;
             }
         }
@@ -1927,7 +1929,7 @@ wasm_application_execute_func(WASMModuleInstanceCommon *module_inst,
 #endif
 #if WASM_ENABLE_AOT != 0
     if (module_inst->module_type == Wasm_Module_AoT) {
-        type = ((AOTFunctionInstance*)func)->func_type;
+        type = ((AOTFunctionInstance*)func)->u.func.func_type;
         argc1 = type->param_cell_num;
         cell_num = argc1 > type->ret_cell_num ?
                    argc1 : type->ret_cell_num;

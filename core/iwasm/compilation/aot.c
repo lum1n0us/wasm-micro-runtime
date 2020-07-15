@@ -344,38 +344,6 @@ fail:
   return NULL;
 }
 
-static AOTExportFunc *
-aot_create_export_funcs(const WASMModule *module,
-                        uint32 export_func_count)
-{
-  AOTExportFunc *export_funcs;
-  uint64 size;
-  uint32 i, j = 0;
-
-  /* Allocate memory */
-  size = sizeof(AOTExportFunc) * (uint64)export_func_count;
-  if (size >= UINT32_MAX
-      || !(export_funcs = wasm_runtime_malloc((uint32)size))) {
-    aot_set_last_error("allocate memory failed.");
-    return NULL;
-  }
-
-  /* Create each export function */
-  for (i = 0; i < module->export_count; i++) {
-    if (module->exports[i].kind == EXPORT_KIND_FUNC) {
-      export_funcs[j].func_name = module->exports[i].name;
-      export_funcs[j].func_index = module->exports[i].index;
-      export_funcs[j].func_type =
-          module->functions[module->exports[i].index
-                            - module->import_function_count]->func_type;
-      /* Function pointer to be linked in JIT mode */
-      export_funcs[j].func_ptr = NULL;
-      j++;
-    }
-  }
-  return export_funcs;
-}
-
 AOTCompData*
 aot_create_comp_data(WASMModule *module)
 {
@@ -489,16 +457,6 @@ aot_create_comp_data(WASMModule *module)
       && !(comp_data->funcs = aot_create_funcs(module)))
     goto fail;
 
-  /* Create export functions */
-  for (i = 0; i < module->export_count; i++)
-    if (module->exports[i].kind == EXPORT_KIND_FUNC)
-      comp_data->export_func_count++;
-
-  if (comp_data->export_func_count
-      && !(comp_data->export_funcs = aot_create_export_funcs
-            (module, comp_data->export_func_count)))
-    goto fail;
-
   /* Create llvm aux stack informations */
   comp_data->llvm_aux_stack_global_index = module->llvm_aux_stack_global_index;
   comp_data->llvm_aux_data_end = module->llvm_aux_data_end;
@@ -548,9 +506,6 @@ aot_destroy_comp_data(AOTCompData *comp_data)
 
   if (comp_data->funcs)
     aot_destroy_funcs(comp_data->funcs, comp_data->func_count);
-
-  if (comp_data->export_funcs)
-    wasm_runtime_free(comp_data->export_funcs);
 
   wasm_runtime_free(comp_data);
 }

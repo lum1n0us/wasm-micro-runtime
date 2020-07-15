@@ -415,23 +415,22 @@ get_func_section_size(AOTCompData *comp_data, AOTObjectData *obj_data)
 }
 
 static uint32
-get_export_func_size(AOTExportFunc *export_func)
+get_export_size(AOTExport *export)
 {
-    /* export func index + export func name */
-    return (uint32)sizeof(uint32)
-           + get_string_size(export_func->func_name);
+    /* export index + export kind + 1 byte padding + export name */
+    return (uint32)sizeof(uint32) + sizeof(uint8) + 1
+           + get_string_size(export->name);
 }
 
 static uint32
-get_export_funcs_size(AOTExportFunc *export_funcs,
-                      uint32 export_func_count)
+get_exports_size(AOTExport *exports, uint32 export_count)
 {
-    AOTExportFunc *export_func = export_funcs;
+    AOTExport *export = exports;
     uint32 size = 0, i;
 
-    for (i = 0; i < export_func_count; i++, export_func++) {
+    for (i = 0; i < export_count; i++, export++) {
         size = align_uint(size, 4);
-        size += get_export_func_size(export_func);
+        size += get_export_size(export);
     }
     return size;
 }
@@ -439,10 +438,10 @@ get_export_funcs_size(AOTExportFunc *export_funcs,
 static uint32
 get_export_section_size(AOTCompData *comp_data)
 {
-    /* export func count + export funcs */
+    /* export count + exports */
     return (uint32)sizeof(uint32)
-           + get_export_funcs_size(comp_data->export_funcs,
-                                   comp_data->export_func_count);
+           + get_exports_size(comp_data->wasm_module->exports,
+                              comp_data->wasm_module->export_count);
 }
 
 static uint32
@@ -1221,19 +1220,22 @@ aot_emit_export_section(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
                         AOTCompData *comp_data, AOTObjectData *obj_data)
 {
     uint32 section_size = get_export_section_size(comp_data);
-    AOTExportFunc *func = comp_data->export_funcs;;
-    uint32 i, offset = *p_offset, export_func_count = comp_data->export_func_count;
+    AOTExport *export = comp_data->wasm_module->exports;
+    uint32 export_count = comp_data->wasm_module->export_count;
+    uint32 i, offset = *p_offset;
 
     *p_offset = offset = align_uint(offset, 4);
 
     EMIT_U32(AOT_SECTION_TYPE_EXPORT);
     EMIT_U32(section_size);
-    EMIT_U32(export_func_count);
+    EMIT_U32(export_count);
 
-    for (i = 0; i < export_func_count; i++, func++) {
+    for (i = 0; i < export_count; i++, export++) {
         offset = align_uint(offset, 4);
-        EMIT_U32(func->func_index);
-        EMIT_STR(func->func_name);
+        EMIT_U32(export->index);
+        EMIT_U8(export->kind);
+        EMIT_U8(0);
+        EMIT_STR(export->name);
     }
 
     if (offset - *p_offset != section_size + sizeof(uint32) * 2) {

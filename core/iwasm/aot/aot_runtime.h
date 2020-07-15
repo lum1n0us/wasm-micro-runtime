@@ -69,6 +69,21 @@ typedef struct AOTRelocationGroup {
     AOTRelocation *relocations;
 } AOTRelocationGroup;
 
+/* AOT function instance */
+typedef struct AOTFunctionInstance {
+    char *func_name;
+    uint32 func_index;
+    bool is_import_func;
+    union {
+        struct {
+            AOTFuncType *func_type;
+            /* function pointer linked */
+            void *func_ptr;
+        } func;
+        AOTImportFunc *func_import;
+    } u;
+} AOTFunctionInstance;
+
 typedef struct AOTModule {
     uint32 module_type;
 
@@ -112,9 +127,9 @@ typedef struct AOTModule {
     /* function type indexes */
     uint32 *func_type_indexes;
 
-    /* export function info */
-    uint32 export_func_count;
-    AOTExportFunc *export_funcs;
+    /* export info */
+    uint32 export_count;
+    AOTExport *exports;
 
     /* start function index, -1 denotes no start function */
     uint32 start_func_index;
@@ -207,6 +222,16 @@ typedef struct AOTModuleInstance {
     /* function type indexes */
     AOTPointer func_type_indexes;
 
+    /* export info */
+    uint32 export_func_count;
+    uint32 export_global_count;
+    uint32 export_mem_count;
+    uint32 export_tab_count;
+    AOTPointer export_funcs;
+    AOTPointer export_globals;
+    AOTPointer export_memories;
+    AOTPointer export_tables;
+
     /* The exception buffer for current thread. */
     char cur_exception[128];
     /* The custom data that can be set/get by
@@ -231,8 +256,6 @@ typedef struct AOTModuleInstance {
         uint8 bytes[1];
     } global_table_data;
 } AOTModuleInstance;
-
-typedef AOTExportFunc AOTFunctionInstance;
 
 /* Target info, read from ELF header of object file */
 typedef struct AOTTargetInfo {

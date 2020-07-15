@@ -499,6 +499,64 @@ init_func_type_indexes(AOTModuleInstance *module_inst, AOTModule *module,
 }
 
 static bool
+create_export_funcs(AOTModuleInstance *module_inst, AOTModule *module,
+                    char *error_buf, uint32 error_buf_size)
+{
+    AOTExport *exports = module->exports;
+    AOTFunctionInstance *export_func;
+    uint64 size;
+    uint32 i, func_index, ftype_index;
+
+    for (i = 0; i < module->export_count; i++) {
+        if (exports[i].kind == EXPORT_KIND_FUNC)
+            module_inst->export_func_count++;
+    }
+
+    if (module_inst->export_func_count > 0) {
+        /* Allocate memory */
+        size = sizeof(AOTFunctionInstance)
+               * (uint64)module_inst->export_func_count;
+        if (!(module_inst->export_funcs.ptr = export_func =
+                    runtime_malloc(size, error_buf, error_buf_size))) {
+            return false;
+        }
+
+        for (i = 0; i < module->export_count; i++) {
+            if (exports[i].kind == EXPORT_KIND_FUNC) {
+                export_func->func_name = exports[i].name;
+                export_func->func_index = exports[i].index;
+                if (export_func->func_index < module->import_func_count) {
+                    export_func->is_import_func = true;
+                    export_func->u.func_import =
+                        &module->import_funcs[export_func->func_index];
+                }
+                else {
+                    export_func->is_import_func = false;
+                    func_index = export_func->func_index
+                                 - module->import_func_count;
+                    ftype_index = module->func_type_indexes[func_index];
+                    export_func->u.func.func_type =
+                                module->func_types[ftype_index];
+                    export_func->u.func.func_ptr =
+                                module->func_ptrs[func_index];
+                }
+                export_func++;
+            }
+        }
+    }
+
+    return true;
+}
+
+static bool
+create_exports(AOTModuleInstance *module_inst, AOTModule *module,
+               char *error_buf, uint32 error_buf_size)
+{
+    return create_export_funcs(module_inst, module,
+                               error_buf, error_buf_size);
+}
+
+static bool
 execute_post_inst_function(AOTModuleInstance *module_inst)
 {
     AOTFunctionInstance *post_inst_func =
@@ -615,6 +673,9 @@ aot_instantiate(AOTModule *module, bool is_sub_inst,
     if (!init_func_type_indexes(module_inst, module, error_buf, error_buf_size))
         goto fail;
 
+    if (!create_exports(module_inst, module, error_buf, error_buf_size))
+        goto fail;
+
 #if WASM_ENABLE_LIBC_WASI != 0
     if (!is_sub_inst) {
         if (heap_size > 0
@@ -691,6 +752,9 @@ aot_deinstantiate(AOTModuleInstance *module_inst, bool is_sub_inst)
     if (module_inst->memories.ptr)
         memories_deinstantiate(module_inst);
 
+    if (module_inst->export_funcs.ptr)
+        wasm_runtime_free(module_inst->export_funcs.ptr);
+
     if (module_inst->func_ptrs.ptr)
         wasm_runtime_free(module_inst->func_ptrs.ptr);
 
@@ -705,11 +769,12 @@ aot_lookup_function(const AOTModuleInstance *module_inst,
                     const char *name, const char *signature)
 {
     uint32 i;
-    AOTModule *module = (AOTModule*)module_inst->aot_module.ptr;
+    AOTFunctionInstance *export_funcs = (AOTFunctionInstance *)
+                                        module_inst->export_funcs.ptr;
 
-    for (i = 0; i < module->export_func_count; i++)
-        if (!strcmp(module->export_funcs[i].func_name, name))
-            return &module->export_funcs[i];
+    for (i = 0; i < module_inst->export_func_count; i++)
+        if (!strcmp(export_funcs[i].func_name, name))
+            return &export_funcs[i];
     (void)signature;
     return NULL;
 }
@@ -908,7 +973,7 @@ aot_call_function(WASMExecEnv *exec_env,
                   unsigned argc, uint32 argv[])
 {
     AOTModuleInstance *module_inst = (AOTModuleInstance*)exec_env->module_inst;
-    AOTFuncType *func_type = function->func_type;
+    AOTFuncType *func_type = function->u.func.func_type;
     uint32 result_count = func_type->result_count;
     uint32 ext_ret_count = result_count > 1 ? result_count - 1 : 0;
     bool ret;
@@ -945,7 +1010,7 @@ aot_call_function(WASMExecEnv *exec_env,
             cell_num += wasm_value_type_cell_num(ext_ret_types[i]);
         }
 
-        ret = invoke_native_internal(exec_env, function->func_ptr,
+        ret = invoke_native_internal(exec_env, function->u.func.func_ptr,
                                      func_type, NULL, NULL, argv1, argc, argv);
         if (!ret || aot_get_exception(module_inst)) {
             if (argv1 != argv1_buf)
@@ -976,7 +1041,7 @@ aot_call_function(WASMExecEnv *exec_env,
         return true;
     }
     else {
-        ret = invoke_native_internal(exec_env, function->func_ptr,
+        ret = invoke_native_internal(exec_env, function->u.func.func_ptr,
                                      func_type, NULL, NULL, argv, argc, argv);
         return ret && !aot_get_exception(module_inst) ? true : false;
     }

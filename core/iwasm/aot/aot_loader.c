@@ -1104,40 +1104,42 @@ fail:
 }
 
 static void
-destroy_export_funcs(AOTExportFunc *export_funcs, bool is_jit_mode)
+destroy_exports(AOTExport *exports, bool is_jit_mode)
 {
     if (!is_jit_mode)
-        wasm_runtime_free(export_funcs);
+        wasm_runtime_free(exports);
 }
 
 static bool
-load_export_funcs(const uint8 **p_buf, const uint8 *buf_end,
-                  AOTModule *module,
-                  char *error_buf, uint32 error_buf_size)
+load_exports(const uint8 **p_buf, const uint8 *buf_end,
+             AOTModule *module, char *error_buf, uint32 error_buf_size)
 {
     const uint8 *buf = *p_buf;
-    AOTExportFunc *export_funcs;
+    AOTExport *exports;
     uint64 size;
     uint32 i;
 
     /* Allocate memory */
-    size = sizeof(AOTExportFunc) * (uint64)module->export_func_count;
-    if (!(module->export_funcs = export_funcs =
+    size = sizeof(AOTExport) * (uint64)module->export_count;
+    if (!(module->exports = exports =
                 loader_malloc(size, error_buf, error_buf_size))) {
         return false;
     }
 
-    /* Create each export func */
-    for (i = 0; i < module->export_func_count; i++) {
-        read_uint32(buf, buf_end, export_funcs[i].func_index);
-        if (export_funcs[i].func_index >=
+    /* Create each export */
+    for (i = 0; i < module->export_count; i++) {
+        read_uint32(buf, buf_end, exports[i].index);
+        read_uint8(buf, buf_end, exports[i].kind);
+        read_string(buf, buf_end, exports[i].name);
+#if 0 /* TODO: check kind and index */
+        if (export_funcs[i].index >=
               module->func_count + module->import_func_count) {
             set_error_buf(error_buf, error_buf_size,
                           "AOT module load failed: "
                           "function index is out of range.");
             return false;
         }
-        read_string(buf, buf_end, export_funcs[i].func_name);
+#endif
     }
 
     *p_buf = buf;
@@ -1154,9 +1156,9 @@ load_export_section(const uint8 *buf, const uint8 *buf_end,
     const uint8 *p = buf, *p_end = buf_end;
 
     /* load export functions */
-    read_uint32(p, p_end, module->export_func_count);
-    if (module->export_func_count > 0
-        && !load_export_funcs(&p, p_end, module, error_buf, error_buf_size))
+    read_uint32(p, p_end, module->export_count);
+    if (module->export_count > 0
+        && !load_exports(&p, p_end, module, error_buf, error_buf_size))
         return false;
 
     if (p != p_end) {
@@ -1401,12 +1403,11 @@ load_relocation_section(const uint8 *buf, const uint8 *buf_end,
 {
     AOTRelocationGroup *groups = NULL, *group;
     uint32 symbol_count = 0;
-    uint32 group_count = 0, i, j, func_index, func_type_index;
+    uint32 group_count = 0, i, j;
     uint64 size;
     uint32 *symbol_offsets, total_string_len;
     uint8 *symbol_buf, *symbol_buf_end;
     bool ret = false;
-    AOTExportFunc *export_func;
 
     read_uint32(buf, buf_end, symbol_count);
 
@@ -1524,21 +1525,6 @@ load_relocation_section(const uint8 *buf, const uint8 *buf_end,
             if (!do_data_relocation(module, group, error_buf, error_buf_size))
                 return false;
         }
-    }
-
-    export_func = module->export_funcs;
-    for (i = 0; i < module->export_func_count; i++, export_func++) {
-        func_index = export_func->func_index - module->import_func_count;
-        if (func_index >= module->func_count) {
-            set_error_buf(error_buf, error_buf_size,
-                          "AOT module load failed: "
-                          "invalid export function index.");
-            ret = false;
-            goto fail;
-        }
-        func_type_index = module->func_type_indexes[func_index];
-        export_func->func_type = module->func_types[func_type_index];
-        export_func->func_ptr = module->func_ptrs[func_index];
     }
 
     ret = true;
@@ -1942,15 +1928,8 @@ aot_load_from_comp_data(AOTCompData *comp_data, AOTCompContext *comp_ctx,
     for (i = 0; i < comp_data->func_count; i++)
         module->func_type_indexes[i] = comp_data->funcs[i]->func_type_index;
 
-    module->export_func_count = comp_data->export_func_count;
-    module->export_funcs = comp_data->export_funcs;
-
-    /* Set export function pointers */
-    for (i = 0; i < module->export_func_count; i++) {
-        module->export_funcs[i].func_ptr =
-            module->func_ptrs[module->export_funcs[i].func_index
-                              - module->import_func_count];
-    }
+    module->export_count = comp_data->wasm_module->export_count;
+    module->exports = comp_data->wasm_module->exports;
 
     module->start_func_index = comp_data->start_func_index;
     if (comp_data->start_func_index != (uint32)-1) {
@@ -1986,6 +1965,7 @@ aot_load_from_comp_data(AOTCompData *comp_data, AOTCompContext *comp_ctx,
 #endif
 
     return module;
+
 fail3:
     wasm_runtime_free(module->func_ptrs);
 fail2:
@@ -2093,9 +2073,9 @@ aot_unload(AOTModule *module)
         destroy_import_funcs(module->import_funcs,
                              module->is_jit_mode);
 
-    if (module->export_funcs)
-        destroy_export_funcs(module->export_funcs,
-                             module->is_jit_mode);
+    if (module->exports)
+        destroy_exports(module->exports,
+                        module->is_jit_mode);
 
     if (module->func_type_indexes)
         wasm_runtime_free(module->func_type_indexes);
