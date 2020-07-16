@@ -22,6 +22,18 @@ typedef WASMType AOTFuncType;
 typedef WASMExport AOTExport;
 
 /**
+ * Import memory
+ */
+typedef struct AOTImportMemory {
+  char *module_name;
+  char *memory_name;
+  uint32 memory_flags;
+  uint32 num_bytes_per_page;
+  uint32 mem_init_page_count;
+  uint32 mem_max_page_count;
+} AOTImportMemory;
+
+/**
  * Memory information
  */
 typedef struct AOTMemory {
@@ -51,9 +63,31 @@ typedef struct AOTMemInitData {
 } AOTMemInitData;
 
 /**
+ * Import table
+ */
+typedef struct AOTImportTable {
+  char *module_name;
+  char *table_name;
+  uint32 table_flags;
+  uint32 table_init_size;
+  uint32 table_max_size;
+} AOTImportTable;
+
+/**
+ * Table
+ */
+typedef struct AOTTable {
+  uint32 elem_type;
+  uint32 table_flags;
+  uint32 table_init_size;
+  uint32 table_max_size;
+} AOTTable;
+
+/**
  * A segment of table init data
  */
 typedef struct AOTTableInitData {
+  uint32 table_index;
   /* Start address of init data */
   AOTInitExpr offset;
   /* Function index count */
@@ -123,32 +157,49 @@ typedef struct AOTFunc {
 } AOTFunc;
 
 typedef struct AOTCompData {
-  /* Memory and memory init data info */
+  /* Import memories */
+  uint32 import_memory_count;
+  AOTImportMemory *import_memories;
+
+  /* Memories */
   uint32 memory_count;
   AOTMemory *memories;
-  uint32 num_bytes_per_page;
+
+  /* Memory init data info */
   uint32 mem_init_data_count;
   AOTMemInitData **mem_init_data_list;
 
-  /* Table and table init data info */
-  uint32 table_size;
-  AOTTableInitData **table_init_data_list;
+  /* Import tables */
+  uint32 import_table_count;
+  AOTImportTable *import_tables;
+
+  /* Tables */
+  uint32 table_count;
+  AOTTable *tables;
+
+  /* Table init data info */
   uint32 table_init_data_count;
+  AOTTableInitData **table_init_data_list;
 
-  AOTImportGlobal *import_globals;
+  /* Import globals */
   uint32 import_global_count;
+  AOTImportGlobal *import_globals;
 
-  AOTGlobal *globals;
+  /* Globals */
   uint32 global_count;
+  AOTGlobal *globals;
 
-  AOTFuncType **func_types;
+  /* Function types */
   uint32 func_type_count;
+  AOTFuncType **func_types;
 
-  AOTImportFunc *import_funcs;
+  /* Import functions */
   uint32 import_func_count;
+  AOTImportFunc *import_funcs;
 
-  AOTFunc **funcs;
+  /* Functions */
   uint32 func_count;
+  AOTFunc **funcs;
 
   uint32 start_func_index;
   uint32 addr_data_size;

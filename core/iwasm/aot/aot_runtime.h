@@ -87,17 +87,27 @@ typedef struct AOTFunctionInstance {
 typedef struct AOTModule {
     uint32 module_type;
 
+    /* import memories */
+    uint32 import_memory_count;
+    AOTImportMemory *import_memories;
+
     /* memory info */
     uint32 memory_count;
     AOTMemory *memories;
-    uint32 num_bytes_per_page;
 
     /* init data */
     uint32 mem_init_data_count;
     AOTMemInitData **mem_init_data_list;
 
-    /* table info */
-    uint32 table_size;
+    /* import tables */
+    uint32 import_table_count;
+    AOTImportTable *import_tables;
+
+    /* tables */
+    uint32 table_count;
+    AOTTable *tables;
+
+    /* table init data info */
     uint32 table_init_data_count;
     AOTTableInitData **table_init_data_list;
 

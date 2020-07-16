@@ -2592,7 +2592,7 @@ load_from_sections(WASMModule *module, WASMSection *sections,
             if (module->memory_count) {
                 memory = &module->memories[0];
                 init_memory_size = (uint64)memory->num_bytes_per_page *
-                             memory->init_page_count;
+                                   memory->init_page_count;
                 if (llvm_heap_base <= init_memory_size
                     && llvm_data_end <= init_memory_size) {
                     /* Reset memory info to decrease memory usage */

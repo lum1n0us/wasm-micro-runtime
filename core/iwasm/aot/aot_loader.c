@@ -350,6 +350,14 @@ fail:
 }
 
 static void
+destroy_import_memories(AOTImportMemory *import_memories,
+                        bool is_jit_mode)
+{
+    if (!is_jit_mode)
+        wasm_runtime_free(import_memories);
+}
+
+static void
 destroy_mem_init_data_list(AOTMemInitData **data_list, uint32 count,
                            bool is_jit_mode)
 {
@@ -424,6 +432,10 @@ load_memory_info(const uint8 **p_buf, const uint8 *buf_end,
     uint64 total_size;
     const uint8 *buf = *p_buf;
 
+    read_uint32(buf, buf_end, module->import_memory_count);
+    /* We don't support import_memory_count > 0 currently */
+    bh_assert(module->import_memory_count == 0);
+
     read_uint32(buf, buf_end, module->memory_count);
     total_size = sizeof(AOTMemory) * (uint64)module->memory_count;
     if (!(module->memories =
@@ -437,9 +449,6 @@ load_memory_info(const uint8 **p_buf, const uint8 *buf_end,
         read_uint32(buf, buf_end, module->memories[i].mem_init_page_count);
         read_uint32(buf, buf_end, module->memories[i].mem_max_page_count);
     }
-
-    if (module->memory_count != 0)
-        module->num_bytes_per_page = module->memories[0].num_bytes_per_page;
 
     read_uint32(buf, buf_end, module->mem_init_data_count);
 
@@ -456,6 +465,20 @@ fail:
 }
 
 static void
+destroy_import_tables(AOTImportTable *import_tables, bool is_jit_mode)
+{
+    if (!is_jit_mode)
+        wasm_runtime_free(import_tables);
+}
+
+static void
+destroy_tables(AOTTable *tables, bool is_jit_mode)
+{
+    if (!is_jit_mode)
+        wasm_runtime_free(tables);
+}
+
+static void
 destroy_table_init_data_list(AOTTableInitData **data_list, uint32 count,
                              bool is_jit_mode)
 {
@@ -466,6 +489,36 @@ destroy_table_init_data_list(AOTTableInitData **data_list, uint32 count,
                 wasm_runtime_free(data_list[i]);
         wasm_runtime_free(data_list);
     }
+}
+
+static bool
+load_table_list(const uint8 **p_buf, const uint8 *buf_end,
+                AOTModule *module, char *error_buf, uint32 error_buf_size)
+{
+    const uint8 *buf = *p_buf;
+    AOTTable *table;
+    uint64 size;
+    uint32 i;
+
+    /* Allocate memory */
+    size = sizeof(AOTTable) * (uint64)module->table_count;
+    if (!(module->tables = table =
+                loader_malloc(size, error_buf, error_buf_size))) {
+        return false;
+    }
+
+    /* Create each table data segment */
+    for (i = 0; i < module->table_count; i++, table++) {
+        read_uint32(buf, buf_end, table->elem_type);
+        read_uint32(buf, buf_end, table->table_flags);
+        read_uint32(buf, buf_end, table->table_init_size);
+        read_uint32(buf, buf_end, table->table_max_size);
+    }
+
+    *p_buf = buf;
+    return true;
+fail:
+    return false;
 }
 
 static bool
@@ -487,9 +540,10 @@ load_table_init_data_list(const uint8 **p_buf, const uint8 *buf_end,
 
     /* Create each table data segment */
     for (i = 0; i < module->table_init_data_count; i++) {
-        uint32 init_expr_type, func_index_count;
+        uint32 table_index, init_expr_type, func_index_count;
         uint64 init_expr_value, size1;
 
+        read_uint32(buf, buf_end, table_index);
         read_uint32(buf, buf_end, init_expr_type);
         read_uint64(buf, buf_end, init_expr_value);
         read_uint32(buf, buf_end, func_index_count);
@@ -501,6 +555,7 @@ load_table_init_data_list(const uint8 **p_buf, const uint8 *buf_end,
             return false;
         }
 
+        data_list[i]->table_index = table_index;
         data_list[i]->offset.init_expr_type = (uint8)init_expr_type;
         data_list[i]->offset.u.i64 = (int64)init_expr_value;
         data_list[i]->func_index_count = func_index_count;
@@ -520,7 +575,16 @@ load_table_info(const uint8 **p_buf, const uint8 *buf_end,
 {
     const uint8 *buf = *p_buf;
 
-    read_uint32(buf, buf_end, module->table_size);
+    read_uint32(buf, buf_end, module->import_table_count);
+    /* We don't support import_table_count > 0 currently */
+    bh_assert(module->import_table_count == 0);
+
+    read_uint32(buf, buf_end, module->table_count);
+    if (module->table_count > 0
+        && !load_table_list(&buf, buf_end, module,
+                            error_buf, error_buf_size))
+        return false;
+
     read_uint32(buf, buf_end, module->table_init_data_count);
 
     /* load table init data list */
@@ -1861,8 +1925,11 @@ aot_load_from_comp_data(AOTCompData *comp_data, AOTCompContext *comp_ctx,
     }
 
     module->module_type = Wasm_Module_AoT;
-    module->memory_count = comp_data->memory_count;
 
+    module->import_memory_count = comp_data->import_memory_count;
+    module->import_memories = comp_data->import_memories;
+
+    module->memory_count = comp_data->memory_count;
     if (module->memory_count) {
         size = sizeof(AOTMemory) * (uint64)module->memory_count;
         if (!(module->memories =
@@ -1876,9 +1943,14 @@ aot_load_from_comp_data(AOTCompData *comp_data, AOTCompContext *comp_ctx,
     module->mem_init_data_list = comp_data->mem_init_data_list;
     module->mem_init_data_count = comp_data->mem_init_data_count;
 
+    module->import_table_count = comp_data->import_table_count;
+    module->import_tables = comp_data->import_tables;
+
+    module->table_count = comp_data->table_count;
+    module->tables = comp_data->tables;
+
     module->table_init_data_list = comp_data->table_init_data_list;
     module->table_init_data_count = comp_data->table_init_data_count;
-    module->table_size = comp_data->table_size;
 
     module->func_type_count = comp_data->func_type_count;
     module->func_types = comp_data->func_types;
@@ -2043,6 +2115,10 @@ aot_unload(AOTModule *module)
         wasm_loader_unload(module->wasm_module);
 #endif
 
+    if (module->import_memories)
+        destroy_import_memories(module->import_memories,
+                                module->is_jit_mode);
+
     if (module->memories)
         wasm_runtime_free(module->memories);
 
@@ -2050,6 +2126,13 @@ aot_unload(AOTModule *module)
         destroy_mem_init_data_list(module->mem_init_data_list,
                                    module->mem_init_data_count,
                                    module->is_jit_mode);
+
+    if (module->import_tables)
+        destroy_import_tables(module->import_tables,
+                              module->is_jit_mode);
+
+    if (module->tables)
+        destroy_tables(module->tables, module->is_jit_mode);
 
     if (module->table_init_data_list)
         destroy_table_init_data_list(module->table_init_data_list,

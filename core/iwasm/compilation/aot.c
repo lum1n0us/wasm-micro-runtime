@@ -348,7 +348,7 @@ AOTCompData*
 aot_create_comp_data(WASMModule *module)
 {
   AOTCompData *comp_data;
-  uint32 import_global_data_size = 0, global_data_size = 0, i;
+  uint32 import_global_data_size = 0, global_data_size = 0, i, j;
   uint64 size;
 
   /* Allocate memory */
@@ -361,12 +361,13 @@ aot_create_comp_data(WASMModule *module)
 
   comp_data->memory_count = module->import_memory_count + module->memory_count;
 
-  /* Allocate memory for memory array, reserve one AOTMemory space at least */
-  if (comp_data->memory_count)
-    size = (uint64)comp_data->memory_count * sizeof(AOTMemory);
-  else
-    size = 1 * sizeof(AOTMemory);
+  /* TODO: create import memories */
 
+  /* Allocate memory for memory array, reserve one AOTMemory space at least */
+  if (!comp_data->memory_count)
+    comp_data->memory_count = 1;
+
+  size = (uint64)comp_data->memory_count * sizeof(AOTMemory);
   if (size >= UINT32_MAX
       || !(comp_data->memories = wasm_runtime_malloc((uint32)size))) {
     aot_set_last_error("create memories array failed.\n");
@@ -375,7 +376,7 @@ aot_create_comp_data(WASMModule *module)
   memset(comp_data->memories, 0, size);
 
   /* Set memory page count */
-  for (i = 0; i < comp_data->memory_count; i++) {
+  for (i = 0; i < module->import_memory_count + module->memory_count; i++) {
     if (i < module->import_memory_count) {
       comp_data->memories[i].memory_flags =
         module->import_memories[i].u.memory.flags;
@@ -385,20 +386,21 @@ aot_create_comp_data(WASMModule *module)
         module->import_memories[i].u.memory.init_page_count;
       comp_data->memories[i].mem_max_page_count =
         module->import_memories[i].u.memory.max_page_count;
-      comp_data->num_bytes_per_page =
+      comp_data->memories[i].num_bytes_per_page =
         module->import_memories[i].u.memory.num_bytes_per_page;
     }
-    else if (i < module->memory_count) {
+    else {
+      j = i - module->import_memory_count;
       comp_data->memories[i].memory_flags =
-        module->memories[i].flags;
+                    module->memories[j].flags;
       comp_data->memories[i].num_bytes_per_page =
-        module->memories[i].num_bytes_per_page;
+                    module->memories[j].num_bytes_per_page;
       comp_data->memories[i].mem_init_page_count =
-        module->memories[i].init_page_count;
+                    module->memories[j].init_page_count;
       comp_data->memories[i].mem_max_page_count =
-        module->memories[i].max_page_count;
-      comp_data->num_bytes_per_page =
-        module->memories[i].num_bytes_per_page;
+                    module->memories[j].max_page_count;
+      comp_data->memories[i].num_bytes_per_page =
+                    module->memories[j].num_bytes_per_page;
     }
   }
 
@@ -409,11 +411,39 @@ aot_create_comp_data(WASMModule *module)
             aot_create_mem_init_data_list(module)))
     goto fail;
 
-  /* Set table size */
-  if (module->import_table_count)
-    comp_data->table_size = module->import_tables[0].u.table.init_size;
-  else if (module->table_count)
-    comp_data->table_size = module->tables[0].init_size;
+  /* TODO: create import tables */
+
+  /* Create tables */
+  comp_data->table_count = module->import_table_count + module->table_count;
+
+  if (comp_data->table_count > 0) {
+    size = sizeof(AOTTable) * (uint64)comp_data->table_count;
+    if (size >= UINT32_MAX
+        || !(comp_data->tables = wasm_runtime_malloc((uint32)size))) {
+      aot_set_last_error("create memories array failed.\n");
+      goto fail;
+    }
+    memset(comp_data->tables, 0, size);
+    for (i = 0; i < comp_data->table_count; i++) {
+      if (i < module->import_table_count) {
+        comp_data->tables[i].elem_type =
+            module->import_tables[i].u.table.elem_type;
+        comp_data->tables[i].table_flags =
+            module->import_tables[i].u.table.flags;
+        comp_data->tables[i].table_init_size =
+            module->import_tables[i].u.table.init_size;
+        comp_data->tables[i].table_max_size =
+            module->import_tables[i].u.table.max_size;
+      }
+      else {
+        j = i - module->import_table_count;
+        comp_data->tables[i].elem_type = module->tables[i].elem_type;
+        comp_data->tables[i].table_flags = module->tables[i].flags;
+        comp_data->tables[i].table_init_size = module->tables[i].init_size;
+        comp_data->tables[i].table_max_size = module->tables[i].max_size;
+      }
+    }
+  }
 
   /* Create table data segments */
   comp_data->table_init_data_count = module->table_seg_count;
@@ -480,12 +510,21 @@ aot_destroy_comp_data(AOTCompData *comp_data)
   if (!comp_data)
     return;
 
+  if (comp_data->import_memories)
+    wasm_runtime_free(comp_data->import_memories);
+
   if (comp_data->memories)
     wasm_runtime_free(comp_data->memories);
 
   if (comp_data->mem_init_data_list)
     aot_destroy_mem_init_data_list(comp_data->mem_init_data_list,
                                    comp_data->mem_init_data_count);
+
+  if (comp_data->import_tables)
+    wasm_runtime_free(comp_data->import_tables);
+
+  if (comp_data->tables)
+    wasm_runtime_free(comp_data->tables);
 
   if (comp_data->table_init_data_list)
     aot_destroy_table_init_data_list(comp_data->table_init_data_list,
