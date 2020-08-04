@@ -253,7 +253,7 @@ The `exec_env` is not thread safety, it will cause unexpected behavior if the sa
 **Note1: You can manage the maximum number of threads can be created:**
 
 ```C
-init_args.max_threads = THREAD_NUM;
+init_args.max_thread_num = THREAD_NUM;
 /* If this init argument is not set, the default maximum thread number is 4 */
 ```
 

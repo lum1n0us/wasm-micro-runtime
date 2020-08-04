@@ -117,7 +117,7 @@ typedef struct RuntimeInitArgs {
 
     /* maximum thread number, only used when
         WASM_ENABLE_THREAD_MGR is defined */
-    uint32_t max_threads;
+    uint32_t max_thread_num;
 } RuntimeInitArgs;
 
 /**

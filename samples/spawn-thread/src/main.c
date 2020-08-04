@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
     init_args.mem_alloc_option.allocator.malloc_func = malloc;
     init_args.mem_alloc_option.allocator.realloc_func = realloc;
     init_args.mem_alloc_option.allocator.free_func = free;
-    init_args.max_threads = THREAD_NUM;
+    init_args.max_thread_num = THREAD_NUM;
 
     /* initialize runtime environment */
     if (!wasm_runtime_full_init(&init_args)) {

@@ -235,7 +235,7 @@ wasm_runtime_full_init(RuntimeInitArgs *init_args)
     }
 
 #if WASM_ENABLE_THREAD_MGR != 0
-    wasm_cluster_set_max_thread_num(init_args->max_threads);
+    wasm_cluster_set_max_thread_num(init_args->max_thread_num);
 #endif
 
     return true;
