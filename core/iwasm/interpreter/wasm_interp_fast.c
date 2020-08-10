@@ -633,8 +633,7 @@ read_leb(const uint8 *buf, uint32 *p_offset, uint32 maxbits, bool sign)
       os_mutex_lock(&memory->mem_lock);                             \
       readv = (uint64)LOAD_I64(maddr);                              \
       op_result = readv op sval;                                    \
-      STORE_U32(maddr, ((uint32*)(&op_result))[0]);                 \
-      STORE_U32(maddr + 4, ((uint32*)(&op_result))[1]);             \
+      STORE_I64(maddr, op_result);                                  \
       os_mutex_unlock(&memory->mem_lock);                           \
     }                                                               \
     PUSH_I64(readv);                                                \
@@ -2975,8 +2974,7 @@ recover_br_info:
               CHECK_BULK_MEMORY_OVERFLOW(addr + offset, 8, maddr);
               CHECK_ATOMIC_MEMORY_ACCESS(8);
               os_mutex_lock(&memory->mem_lock);
-              STORE_U32(maddr, ((uint32*)(&sval))[0]);
-              STORE_U32(maddr + 4, ((uint32*)(&sval))[1]);
+              STORE_I64(maddr, sval);
               os_mutex_unlock(&memory->mem_lock);
             }
             break;
@@ -3073,8 +3071,7 @@ recover_br_info:
               os_mutex_lock(&memory->mem_lock);
               readv = (uint64)LOAD_I64(maddr);
               if (readv == expect) {
-                STORE_U32(maddr, ((uint32*)(&sval))[0]);
-                STORE_U32(maddr + 4, ((uint32*)(&sval))[1]);
+                STORE_I64(maddr, sval);
               }
               os_mutex_unlock(&memory->mem_lock);
             }

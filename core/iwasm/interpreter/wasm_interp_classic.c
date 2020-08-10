@@ -841,8 +841,7 @@ trunc_f64_to_int(WASMModuleInstance *module,
       os_mutex_lock(&memory->mem_lock);                             \
       readv = (uint64)LOAD_I64(maddr);                              \
       op_result = readv op sval;                                    \
-      STORE_U32(maddr, ((uint32*)(&op_result))[0]);                 \
-      STORE_U32(maddr + 4, ((uint32*)(&op_result))[1]);             \
+      STORE_I64(maddr, op_result);                                  \
       os_mutex_unlock(&memory->mem_lock);                           \
     }                                                               \
     PUSH_I64(readv);                                                \
@@ -3093,8 +3092,7 @@ label_pop_csp_n:
               os_mutex_lock(&memory->mem_lock);
               readv = (uint64)LOAD_I64(maddr);
               if (readv == expect) {
-                STORE_U32(maddr, ((uint32*)(&sval))[0]);
-                STORE_U32(maddr + 4, ((uint32*)(&sval))[1]);
+                STORE_I64(maddr, sval);
               }
               os_mutex_unlock(&memory->mem_lock);
             }
