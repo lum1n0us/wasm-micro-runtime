@@ -591,5 +591,7 @@ static type _name[WASM_INSTRUCTION_NUM] = {                  \
 do {                                                         \
   _name[WASM_OP_MISC_PREFIX] =                               \
     HANDLE_OPCODE (WASM_OP_MISC_PREFIX);     /* 0xfc */      \
+  _name[WASM_OP_ATOMIC_PREFIX] =                             \
+    HANDLE_OPCODE (WASM_OP_ATOMIC_PREFIX);   /* 0xfe */      \
 } while (0)
 #endif /* end of _WASM_OPCODE_H */
