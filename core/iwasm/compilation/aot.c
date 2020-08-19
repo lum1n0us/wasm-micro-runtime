@@ -375,6 +375,10 @@ aot_create_comp_data(WASMModule *module)
   }
   memset(comp_data->memories, 0, size);
 
+  if (!(module->import_memory_count + module->memory_count)) {
+      comp_data->memories[0].num_bytes_per_page = DEFAULT_NUM_BYTES_PER_PAGE;
+  }
+
   /* Set memory page count */
   for (i = 0; i < module->import_memory_count + module->memory_count; i++) {
     if (i < module->import_memory_count) {
