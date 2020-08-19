@@ -52,14 +52,14 @@ check_buf1(const uint8 *buf, const uint8 *buf_end, uint32 length,
 #define CHECK_BUF(buf, buf_end, length) do {    \
   if (!check_buf(buf, buf_end, length,          \
                  error_buf, error_buf_size)) {  \
-      return false;                             \
+      goto fail;                                \
   }                                             \
 } while (0)
 
 #define CHECK_BUF1(buf, buf_end, length) do {   \
   if (!check_buf1(buf, buf_end, length,         \
                   error_buf, error_buf_size)) { \
-      return false;                             \
+      goto fail;                                \
   }                                             \
 } while (0)
 
@@ -90,6 +90,8 @@ skip_leb(const uint8 **p_buf, const uint8 *buf_end, uint32 maxbits,
 
     *p_buf += offset;
     return true;
+fail:
+    return false;
 }
 
 #define skip_leb_int64(p, p_end) do {               \
@@ -184,6 +186,7 @@ read_leb(uint8 **p_buf, const uint8 *buf_end,
 fail_integer_too_large:
     set_error_buf(error_buf, error_buf_size,
                   "WASM module load failed: integer too large");
+fail:
     return false;
 }
 
@@ -195,7 +198,7 @@ fail_integer_too_large:
   uint64 res64;                                     \
   if (!read_leb((uint8**)&p, p_end, 64, true, &res64,\
                 error_buf, error_buf_size))         \
-    return false;                                   \
+    goto fail;                                      \
   res = (int64)res64;                               \
 } while (0)
 
@@ -203,7 +206,7 @@ fail_integer_too_large:
   uint64 res64;                                     \
   if (!read_leb((uint8**)&p, p_end, 32, false, &res64,\
                 error_buf, error_buf_size))         \
-    return false;                                   \
+    goto fail;                                      \
   res = (uint32)res64;                              \
 } while (0)
 
@@ -211,7 +214,7 @@ fail_integer_too_large:
   uint64 res64;                                     \
   if (!read_leb((uint8**)&p, p_end, 32, true, &res64,\
                 error_buf, error_buf_size))         \
-    return false;                                   \
+    goto fail;                                      \
   res = (int32)res64;                               \
 } while (0)
 
@@ -335,19 +338,19 @@ load_init_expr(const uint8 **p_buf, const uint8 *buf_end,
         /* i32.const */
         case INIT_EXPR_TYPE_I32_CONST:
             if (type != VALUE_TYPE_I32)
-                goto fail;
+                goto fail_type_mismatch;
             read_leb_int32(p, p_end, init_expr->u.i32);
             break;
         /* i64.const */
         case INIT_EXPR_TYPE_I64_CONST:
             if (type != VALUE_TYPE_I64)
-                goto fail;
+                goto fail_type_mismatch;
             read_leb_int64(p, p_end, init_expr->u.i64);
             break;
         /* f32.const */
         case INIT_EXPR_TYPE_F32_CONST:
             if (type != VALUE_TYPE_F32)
-                goto fail;
+                goto fail_type_mismatch;
             CHECK_BUF(p, p_end, 4);
             p_float = (uint8*)&init_expr->u.f32;
             for (i = 0; i < sizeof(float32); i++)
@@ -356,7 +359,7 @@ load_init_expr(const uint8 **p_buf, const uint8 *buf_end,
         /* f64.const */
         case INIT_EXPR_TYPE_F64_CONST:
             if (type != VALUE_TYPE_F64)
-                goto fail;
+                goto fail_type_mismatch;
             CHECK_BUF(p, p_end, 8);
             p_float = (uint8*)&init_expr->u.f64;
             for (i = 0; i < sizeof(float64); i++)
@@ -367,19 +370,20 @@ load_init_expr(const uint8 **p_buf, const uint8 *buf_end,
             read_leb_uint32(p, p_end, init_expr->u.global_index);
             break;
         default:
-            goto fail;
+            goto fail_type_mismatch;
     }
     CHECK_BUF(p, p_end, 1);
     end_byte = read_uint8(p);
     if (end_byte != 0x0b)
-        goto fail;
+        goto fail_type_mismatch;
     *p_buf = p;
 
     return true;
-fail:
+fail_type_mismatch:
     set_error_buf(error_buf, error_buf_size,
                   "WASM module load failed: type mismatch or "
                   "constant expression required.");
+fail:
     return false;
 }
 
@@ -472,6 +476,8 @@ load_type_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
     LOG_VERBOSE("Load type section success.\n");
     return true;
+fail:
+    return false;
 }
 
 #if WASM_ENABLE_MULTI_MODULE != 0
@@ -804,6 +810,8 @@ load_function_import(const WASMModule *parent_module, WASMModule *sub_module,
     function->import_func_linked = is_built_in_module ? NULL : linked_func;
 #endif
     return true;
+fail:
+    return false;
 }
 
 static bool
@@ -905,6 +913,8 @@ load_table_import(WASMModule *sub_module, const char *sub_module_name,
     table->flags = declare_max_size_flag;
     table->max_size = declare_max_size;
     return true;
+fail:
+    return false;
 }
 
 unsigned
@@ -1034,6 +1044,8 @@ load_memory_import(WASMModule *sub_module, const char *sub_module_name,
 
     *p_buf = p;
     return true;
+fail:
+    return false;
 }
 
 static bool
@@ -1107,6 +1119,8 @@ load_global_import(const WASMModule *parent_module,
     global->type = declare_type;
     global->is_mutable = is_mutable;
     return true;
+fail:
+    return false;
 }
 
 static bool
@@ -1142,6 +1156,8 @@ load_table(const uint8 **p_buf, const uint8 *buf_end, WASMTable *table,
 
     *p_buf = p;
     return true;
+fail:
+    return false;
 }
 
 static bool
@@ -1180,6 +1196,8 @@ load_memory(const uint8 **p_buf, const uint8 *buf_end, WASMMemory *memory,
 
     *p_buf = p;
     return true;
+fail:
+    return false;
 }
 
 #if WASM_ENABLE_MULTI_MODULE != 0
@@ -1598,6 +1616,8 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
     (void)u32;
     (void)type_index;
     return true;
+fail:
+    return false;
 }
 
 static bool
@@ -1779,6 +1799,8 @@ load_function_section(const uint8 *buf, const uint8 *buf_end,
 
     LOG_VERBOSE("Load function section success.\n");
     return true;
+fail:
+    return false;
 }
 
 static bool
@@ -1820,6 +1842,8 @@ load_table_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
     LOG_VERBOSE("Load table section success.\n");
     return true;
+fail:
+    return false;
 }
 
 static bool
@@ -1861,6 +1885,8 @@ load_memory_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
     LOG_VERBOSE("Load memory section success.\n");
     return true;
+fail:
+    return false;
 }
 
 static bool
@@ -1926,6 +1952,8 @@ load_global_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
     LOG_VERBOSE("Load global section success.\n");
     return true;
+fail:
+    return false;
 }
 
 static bool
@@ -2029,6 +2057,8 @@ load_export_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
     LOG_VERBOSE("Load export section success.\n");
     return true;
+fail:
+    return false;
 }
 
 static bool
@@ -2102,6 +2132,8 @@ load_table_segment_section(const uint8 *buf, const uint8 *buf_end, WASMModule *m
 
     LOG_VERBOSE("Load table segment section success.\n");
     return true;
+fail:
+    return false;
 }
 
 static bool
@@ -2217,6 +2249,8 @@ check_mem_index:
 
     LOG_VERBOSE("Load data segment section success.\n");
     return true;
+fail:
+    return false;
 }
 
 #if WASM_ENABLE_BULK_MEMORY != 0
@@ -2268,6 +2302,8 @@ load_code_section(const uint8 *buf, const uint8 *buf_end,
 
     LOG_VERBOSE("Load code segment section success.\n");
     return true;
+fail:
+    return false;
 }
 
 static bool
@@ -2311,6 +2347,8 @@ load_start_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
     LOG_VERBOSE("Load start section success.\n");
     return true;
+fail:
+    return false;
 }
 
 static bool
@@ -2344,6 +2382,8 @@ load_user_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
 
     LOG_VERBOSE("Load custom section success.\n");
     return true;
+fail:
+    return false;
 }
 
 
@@ -2759,6 +2799,8 @@ create_sections(const uint8 *buf, uint32 size,
     }
 
     return true;
+fail:
+    return false;
 }
 
 static void
@@ -2819,6 +2861,8 @@ load(const uint8 *buf, uint32 size, WASMModule *module,
 
     destroy_sections(section_list);
     return true;
+fail:
+    return false;
 }
 
 WASMModule*
@@ -3339,6 +3383,8 @@ wasm_loader_find_block_addr(BlockAddr *block_addr_cache,
     }
 
     (void)u8;
+    return false;
+fail:
     return false;
 }
 
