@@ -2297,6 +2297,8 @@ load_datacount_section(const uint8 *buf, const uint8 *buf_end, WASMModule *modul
 
     LOG_VERBOSE("Load datacount section success.\n");
     return true;
+fail:
+    return false;
 }
 #endif
 
