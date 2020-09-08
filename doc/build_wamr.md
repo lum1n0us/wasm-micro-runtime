@@ -68,6 +68,10 @@ cmake -DWAMR_BUILD_PLATFORM=linux -DWAMR_BUILD_TARGET=ARM
 - **WAMR_DISABLE_HW_BOUND_CHECK**=1/0, default to enable if not set and supported by platform
 > Note: by default only platform linux/darwin/android/vxworks 64-bit will enable boundary check with hardware trap in AOT or JIT mode, and the wamrc tool will generate AOT code without boundary check instructions in all 64-bit targets except SGX to improve performance.
 
+#### **Enable memory profiling (Experiment)**
+- **WAMR_BUILD_MEMORY_PROFLING**=1/0, default to disable if not set
+> Note: only classic interpreter is supported currently, if it is enabled, developer can use API `void wasm_runtime_dump_mem_consumption(wasm_exec_env_t exec_env)` to dump the memory consumption info.
+
 #### **Set maximum app thread stack size**
 - **WAMR_APP_THREAD_STACK_SIZE_MAX**=n, default to 8 MB (8388608) if not set
 > Note: the AOT boundary check with hardware trap mechanism might consume large stack since the OS may lazily grow the stack mapping as a guard page is hit, we may use this configuration to reduce the total stack usage, e.g. -DWAMR_APP_THREAD_STACK_SIZE_MAX=131072 (128 KB).
