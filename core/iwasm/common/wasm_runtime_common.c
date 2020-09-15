@@ -885,6 +885,7 @@ wasm_runtime_dump_mem_consumption(WASMExecEnv *exec_env)
     WASMModuleCommon *module_common;
     void *heap_handle = NULL;
     uint32 total_size = 0, app_heap_peak_size = 0;
+    uint32 max_aux_stack_used = -1;
 
     module_inst_common = exec_env->module_inst;
 #if WASM_ENABLE_INTERP != 0
@@ -900,6 +901,8 @@ wasm_runtime_dump_mem_consumption(WASMExecEnv *exec_env)
                     (wasm_module_inst, &module_inst_mem_consps);
         wasm_get_module_mem_consumption
                     (wasm_module, &module_mem_consps);
+        if (wasm_module_inst->module->aux_stack_top_global_index != (uint32)-1)
+            max_aux_stack_used = wasm_module_inst->max_aux_stack_used;
     }
 #endif
 #if WASM_ENABLE_AOT != 0
@@ -907,10 +910,10 @@ wasm_runtime_dump_mem_consumption(WASMExecEnv *exec_env)
         AOTModuleInstance *aot_module_inst =
                     (AOTModuleInstance*)module_inst_common;
         AOTModule *aot_module =
-                    (AOTModule*)aot_module_inst->module.ptr;
+                    (AOTModule*)aot_module_inst->aot_module.ptr;
         module_common = (WASMModuleCommon*)aot_module;
         if (aot_module_inst->memories.ptr) {
-            AOTMemoryInstance *memories =
+            AOTMemoryInstance **memories =
                (AOTMemoryInstance **)aot_module_inst->memories.ptr;
             heap_handle = memories[0]->heap_handle.ptr;
         }
@@ -938,13 +941,12 @@ wasm_runtime_dump_mem_consumption(WASMExecEnv *exec_env)
               "exec env: %u\n", total_size);
     os_printf("Total interpreter stack used: %u\n",
               exec_env->max_wasm_stack_used);
-#if 0 /* TODO */
-    if (module_inst->module->aux_stack_top_global_index != (uint32)-1)
-        os_printf("Total auxiliary stack used: %u\n",
-                  module_inst->max_aux_stack_used);
+
+    if (max_aux_stack_used != (uint32)-1)
+        os_printf("Total auxiliary stack used: %u\n", max_aux_stack_used);
     else
         os_printf("Total aux stack used: no enough info to profile\n");
-#endif
+
     os_printf("Total app heap used: %u\n", app_heap_peak_size);
 }
 #endif

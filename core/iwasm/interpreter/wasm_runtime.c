@@ -1934,6 +1934,7 @@ wasm_get_aux_stack(WASMExecEnv *exec_env,
 }
 #endif
 
+#if (WASM_ENABLE_MEMORY_PROFILING != 0) || (WASM_ENABLE_MEMORY_TRACING != 0)
 void
 wasm_get_module_mem_consumption(const WASMModule *module,
                                 WASMModuleMemConsumption *mem_conspn)
@@ -2065,4 +2066,5 @@ wasm_get_module_inst_mem_consumption(const WASMModuleInstance *module_inst,
     mem_conspn->total_size += mem_conspn->globals_size;
     mem_conspn->total_size += mem_conspn->exports_size;
 }
-
+#endif /* end of (WASM_ENABLE_MEMORY_PROFILING != 0)
+                 || (WASM_ENABLE_MEMORY_TRACING != 0) */

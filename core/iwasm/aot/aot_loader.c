@@ -1701,6 +1701,9 @@ load_from_sections(AOTModule *module, AOTSection *sections,
      * otherwise unpredictable behavior can occur. */
     os_dcache_flush();
 
+#if WASM_ENABLE_MEMORY_TRACING != 0
+    wasm_runtime_dump_module_mem_consumption((WASMModuleCommon*)module);
+#endif
     return true;
 }
 
