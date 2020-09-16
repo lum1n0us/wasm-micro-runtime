@@ -1542,7 +1542,6 @@ wasm_create_exec_env_and_call_function(WASMModuleInstance *module_inst,
     wasm_exec_env_set_thread_info(exec_env);
 
     ret = wasm_call_function(exec_env, func, argc, argv);
-    wasm_runtime_dump_mem_consumption(exec_env);
     wasm_exec_env_destroy(exec_env);
     return ret;
 }

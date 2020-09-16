@@ -559,7 +559,7 @@ aot_get_module_mem_consumption(const AOTModule *module,
 
 void
 aot_get_module_inst_mem_consumption(const AOTModuleInstance *module_inst,
-                                    WASMModuleMemConsumption *mem_conspn);
+                                    WASMModuleInstMemConsumption *mem_conspn);
 
 #ifdef __cplusplus
 } /* end of extern "C" */
