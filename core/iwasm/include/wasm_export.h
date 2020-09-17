@@ -784,7 +784,7 @@ wasm_runtime_get_user_data(wasm_exec_env_t exec_env);
  *
  * @param exec_env the execution environment
  */
-void
+WASM_RUNTIME_API_EXTERN void
 wasm_runtime_dump_mem_consumption(wasm_exec_env_t exec_env);
 
 #if WASM_ENABLE_THREAD_MGR != 0
