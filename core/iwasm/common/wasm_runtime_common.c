@@ -882,7 +882,7 @@ wasm_runtime_dump_mem_consumption(WASMExecEnv *exec_env)
     WASMModuleInstMemConsumption module_inst_mem_consps;
     WASMModuleMemConsumption module_mem_consps;
     WASMModuleInstanceCommon *module_inst_common;
-    WASMModuleCommon *module_common;
+    WASMModuleCommon *module_common = NULL;
     void *heap_handle = NULL;
     uint32 total_size = 0, app_heap_peak_size = 0;
     uint32 max_aux_stack_used = -1;
@@ -923,6 +923,8 @@ wasm_runtime_dump_mem_consumption(WASMExecEnv *exec_env)
                     (aot_module, &module_mem_consps);
     }
 #endif
+
+    bh_assert(module_common != NULL);
 
     if (heap_handle) {
         app_heap_peak_size = gc_get_heap_highmark_size(heap_handle);
