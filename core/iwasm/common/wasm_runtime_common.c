@@ -2645,7 +2645,7 @@ wasm_runtime_invoke_native_raw(WASMExecEnv *exec_env, void *func_ptr,
         }
     }
 
-    ret = true;
+    ret = !wasm_runtime_get_exception(module) ? true : false;
 
 fail:
     if (argv1 != argv_buf)
@@ -2900,7 +2900,7 @@ wasm_runtime_invoke_native(WASMExecEnv *exec_env, void *func_ptr,
     }
     exec_env->attachment = NULL;
 
-    ret = true;
+    ret = !wasm_runtime_get_exception(module) ? true : false;
 
 fail:
     if (argv1 != argv_buf)
@@ -3053,7 +3053,7 @@ wasm_runtime_invoke_native(WASMExecEnv *exec_env, void *func_ptr,
     }
     exec_env->attachment = NULL;
 
-    ret = true;
+    ret = !wasm_runtime_get_exception(module) ? true : false;
 
 fail:
     if (argv1 != argv_buf)
@@ -3231,7 +3231,7 @@ wasm_runtime_invoke_native(WASMExecEnv *exec_env, void *func_ptr,
     }
     exec_env->attachment = NULL;
 
-    ret = true;
+    ret = !wasm_runtime_get_exception(module) ? true : false;
 fail:
     if (argv1 != argv_buf)
         wasm_runtime_free(argv1);
