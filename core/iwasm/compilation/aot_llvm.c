@@ -997,6 +997,13 @@ get_target_arch_from_triple(const char *triple, char *arch_buf, uint32 buf_size)
     bh_assert(*triple == '-' || *triple == '\0');
 }
 
+LLVMBool
+WAMRCreateMCJITCompilerForModule(LLVMExecutionEngineRef *OutJIT,
+                                 LLVMModuleRef M,
+                                 struct LLVMMCJITCompilerOptions *Options,
+                                 size_t SizeOfOptions,
+                                 char **OutError);
+
 void LLVMAddPromoteMemoryToRegisterPass(LLVMPassManagerRef PM);
 
 AOTCompContext *
@@ -1060,7 +1067,7 @@ aot_create_comp_context(AOTCompData *comp_data,
         jit_options.OptLevel = LLVMCodeGenLevelAggressive;
         jit_options.EnableFastISel = true;
         /*jit_options.CodeModel = LLVMCodeModelSmall;*/
-        if (LLVMCreateMCJITCompilerForModule
+        if (WAMRCreateMCJITCompilerForModule
                 (&comp_ctx->exec_engine, comp_ctx->module,
                  &jit_options, sizeof(jit_options), &err) != 0) {
             if (err) {
