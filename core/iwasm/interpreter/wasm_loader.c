@@ -4285,16 +4285,18 @@ preserve_referenced_local(WASMLoaderContext *loader_ctx, uint8 opcode,
             if (!(*preserved)) {
                 *preserved = true;
                 skip_label();
+                preserved_offset = loader_ctx->preserved_local_offset;
+                if (loader_ctx->p_code_compiled) {
+                    bh_assert(preserved_offset != (int16)local_index);
+                }
                 if (local_type == VALUE_TYPE_I32
                     || local_type == VALUE_TYPE_F32) {
-                    preserved_offset = loader_ctx->preserved_local_offset;
                     /* Only increase preserve offset in the second traversal */
                     if (loader_ctx->p_code_compiled)
                         loader_ctx->preserved_local_offset++;
                     emit_label(EXT_OP_COPY_STACK_TOP);
                 }
                 else {
-                    preserved_offset = loader_ctx->preserved_local_offset;
                     if (loader_ctx->p_code_compiled)
                         loader_ctx->preserved_local_offset += 2;
                     emit_label(EXT_OP_COPY_STACK_TOP_I64);
@@ -4303,7 +4305,6 @@ preserve_referenced_local(WASMLoaderContext *loader_ctx, uint8 opcode,
                 emit_operand(loader_ctx, preserved_offset);
                 emit_label(opcode);
             }
-            bh_assert(preserved_offset != (int16)local_index);
             loader_ctx->frame_offset_bottom[i] = preserved_offset;
         }
 
