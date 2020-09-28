@@ -2081,3 +2081,40 @@ wasm_get_module_inst_mem_consumption(const WASMModuleInstance *module_inst,
 }
 #endif /* end of (WASM_ENABLE_MEMORY_PROFILING != 0)
                  || (WASM_ENABLE_MEMORY_TRACING != 0) */
+
+#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+void
+wasm_interp_dump_call_stack(struct WASMExecEnv *exec_env)
+{
+    WASMModuleInstance *module_inst =
+        (WASMModuleInstance *)wasm_exec_env_get_module_inst(exec_env);
+    WASMInterpFrame *cur_frame =
+        wasm_exec_env_get_cur_frame(exec_env);
+    WASMFunctionInstance *func_inst;
+    const char *func_name = NULL;
+    uint32 n;
+
+    os_printf("\n");
+    for (n = 0; cur_frame && cur_frame->function; n++) {
+        func_inst = cur_frame->function;
+
+        if (func_inst->is_import_func) {
+            func_name = func_inst->u.func_import->field_name;
+        }
+        else {
+            func_name = func_inst->u.func->field_name;
+        }
+
+        /* function name not exported, print number instead */
+        if (func_name == NULL) {
+            os_printf("#%02d $f%d \n", n, func_inst - module_inst->functions);
+        }
+        else {
+            os_printf("#%02d %s \n", n, func_name);
+        }
+
+        cur_frame = cur_frame->prev_frame;
+    }
+    os_printf("\n");
+}
+#endif /* end of WASM_ENABLE_CUSTOM_NAME_SECTION */
