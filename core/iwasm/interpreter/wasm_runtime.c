@@ -559,47 +559,26 @@ functions_instantiate(const WASMModule *module,
                                   import->u.function.import_module);
             bh_assert(function->import_module_inst);
 
-            WASMFunction *function_linked =
-              import->u.function.import_func_linked;
-
-            function->u.func = function_linked;
             function->import_func_inst =
               wasm_lookup_function(function->import_module_inst,
-                                   import->u.function.field_name,
-                                   NULL);
+                                   import->u.function.field_name, NULL);
             bh_assert(function->import_func_inst);
-
-            function->param_cell_num = function->u.func->param_cell_num;
-            function->ret_cell_num = function->u.func->ret_cell_num;
-            function->local_cell_num = function->u.func->local_cell_num;
-            function->param_count =
-              (uint16)function->u.func->func_type->param_count;
-            function->local_count = (uint16)function->u.func->local_count;
-            function->param_types = function->u.func->func_type->types;
-            function->local_types = function->u.func->local_types;
-            function->local_offsets = function->u.func->local_offsets;
-#if WASM_ENABLE_FAST_INTERP != 0
-            function->const_cell_num = function->u.func->const_cell_num;
-#endif
-        }
-        else
-#endif /* WASM_ENABLE_MULTI_MODULE */
-        {
+        } else {
             LOG_DEBUG("(%s, %s) is a function of native",
                       import->u.function.module_name,
                       import->u.function.field_name);
-            function->u.func_import = &import->u.function;
-            function->param_cell_num =
-              import->u.function.func_type->param_cell_num;
-            function->ret_cell_num =
-              import->u.function.func_type->ret_cell_num;
-            function->param_count =
-              (uint16)function->u.func_import->func_type->param_count;
-            function->param_types = function->u.func_import->func_type->types;
-            function->local_cell_num = 0;
-            function->local_count = 0;
-            function->local_types = NULL;
         }
+#endif /* WASM_ENABLE_MULTI_MODULE */
+        function->u.func_import = &import->u.function;
+        function->param_cell_num =
+          import->u.function.func_type->param_cell_num;
+        function->ret_cell_num = import->u.function.func_type->ret_cell_num;
+        function->param_count =
+          (uint16)function->u.func_import->func_type->param_count;
+        function->param_types = function->u.func_import->func_type->types;
+        function->local_cell_num = 0;
+        function->local_count = 0;
+        function->local_types = NULL;
 
         function++;
     }
