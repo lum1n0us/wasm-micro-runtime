@@ -13,13 +13,14 @@
 #include "event.h"
 #include "watchdog.h"
 #include "runtime_lib.h"
+#include "wasm.h"
 #if WASM_ENABLE_AOT != 0
 #include "aot_export.h"
 #endif
 
 #if WASM_ENABLE_INTERP != 0 || WASM_ENABLE_JIT != 0
 /* Wasm bytecode file 4 version bytes */
-static uint8 wasm_bytecode_version[] = {
+static uint8 wasm_bytecode_version[4] = {
     (uint8) 0x01,
     (uint8) 0x00,
     (uint8) 0x00,
@@ -29,12 +30,13 @@ static uint8 wasm_bytecode_version[] = {
 
 #if WASM_ENABLE_AOT != 0
 /* Wasm aot file 4 version bytes */
-static uint8 wasm_aot_version[] = {
-    (uint8) 0x01,
+static uint8 wasm_aot_version[4] = {
+    (uint8) 0x02,
     (uint8) 0x00,
     (uint8) 0x00,
     (uint8) 0x00
 };
+#endif
 
 static union {
     int a;
@@ -42,8 +44,6 @@ static union {
 } __ue = { .a = 1 };
 
 #define is_little_endian() (__ue.b == 1)
-#endif
-
 /* Wasm App Install Request Receiving Phase */
 typedef enum wasm_app_install_req_recv_phase_t {
     Phase_Req_Ver,
@@ -163,14 +163,6 @@ module_interface wasm_app_module_interface = {
     wasm_app_module_on_install_request_byte_arrive
 };
 
-static unsigned
-align_uint(unsigned v, unsigned b)
-{
-    unsigned m = b - 1;
-    return (v + m) & ~m;
-}
-
-#if WASM_ENABLE_AOT != 0
 static void
 exchange_uint32(uint8 *p_data)
 {
@@ -182,7 +174,6 @@ exchange_uint32(uint8 *p_data)
     *(p_data + 1) = *(p_data + 2);
     *(p_data + 2) = value;
 }
-#endif
 
 static wasm_function_inst_t
 app_manager_lookup_function(const wasm_module_inst_t module_inst,
@@ -445,7 +436,7 @@ wasm_app_routine(void *arg)
                                         0, NULL)) {
                 const char *exception = wasm_runtime_get_exception(inst);
                 bh_assert(exception);
-                printf("Got exception running wasi start function: %s\n",
+                app_manager_printf("Got exception running wasi start function: %s\n",
                         exception);
                 wasm_runtime_clear_exception(inst);
                 goto fail1;
@@ -467,7 +458,7 @@ wasm_app_routine(void *arg)
                                 0, NULL)) {
         const char *exception = wasm_runtime_get_exception(inst);
         bh_assert(exception);
-        printf("Got exception running WASM code: %s\n",
+        app_manager_printf("Got exception running WASM code: %s\n",
                exception);
         wasm_runtime_clear_exception(inst);
         /* call on_destroy() in case some resources are opened in on_init()
@@ -546,7 +537,21 @@ cleanup_app_resource(module_data *m_data)
 static bool
 wasm_app_module_init(void)
 {
-    /* wasm runtime is already initialized by main func */
+    uint32 version;
+
+#if WASM_ENABLE_INTERP != 0 || WASM_ENABLE_JIT != 0
+    version = WASM_CURRENT_VERSION;
+    if (!is_little_endian())
+        exchange_uint32((uint8 *)&version);
+    bh_memcpy_s(wasm_bytecode_version, 4, &version, 4);
+#endif
+
+#if WASM_ENABLE_AOT != 0
+    version = AOT_CURRENT_VERSION;
+    if (!is_little_endian())
+        exchange_uint32((uint8 *)&version);
+    bh_memcpy_s(wasm_aot_version, 4, &version, 4);
+#endif
     return true;
 }
 
@@ -556,7 +561,7 @@ wasm_app_module_init(void)
 static bool
 wasm_app_module_install(request_t * msg)
 {
-    unsigned int m_data_size, heap_size;
+    unsigned int m_data_size, heap_size, stack_size;
     unsigned int timeout, timers, err_size;
     char *properties;
     int properties_offset;
@@ -644,7 +649,7 @@ wasm_app_module_install(request_t * msg)
             if (!module) {
                 SEND_ERR_RESPONSE(msg->mid,
                                   "Install WASM app failed: load WASM file failed.");
-                printf("error: %s\n", err);
+                app_manager_printf("error: %s\n", err);
                 destroy_all_aot_sections(aot_file->sections);
                 return false;
             }
@@ -674,7 +679,7 @@ wasm_app_module_install(request_t * msg)
             if (!inst) {
                 SEND_ERR_RESPONSE(msg->mid,
                                   "Install WASM app failed: instantiate wasm runtime failed.");
-                printf("error: %s\n", err);
+                app_manager_printf("error: %s\n", err);
                 wasm_runtime_unload(module);
                 destroy_all_aot_sections(aot_file->sections);
                 return false;
@@ -713,7 +718,7 @@ wasm_app_module_install(request_t * msg)
             if (!module) {
                 SEND_ERR_RESPONSE(msg->mid,
                                   "Install WASM app failed: load WASM file failed.");
-                printf("error: %s\n", err);
+                app_manager_printf("error: %s\n", err);
                 destroy_all_wasm_sections(bytecode_file->sections);
                 return false;
             }
@@ -744,7 +749,7 @@ wasm_app_module_install(request_t * msg)
             if (!inst) {
                 SEND_ERR_RESPONSE(msg->mid,
                                   "Install WASM app failed: instantiate wasm runtime failed.");
-                printf("error: %s\n", err);
+                app_manager_printf("error: %s\n", err);
                 wasm_runtime_unload(module);
                 destroy_all_wasm_sections(bytecode_file->sections);
                 return false;
@@ -842,12 +847,16 @@ wasm_app_module_install(request_t * msg)
         goto fail;
     }
 
+    stack_size = APP_THREAD_STACK_SIZE_DEFAULT;
+#ifdef OS_ENABLE_HW_BOUND_CHECK
+    stack_size += 4 * BH_KB;
+#endif
     /* Create WASM app thread. */
     if (os_thread_create(&wasm_app_data->thread_id, wasm_app_routine,
-                         (void*) m_data, APP_THREAD_STACK_SIZE_DEFAULT) != 0) {
+                         (void*) m_data, stack_size) != 0) {
         module_data_list_remove(m_data);
         SEND_ERR_RESPONSE(msg->mid,
-                          "Install WASM app failed: create app threadf failed.");
+                          "Install WASM app failed: create app thread failed.");
         goto fail;
     }
 

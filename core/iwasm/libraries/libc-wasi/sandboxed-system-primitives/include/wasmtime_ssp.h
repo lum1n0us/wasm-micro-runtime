@@ -1,6 +1,6 @@
 /*
  * Part of the Wasmtime Project, under the Apache License v2.0 with LLVM Exceptions.
- * See https://github.com/CraneStation/wasmtime/blob/master/LICENSE for license information.
+ * See https://github.com/bytecodealliance/wasmtime/blob/main/LICENSE for license information.
  *
  * This file declares an interface similar to WASI, but augmented to expose
  * some implementation details such as the curfds arguments that we pass
@@ -275,9 +275,9 @@ typedef uint64_t __wasi_timestamp_t;
 typedef uint64_t __wasi_userdata_t;
 
 typedef uint8_t __wasi_whence_t;
-#define __WASI_WHENCE_CUR (0)
-#define __WASI_WHENCE_END (1)
-#define __WASI_WHENCE_SET (2)
+#define __WASI_WHENCE_SET (0)
+#define __WASI_WHENCE_CUR (1)
+#define __WASI_WHENCE_END (2)
 
 typedef uint8_t __wasi_preopentype_t;
 #define __WASI_PREOPENTYPE_DIR              (0)
@@ -832,9 +832,15 @@ __wasi_errno_t wasmtime_ssp_poll_oneoff(
     size_t *nevents
 ) WASMTIME_SSP_SYSCALL_NAME(poll_oneoff) __attribute__((__warn_unused_result__));
 
+#if 0
+/**
+ * We throw exception in libc-wasi wrapper function wasi_proc_exit()
+ * but not call this function.
+ */
 _Noreturn void wasmtime_ssp_proc_exit(
     __wasi_exitcode_t rval
 ) WASMTIME_SSP_SYSCALL_NAME(proc_exit);
+#endif
 
 __wasi_errno_t wasmtime_ssp_proc_raise(
     __wasi_signal_t sig

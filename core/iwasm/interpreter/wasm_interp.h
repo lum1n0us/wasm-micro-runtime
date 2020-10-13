@@ -27,8 +27,8 @@ typedef struct WASMInterpFrame {
   uint8 *ip;
 
 #if WASM_ENABLE_FAST_INTERP != 0
-  /* return offset of current frame.
-    the callee will put return value here */
+  /* return offset of the first return value of current frame.
+    the callee will put return values here continuously */
   uint32 ret_offset;
   uint32 *lp;
   uint32 operand[1];
@@ -73,6 +73,11 @@ wasm_interp_call_wasm(struct WASMModuleInstance *module_inst,
                       struct WASMExecEnv *exec_env,
                       struct WASMFunctionInstance *function,
                       uint32 argc, uint32 argv[]);
+
+#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+void
+wasm_interp_dump_call_stack(struct WASMExecEnv *exec_env);
+#endif
 
 #ifdef __cplusplus
 }

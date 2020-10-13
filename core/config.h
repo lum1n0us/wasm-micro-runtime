@@ -43,12 +43,8 @@
 #define BH_DEBUG 0
 #endif
 
-enum {
-    /* Memory allocator ems */
-    MEM_ALLOCATOR_EMS = 0,
-    /* Memory allocator tlsf */
-    MEM_ALLOCATOR_TLSF
-};
+#define MEM_ALLOCATOR_EMS  0
+#define MEM_ALLOCATOR_TLSF 1
 
 /* Default memory allocator */
 #define DEFAULT_MEM_ALLOCATOR MEM_ALLOCATOR_EMS
@@ -62,7 +58,7 @@ enum {
 #endif
 
 #define AOT_MAGIC_NUMBER 0x746f6100
-#define AOT_CURRENT_VERSION 1
+#define AOT_CURRENT_VERSION 2
 
 #ifndef WASM_ENABLE_JIT
 #define WASM_ENABLE_JIT 0
@@ -86,12 +82,31 @@ enum {
 #define WASM_ENABLE_LIBC_WASI 0
 #endif
 
+#ifndef WASM_ENABLE_LIB_PTHREAD
+#define WASM_ENABLE_LIB_PTHREAD 0
+#endif
+
 #ifndef WASM_ENABLE_BASE_LIB
 #define WASM_ENABLE_BASE_LIB 0
 #endif
 
 #ifndef WASM_ENABLE_APP_FRAMEWORK
 #define WASM_ENABLE_APP_FRAMEWORK 0
+#endif
+
+/* Bulk memory operation */
+#ifndef WASM_ENABLE_BULK_MEMORY
+#define WASM_ENABLE_BULK_MEMORY 0
+#endif
+
+/* Shared memory */
+#ifndef WASM_ENABLE_SHARED_MEMORY
+#define WASM_ENABLE_SHARED_MEMORY 0
+#endif
+
+/* Thread manager */
+#ifndef WASM_ENABLE_THREAD_MGR
+#define WASM_ENABLE_THREAD_MGR 0
 #endif
 
 /* WASM log system */
@@ -106,7 +121,16 @@ enum {
 #endif
 
 /* WASM Interpreter labels-as-values feature */
+#ifdef __GNUC__
 #define WASM_ENABLE_LABELS_AS_VALUES 1
+#else
+#define WASM_ENABLE_LABELS_AS_VALUES 0
+#endif
+
+/* Enable fast interpreter or not */
+#ifndef WASM_ENABLE_FAST_INTERP
+#define WASM_ENABLE_FAST_INTERP 0
+#endif
 
 #if WASM_ENABLE_FAST_INTERP != 0
 #define WASM_ENABLE_ABS_LABEL_ADDR 1
@@ -120,11 +144,36 @@ enum {
 #define WASM_ENABLE_OPCODE_COUNTER 0
 #endif
 
-/* Heap and stack profiling */
-#define BH_ENABLE_MEMORY_PROFILING 0
+/* Support a module with dependency, other modules */
+#ifndef WASM_ENABLE_MULTI_MODULE
+#define WASM_ENABLE_MULTI_MODULE 0
+#endif
+
+/* Enable wasm mini loader or not */
+#ifndef WASM_ENABLE_MINI_LOADER
+#define WASM_ENABLE_MINI_LOADER 0
+#endif
+
+/* Disable boundary check with hardware trap or not,
+ * enable it by default if it is supported */
+#ifndef WASM_DISABLE_HW_BOUND_CHECK
+#define WASM_DISABLE_HW_BOUND_CHECK 0
+#endif
+
+/* Memory profiling */
+#ifndef WASM_ENABLE_MEMORY_PROFILING
+#define WASM_ENABLE_MEMORY_PROFILING 0
+#endif
+
+/* Memory tracing */
+#ifndef WASM_ENABLE_MEMORY_TRACING
+#define WASM_ENABLE_MEMORY_TRACING 0
+#endif
 
 /* Heap verification */
+#ifndef BH_ENABLE_GC_VERIFY
 #define BH_ENABLE_GC_VERIFY 0
+#endif
 
 /* Max app number of all modules */
 #define MAX_APP_INSTALLATIONS 3
@@ -153,12 +202,9 @@ enum {
 /* The max percentage of global heap that app memory space can grow */
 #define APP_MEMORY_MAX_GLOBAL_HEAP_PERCENT 1 / 3
 
-/* Default base offset of app heap space */
-#define DEFAULT_APP_HEAP_BASE_OFFSET (1 * BH_GB)
-
 /* Default min/max heap size of each app */
 #define APP_HEAP_SIZE_DEFAULT (8 * 1024)
-#define APP_HEAP_SIZE_MIN (2 * 1024)
+#define APP_HEAP_SIZE_MIN (512)
 #define APP_HEAP_SIZE_MAX (512 * 1024 * 1024)
 
 /* Default wasm stack size of each app */
@@ -170,13 +216,14 @@ enum {
 
 /* Default/min/max stack size of each app thread */
 #if !defined(BH_PLATFORM_ZEPHYR) && !defined(BH_PLATFORM_ALIOS_THINGS)
-#define APP_THREAD_STACK_SIZE_DEFAULT (20 * 1024)
-#define APP_THREAD_STACK_SIZE_MIN (16 * 1024)
-#define APP_THREAD_STACK_SIZE_MAX (256 * 1024)
+#define APP_THREAD_STACK_SIZE_DEFAULT (32 * 1024)
+#define APP_THREAD_STACK_SIZE_MIN (24 * 1024)
 #else
 #define APP_THREAD_STACK_SIZE_DEFAULT (6 * 1024)
 #define APP_THREAD_STACK_SIZE_MIN (4 * 1024)
-#define APP_THREAD_STACK_SIZE_MAX (256 * 1024)
+#endif
+#if !defined(APP_THREAD_STACK_SIZE_MAX)
+#define APP_THREAD_STACK_SIZE_MAX (8 * 1024 * 1024)
 #endif
 
 /* Reserved bytes to the native thread stack boundary, throw native
@@ -184,11 +231,21 @@ enum {
 #define RESERVED_BYTES_TO_NATIVE_STACK_BOUNDARY (512)
 
 /* Default wasm block address cache size and conflict list size */
+#ifndef BLOCK_ADDR_CACHE_SIZE
 #define BLOCK_ADDR_CACHE_SIZE 64
+#endif
 #define BLOCK_ADDR_CONFLICT_SIZE 2
 
 #ifndef WASM_ENABLE_SPEC_TEST
 #define WASM_ENABLE_SPEC_TEST 0
+#endif
+
+/* Default max thread num per cluster. Can be overwrite by
+    wasm_runtime_set_max_thread_num */
+#define CLUSTER_MAX_THREAD_NUM 4
+
+#ifndef WASM_ENABLE_TAIL_CALL
+#define WASM_ENABLE_TAIL_CALL 0
 #endif
 
 #endif /* end of _CONFIG_H_ */

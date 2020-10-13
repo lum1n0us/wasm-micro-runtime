@@ -1,8 +1,8 @@
 // Part of the Wasmtime Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://github.com/CraneStation/wasmtime/blob/master/LICENSE for license information.
+// See https://github.com/bytecodealliance/wasmtime/blob/main/LICENSE for license information.
 //
 // Significant parts of this file are derived from cloudabi-utils. See
-// https://github.com/CraneStation/wasmtime/blob/master/lib/wasi/sandboxed-system-primitives/src/LICENSE
+// https://github.com/bytecodealliance/wasmtime/blob/main/lib/wasi/sandboxed-system-primitives/src/LICENSE
 // for license information.
 //
 // The upstream file contains the following copyright notice:
@@ -73,7 +73,7 @@
 #define CONFIG_HAS_PTHREAD_COND_TIMEDWAIT_RELATIVE_NP 0
 #endif
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(BH_PLATFORM_LINUX_SGX)
 #define CONFIG_HAS_PTHREAD_CONDATTR_SETCLOCK 1
 #else
 #define CONFIG_HAS_PTHREAD_CONDATTR_SETCLOCK 0
@@ -95,6 +95,12 @@
 #define CONFIG_TLS_USE_GSBASE 1
 #else
 #define CONFIG_TLS_USE_GSBASE 0
+#endif
+
+#if !defined(BH_PLATFORM_LINUX_SGX)
+#define CONFIG_HAS_STD_ATOMIC 1
+#else
+#define CONFIG_HAS_STD_ATOMIC 0
 #endif
 
 #endif

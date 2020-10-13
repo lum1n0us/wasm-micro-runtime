@@ -34,17 +34,32 @@ extern "C" {
 #define BH_FREE os_free
 #endif
 
+#if defined(MSVC)
+__declspec(dllimport)  void *BH_MALLOC(unsigned int size);
+__declspec(dllimport)  void BH_FREE(void *ptr);
+#else
 void *BH_MALLOC(unsigned int size);
 void BH_FREE(void *ptr);
+#endif
 
 #ifndef NULL
 #define NULL (void*)0
 #endif
 
 #ifndef __cplusplus
+
+#ifndef true
 #define true 1
+#endif
+
+#ifndef false
 #define false 0
+#endif
+
+#ifndef inline
 #define inline __inline
+#endif
+
 #endif
 
 /* Return the offset of the given field in the given type */
