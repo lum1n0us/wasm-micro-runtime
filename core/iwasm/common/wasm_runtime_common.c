@@ -540,6 +540,12 @@ wasm_runtime_destroy_loading_module_list()
 #endif /* WASM_ENABLE_MULTI_MODULE */
 
 bool
+wasm_runtime_is_host_injected(const char *module_name)
+{
+    return strlen(module_name) == 0;
+}
+
+bool
 wasm_runtime_is_built_in_module(const char *module_name)
 {
     return (!strcmp("env", module_name)

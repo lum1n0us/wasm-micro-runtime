@@ -796,10 +796,11 @@ load_function_import(const WASMModule *parent_module, WASMModule *sub_module,
 
     declare_func_type = parent_module->types[declare_type_index];
 
-    is_built_in_module = wasm_runtime_is_built_in_module(sub_module_name);
-    if (is_built_in_module) {
-        LOG_DEBUG("%s is a function of a built-in module %s",
-                  function_name, sub_module_name);
+    if (wasm_runtime_is_host_injected(sub_module_name)) {
+        /* do nothing, wait for injecting host created fuctions */
+    }
+    else if ((is_built_in_module =
+                wasm_runtime_is_built_in_module(sub_module_name))) {
         /* check built-in modules */
         linked_func = wasm_native_resolve_symbol(sub_module_name,
                                                  function_name,
@@ -810,8 +811,6 @@ load_function_import(const WASMModule *parent_module, WASMModule *sub_module,
     }
 #if WASM_ENABLE_MULTI_MODULE != 0
     else {
-        LOG_DEBUG("%s is a function of a sub-module %s",
-                  function_name, sub_module_name);
         linked_func = wasm_loader_resolve_function(sub_module_name,
                                                    function_name,
                                                    declare_func_type,
@@ -821,15 +820,12 @@ load_function_import(const WASMModule *parent_module, WASMModule *sub_module,
 #endif
 
     if (!linked_func) {
+        LOG_WARNING("fail to link import function (%s, %s)", sub_module_name,
+                    function_name);
 #if WASM_ENABLE_SPEC_TEST != 0
         set_error_buf(error_buf, error_buf_size,
                       "unknown import or incompatible import type");
         return false;
-#else
-#if WASM_ENABLE_WAMR_COMPILER == 0
-        LOG_WARNING("warning: fail to link import function (%s, %s)",
-                    sub_module_name, function_name);
-#endif
 #endif
     }
 
@@ -1111,29 +1107,22 @@ load_global_import(const WASMModule *parent_module,
 
     is_mutable = declare_mutable & 1 ? true : false;
 
-#if WASM_ENABLE_LIBC_BUILTIN != 0
-    ret = wasm_runtime_is_built_in_module(sub_module_name);
-    if (ret) {
-        /* check built-in modules */
-        ret = wasm_native_lookup_libc_builtin_global(sub_module_name,
-                                                     global_name, global);
-        if (ret) {
-            LOG_DEBUG("(%s, %s) is a global of a built-in module",
-                      sub_module_name, global_name);
-        }
+    if (wasm_runtime_is_host_injected(sub_module_name)) {
+        /* do nothing, let host injects the symbol */
     }
-#endif /* WASM_ENABLE_LIBC_BUILTIN */
-
+    else if (wasm_runtime_is_built_in_module(sub_module_name)) {
+        /* check built-in modules */
+        ret = wasm_native_lookup_libc_builtin_global(
+              sub_module_name, global_name, global);
+    }
 #if WASM_ENABLE_MULTI_MODULE != 0
-    if (!ret) {
+    else {
         /* check sub modules */
         WASMGlobal *linked_global =
             wasm_loader_resolve_global(sub_module_name, global_name,
                                        declare_type, declare_mutable,
                                        error_buf, error_buf_size);
         if (linked_global) {
-            LOG_DEBUG("(%s, %s) is a global of external module",
-                      sub_module_name, global_name);
             global->import_module = sub_module;
             global->import_global_linked = linked_global;
             ret = true;
@@ -1142,6 +1131,8 @@ load_global_import(const WASMModule *parent_module,
 #endif
 
     if (!ret) {
+        LOG_WARNING("fail to link import globla (%s, %s)", sub_module_name,
+                    global_name);
 #if WASM_ENABLE_SPEC_TEST != 0
         set_error_buf(error_buf, error_buf_size,
                       "unknown import or incompatible import type");
@@ -1568,7 +1559,8 @@ load_import_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
             LOG_DEBUG("import #%d: (%s, %s)", i, sub_module_name, field_name);
 #if WASM_ENABLE_MULTI_MODULE != 0
             /* assume built-in modules have been loaded */
-            if (!wasm_runtime_is_built_in_module(sub_module_name)) {
+            if (!wasm_runtime_is_host_injected(sub_module_name)
+                && !wasm_runtime_is_built_in_module(sub_module_name)) {
                 LOG_DEBUG("%s is an exported field of a %s", field_name,
                           sub_module_name);
                 /*
