@@ -7,7 +7,6 @@ set -x
 set -e
 
 EMSDK_WASM_DIR="$EM_CACHE/wasm"
-WASI_SDK_DIR="/opt/wasi-sdk"
 BUILD_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT_DIR=${BUILD_SCRIPT_DIR}/out
 TENSORFLOW_DIR="${BUILD_SCRIPT_DIR}/tensorflow"
@@ -16,13 +15,11 @@ WAMR_DIR="${BUILD_SCRIPT_DIR}/../../../product-mini/platforms/linux"
 
 function Clear_Before_Exit
 {
-    [[ -f ${BUILD_SCRIPT_DIR}/../../../iwasm_for_tf_lite.patch ]] &&
-       rm -r ${BUILD_SCRIPT_DIR}/../../../iwasm_for_tf_lite.patch
     [[ -f ${TENSORFLOW_DIR}/tf_lite.patch ]] &&
-       rm -r ${TENSORFLOW_DIR}/tf_lite.patch
+       rm -f ${TENSORFLOW_DIR}/tf_lite.patch
     # resume the libc.a under EMSDK_WASM_DIR
     cd ${EMSDK_WASM_DIR}
-    rm libc.a && mv libc.a.bak libc.a
+    mv libc.a.bak libc.a
 }
 
 # 1.hack emcc
@@ -30,10 +27,10 @@ cd ${EMSDK_WASM_DIR}
 # back up libc.a
 cp libc.a libc.a.bak
 # delete some objects in libc.a
-ar d libc.a open.o
-ar d libc.a mmap.o
-ar d libc.a munmap.o
-${WASI_SDK_DIR}/bin/ranlib libc.a
+emar d libc.a open.o
+emar d libc.a mmap.o
+emar d libc.a munmap.o
+emranlib libc.a
 
 # 2. build tf-lite
 cd ${BUILD_SCRIPT_DIR}
@@ -48,6 +45,8 @@ git checkout 2303ed4bdb344a1fc4545658d1df6d9ce20331dd
 # 2.2 copy the tf-lite.patch to tensorflow_root_dir and apply
 cd ${TENSORFLOW_DIR}
 cp ${BUILD_SCRIPT_DIR}/tf_lite.patch .
+git checkout tensorflow/lite/tools/make/Makefile
+git checkout tensorflow/lite/tools/make/targets/linux_makefile.inc
 
 if [[ $(git apply tf_lite.patch 2>&1) =~ "error" ]]; then
     echo "git apply patch failed, please check tf-lite related changes..."

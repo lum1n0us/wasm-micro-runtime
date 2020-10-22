@@ -1,5 +1,5 @@
 diff --git a/tensorflow/lite/tools/make/Makefile b/tensorflow/lite/tools/make/Makefile
-index c7ddff5844..92138a2db4 100644
+index c7ddff5844..1082644043 100644
 --- a/tensorflow/lite/tools/make/Makefile
 +++ b/tensorflow/lite/tools/make/Makefile
 @@ -48,11 +48,7 @@ INCLUDES += -I/usr/local/include
@@ -15,11 +15,13 @@ index c7ddff5844..92138a2db4 100644
  -ldl
  
  # There are no rules for compiling objects for the host system (since we don't
-@@ -84,14 +80,16 @@ endif # ifeq ($(HOST_ARCH),$(TARGET_ARCH))
+@@ -84,14 +80,18 @@ endif # ifeq ($(HOST_ARCH),$(TARGET_ARCH))
  endif # ifeq ($(HOST_OS),$(TARGET))
  endif
  
-+LIBFLAGS += -s ERROR_ON_UNDEFINED_SYMBOLS=0
++LIBFLAGS += -s TOTAL_STACK=1048576 \
++            -Wl,--export=__data_end -Wl,--export=__heap_base \
++            -s ERROR_ON_UNDEFINED_SYMBOLS=0
 +
  # This library is the main target for this makefile. It will contain a minimal
  # runtime that can be linked in to other programs.
@@ -34,7 +36,7 @@ index c7ddff5844..92138a2db4 100644
  
  # A small example program that shows how to link against the library.
  MINIMAL_SRCS := \
-@@ -277,12 +275,17 @@ LIB_PATH := $(LIBDIR)$(LIB_NAME)
+@@ -277,12 +277,16 @@ LIB_PATH := $(LIBDIR)$(LIB_NAME)
  BENCHMARK_LIB := $(LIBDIR)$(BENCHMARK_LIB_NAME)
  BENCHMARK_BINARY := $(BINDIR)$(BENCHMARK_BINARY_NAME)
  BENCHMARK_PERF_OPTIONS_BINARY := $(BINDIR)$(BENCHMARK_PERF_OPTIONS_BINARY_NAME)
@@ -49,10 +51,9 @@ index c7ddff5844..92138a2db4 100644
 +# CC := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}gcc
 +# AR := $(CC_PREFIX)${TARGET_TOOLCHAIN_PREFIX}ar
 +
-+EMSDK_DIR=/opt/emsdk/upstream/emscripten
-+CXX := $(EMSDK_DIR)/em++
-+CC := $(EMSDK_DIR)/emcc
-+AR := $(EMSDK_DIR)/emar
++CXX := em++
++CC := emcc
++AR := emar
  
  MINIMAL_OBJS := $(addprefix $(OBJDIR), \
  $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(MINIMAL_SRCS))))

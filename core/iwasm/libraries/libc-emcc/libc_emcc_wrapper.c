@@ -166,6 +166,14 @@ __munmap_wrapper(wasm_exec_env_t exec_env, uint32 buf_offset, int length)
     return munmap_wrapper(exec_env, buf_offset, length);
 }
 
+static int
+getentropy_wrapper(wasm_exec_env_t exec_env, void *buffer, uint32 length)
+{
+    if (buffer == NULL)
+        return -1;
+    return getentropy(buffer, length);
+}
+
 #define REG_NATIVE_FUNC(func_name, signature)  \
     { #func_name, func_name##_wrapper, signature, NULL }
 
@@ -177,6 +185,7 @@ static NativeSymbol native_symbols_libc_emcc[] = {
     REG_NATIVE_FUNC(mmap, "(*iiiiI)i"),
     REG_NATIVE_FUNC(munmap, "(ii)i"),
     REG_NATIVE_FUNC(__munmap, "(ii)i"),
+    REG_NATIVE_FUNC(getentropy, "(*~)i"),
 };
 
 uint32
