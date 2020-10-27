@@ -11,9 +11,17 @@ And set up ensdk environment:
 ```bash
 source emsdk_env.sh
 ```
-Then run ./build.sh to build tensorflow and run it with iwasm, which basically contains the following steps:
+Then run
+```bash
+./build.sh
+# for linux platform, or
+./build.sh --sgx
+# for linux-sgx platform
+```
+to build tensorflow and run it with iwasm, which basically contains the following steps:
 - hack emcc to delete some objects in libc.a
 - build tf-lite with emcc compiler
 - build iwasm with pthread enable and include libiary under libc-emcc
 - run benchmark model with iwasm:
   --max-secs 300: means the max training time cost is 5 minutes, you can adjust by yourself
+
