@@ -24,4 +24,3 @@ to build tensorflow and run it with iwasm, which basically contains the followin
 - build iwasm with pthread enable and include libiary under libc-emcc
 - run benchmark model with iwasm:
   --max-secs 300: means the max training time cost is 5 minutes, you can adjust by yourself
-
