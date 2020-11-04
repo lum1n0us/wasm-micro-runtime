@@ -1,0 +1,71 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index eccc49e..85db771 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,5 +1,8 @@
+ cmake_minimum_required(VERSION 3.0)
+ 
++set(CMAKE_C_COMPILER /usr/bin/clang-11)
++set(CMAKE_CXX_COMPILER /usr/bin/clang++-11)
++
+ if (NOT CMAKE_VERSION VERSION_LESS 3.12)
+     cmake_policy(SET CMP0077 NEW) # Enables override of options from parent CMakeLists.txt
+ endif()
+@@ -127,3 +130,57 @@ install(FILES
+     ${CMAKE_CURRENT_BINARY_DIR}/meshoptimizerConfig.cmake
+     ${CMAKE_CURRENT_BINARY_DIR}/meshoptimizerConfigVersion.cmake
+     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/meshoptimizer)
++
++##################################################
++# codecbench
++##################################################
++add_executable(codecbench tools/codecbench.cpp ${SOURCES})
++
++set_target_properties(codecbench
++  PROPERTIES
++    OUTPUT_NAME codecbench.wasm
++)
++
++target_compile_options(codecbench
++  PUBLIC
++    --target=wasm32-wasi
++    --sysroot=/opt/wasi-sdk-11.0/share/wasi-sysroot
++    -msimd128
++    -std=c++11
++    -O3
++    -Wno-unused-function
++    -Wno-unused-variable
++    #-v
++)
++
++target_link_options(codecbench
++  PUBLIC
++    --target=wasm32-wasi
++    --sysroot=/opt/wasi-sdk-11.0/share/wasi-sysroot
++    -fuse-ld=/usr/lib/llvm-11/bin/wasm-ld
++    --target=wasm32-wasi
++    -O3
++    LINKER:-allow-undefined,--demangle
++    #LINKER:--verbose
++    #-v
++)
++
++find_program(WASM_OPT
++    NAMES wasm-opt
++    PATHS /opt/binaryen-version_97/bin /opt/binaryen/bin
++)
++
++if (NOT WASM_OPT)
++  message(WARNING "can not find wasm-opt and will not optimize any wasm module")
++endif()
++
++add_custom_target(codecbench.opt ALL
++  COMMAND
++    ${WASM_OPT} -Oz --enable-simd -o codecbench.opt.wasm codecbench.wasm
++  BYPRODUCTS
++    ${CMAKE_CURRENT_BINARY_DIR}/codecbench.opt.wasm
++  WORKING_DIRECTORY
++    ${CMAKE_CURRENT_BINARY_DIR}
++)
++
++add_dependencies(codecbench.opt codecbench)
