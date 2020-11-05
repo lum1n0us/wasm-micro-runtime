@@ -8,6 +8,13 @@
 ####################################
 #   build tensorflow-lite sample   #
 ####################################
+if [ ! -d "${EMSDK}" ]; then
+    echo "can not find emsdk. "
+    echo "please refer to https://emscripten.org/docs/getting_started/downloads.html "
+    echo "to install it, or active it by 'source <emsdk_dir>emsdk_env.sh'"
+    exit
+fi
+
 set -xe
 
 EMSDK_WASM_DIR="$EM_CACHE/wasm"
@@ -76,6 +83,9 @@ else
     make -j 4 -C "${TENSORFLOW_DIR}" -f ${TF_LITE_BUILD_DIR}/Makefile
 fi
 
+# remove patch file and recover emcc libc.a after building
+Clear_Before_Exit
+
 # 2.5 copy /make/gen target files to out/
 rm -rf ${OUT_DIR}
 mkdir ${OUT_DIR}
@@ -134,6 +144,4 @@ fi
 ${IWASM_CMD} --heap-size=10475860 \
              ${OUT_DIR}/benchmark_model.aot \
              --graph=mobilenet_quant_v1_224.tflite --max_secs=300
-
-Clear_Before_Exit
 

@@ -8,6 +8,13 @@
 ####################################
 #   build wasm-av1 sample   #
 ####################################
+if [ ! -d "${EMSDK}" ]; then
+    echo "can not find emsdk. "
+    echo "please refer to https://emscripten.org/docs/getting_started/downloads.html "
+    echo "to install it, or active it by 'source <emsdk_dir>emsdk_env.sh'"
+    exit
+fi
+
 set -xe
 
 EMSDK_WASM_DIR="$EM_CACHE/wasm"
@@ -62,6 +69,9 @@ fi
 
 make testavx -j 4
 
+# remove patch file and recover emcc libc.a after building
+Clear_Before_Exit
+
 # 2.3 copy /make/gen target files to out/
 rm -rf ${OUT_DIR} && mkdir ${OUT_DIR}
 cp -a ${WASM_AV1_DIR}/testavx.wasm ${OUT_DIR}/
@@ -87,6 +97,4 @@ make
 echo "---> run testav1.aot with iwasm"
 cd ${OUT_DIR}
 ${IWASM_CMD} testavx.aot ../wasm-av1/third_party/samples/elephants_dream_480p24.ivf
-
-Clear_Before_Exit
 
