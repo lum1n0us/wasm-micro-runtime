@@ -45,13 +45,13 @@ simd_v128_float_arith(AOTCompContext *comp_ctx,
 {
     LLVMValueRef lhs, rhs, result;
 
-    if (!(lhs = simd_pop_v128_and_bitcast(comp_ctx, func_ctx, vector_type,
-                                          "lhs"))) {
+    if (!(rhs = simd_pop_v128_and_bitcast(comp_ctx, func_ctx, vector_type,
+                                          "rhs"))) {
         goto fail;
     }
 
-    if (!(rhs = simd_pop_v128_and_bitcast(comp_ctx, func_ctx, vector_type,
-                                          "rhs"))) {
+    if (!(lhs = simd_pop_v128_and_bitcast(comp_ctx, func_ctx, vector_type,
+                                          "lhs"))) {
         goto fail;
     }
 
