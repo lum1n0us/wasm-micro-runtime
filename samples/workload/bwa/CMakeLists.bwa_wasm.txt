@@ -5,12 +5,6 @@ cmake_minimum_required (VERSION 3.0)
 
 project(bwa_wasm C)
 
-set(CMAKE_C_COMPILER /usr/bin/clang-11)
-set(CMAKE_C_COMPILER_AR /usr/lib/llvm-11/bin/llvm-ar)
-SET(CMAKE_AR ${CMAKE_C_COMPILER_AR} CACHE PATH "AR" FORCE)
-SET(CMAKE_C_COMPILER_RANLIB /usr/lib/llvm-11/bin/llvm-ranlib)
-SET(CMAKE_RANLIB ${CMAKE_C_COMPILER_RANLIB} CACHE PATH "RANLIB" FORCE)
-
 ################ LIBZ ################
 set(LIBZ_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libz)
 add_library(z_wasm STATIC
@@ -37,12 +31,8 @@ target_compile_definitions(z_wasm PRIVATE Z_HAVE_UNISTD_H _LARGEFILE64_SOURCE=1)
 
 target_compile_options(z_wasm
   PRIVATE
-    --target=wasm32-wasi
-    --sysroot=/opt/wasi-sdk-11.0/share/wasi-sysroot
-    -O3
     -Wno-unused-function
     -Wno-unused-variable
-    #-v
 )
 
 target_include_directories(z_wasm
@@ -110,25 +100,15 @@ target_compile_definitions(${PROJECT_NAME}
 
 target_compile_options(${PROJECT_NAME}
   PRIVATE
-    --target=wasm32-wasi
-    --sysroot=/opt/wasi-sdk-11.0/share/wasi-sysroot
-    -msimd128
-    -O3
     -Wno-unused-function
     -Wno-unused-variable
-    #-v
 )
 
 target_link_options(${PROJECT_NAME}
   PRIVATE
-    --target=wasm32-wasi
-    --sysroot=/opt/wasi-sdk-11.0/share/wasi-sysroot
-    -fuse-ld=/usr/lib/llvm-11/bin/wasm-ld
-    -O3
     -Wno-unused-command-line-argument
     LINKER:--allow-undefined,--export=__heap_base,--export=__data_end
     LINKER:-z,stack-size=1048576
-    #-v
 )
 
 target_link_libraries(${PROJECT_NAME} z_wasm)
