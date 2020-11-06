@@ -11,17 +11,26 @@
 #define get_module_inst(exec_env) \
     wasm_runtime_get_module_inst(exec_env)
 
+#define validate_app_addr(offset, size) \
+    wasm_runtime_validate_app_addr(module_inst, offset, size)
+
+#define validate_app_str_addr(offset) \
+    wasm_runtime_validate_app_str_addr(module_inst, offset)
+
 #define validate_native_addr(addr, size) \
     wasm_runtime_validate_native_addr(module_inst, addr, size)
+
+#define addr_app_to_native(offset) \
+    wasm_runtime_addr_app_to_native(module_inst, offset)
+
+#define addr_native_to_app(ptr) \
+    wasm_runtime_addr_native_to_app(module_inst, ptr)
 
 #define module_malloc(size, p_native_addr) \
     wasm_runtime_module_malloc(module_inst, size, p_native_addr)
 
 #define module_free(offset) \
     wasm_runtime_module_free(module_inst, offset)
-
-#define REG_NATIVE_FUNC(func_name, signature)  \
-    { #func_name, func_name##_wrapper, signature, NULL }
 
 extern bool
 wasm_runtime_call_indirect(wasm_exec_env_t exec_env,
@@ -351,6 +360,80 @@ fclose_wrapper(wasm_exec_env_t exec_env, int file_id)
     file_list[file_id] = NULL;
     return fclose(file);
 }
+
+#if 0 /* TODO */
+static int
+mkdir_wrapper(wasm_exec_env_t exec_env,
+              const char *pathname, int mode)
+{
+}
+
+static int
+rmdir_wrapper(wasm_exec_env_t exec_env, const char *pathname)
+{
+}
+
+static int
+unlink_wrapper(wasm_exec_env_t exec_env, const char *pathname)
+{
+}
+
+static uint32
+getcwd(wasm_exec_env_t exec_env, char *buf, uint32 size)
+{
+}
+#endif
+
+#include <sys/utsname.h>
+
+struct utsname_app {
+    char sysname[64];
+    char nodename[64];
+    char release[64];
+    char version[64];
+    char machine[64];
+    char domainname[64];
+};
+
+static int
+__sys_uname_wrapper(wasm_exec_env_t exec_env, struct utsname_app *uname_app)
+{
+    wasm_module_inst_t module_inst = get_module_inst(exec_env);
+    struct utsname uname_native = { 0 };
+    char *p;
+
+    if (!validate_native_addr(uname_app, sizeof(struct utsname_app)))
+        return -1;
+
+    if (uname(&uname_native) != 0) {
+        return -1;
+    }
+
+    memset(uname_app, 0, sizeof(struct utsname_app));
+
+    p = uname_native.sysname;
+    snprintf(uname_app->sysname, sizeof(uname_app)->sysname, "%s", p);
+    p = uname_native.nodename;
+    snprintf(uname_app->nodename, sizeof(uname_app)->nodename, "%s", p);
+    p = uname_native.release;
+    snprintf(uname_app->release, sizeof(uname_app)->release, "%s", p);
+    p = uname_native.version;
+    snprintf(uname_app->version, sizeof(uname_app)->version, "%s", p);
+    p = uname_native.machine;
+    snprintf(uname_app->machine, sizeof(uname_app)->machine, "%s", p);
+#ifdef _GNU_SOURCE
+    p = uname_native.domainname;
+    snprintf(uname_app->domainname, sizeof(uname_app)->domainname, "%s", p);
+#endif
+    return 0;
+}
+
+static void
+emscripten_notify_memory_growth_wrapper(wasm_exec_env_t exec_env, int i)
+{
+    (void)i;
+}
+
 #endif /* end of BH_PLATFORM_LINUX_SGX */
 
 #define REG_NATIVE_FUNC(func_name, signature)  \
@@ -377,6 +460,8 @@ static NativeSymbol native_symbols_libc_emcc[] = {
     REG_NATIVE_FUNC(emcc_fwrite, "(*iii)i"),
     REG_NATIVE_FUNC(feof, "(i)i"),
     REG_NATIVE_FUNC(fclose, "(i)i"),
+    REG_NATIVE_FUNC(__sys_uname, "(*)i"),
+    REG_NATIVE_FUNC(emscripten_notify_memory_growth, "(i)"),
 #endif /* end of BH_PLATFORM_LINUX_SGX */
 };
 
