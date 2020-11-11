@@ -20,12 +20,10 @@ include(ExternalProject)
 ExternalProject_Add(xnnpack
     PREFIX xnnpack
     GIT_REPOSITORY https://github.com/google/XNNPACK.git
-    GIT_TAG        master
+    GIT_TAG        2da0de89960b829c6fae74204a102db524e73047
     GIT_PROGRESS   ON
-    GIT_SHALLOW    OFF
     SOURCE_DIR     ${CMAKE_CURRENT_SOURCE_DIR}/xnnpack
-    UPDATE_COMMAND git checkout 2da0de89960b829c6fae74204a102db524e73047
-                   && git checkout .bazelrc BUILD.bazel emscripten.bzl
+    UPDATE_COMMAND git checkout .bazelrc BUILD.bazel emscripten.bzl
                    && git apply ${CMAKE_CURRENT_SOURCE_DIR}/xnnpack.patch
                    && cmake -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/toolchain ${CMAKE_CURRENT_SOURCE_DIR}/xnnpack/toolchain
     CONFIGURE_COMMAND ""
@@ -98,5 +96,7 @@ ExternalProject_Add(xnnpack
                         //:f32_sigmoid_eval.wasm
                         //:f32_sqrt_eval.wasm
                         #--sandbox_debug
-    INSTALL_COMMAND ""
+    INSTALL_COMMAND ${CMAKE_COMMAND} -E create_symlink
+                      ${CMAKE_CURRENT_SOURCE_DIR}/xnnpack/bazel-out/wasm-opt/bin/
+                      ${CMAKE_CURRENT_SOURCE_DIR}/build/wasm-opt
 )
