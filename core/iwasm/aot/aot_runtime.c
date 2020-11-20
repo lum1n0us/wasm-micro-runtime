@@ -974,6 +974,7 @@ touch_pages(uint8 *stack_min_addr, uint32 page_size)
             sum += *(stack_min_addr + page_size - 1);
             break;
         }
+        *touch_addr = 0;
         sum += *touch_addr;
     }
     return sum;
@@ -1011,7 +1012,7 @@ invoke_native_with_hw_bound_check(WASMExecEnv *exec_env, void *func_ptr,
     if (!exec_env->jmpbuf_stack_top) {
         /* Touch each stack page to ensure that it has been mapped: the OS may
            lazily grow the stack mapping as a guard page is hit. */
-        touch_pages(stack_min_addr, page_size);
+        (void)touch_pages(stack_min_addr, page_size);
         /* First time to call aot function, protect one page */
         if (os_mprotect(stack_min_addr, page_size * guard_page_count,
                         MMAP_PROT_NONE) != 0) {
@@ -1377,10 +1378,15 @@ aot_validate_app_addr(AOTModuleInstance *module_inst,
 {
     AOTMemoryInstance *memory_inst = aot_get_default_memory(module_inst);
 
+    if (!memory_inst) {
+        goto fail;
+    }
+
     /* integer overflow check */
     if(app_offset + size < app_offset) {
         goto fail;
     }
+
     if (app_offset + size <= memory_inst->memory_data_size) {
         return true;
     }
@@ -1393,8 +1399,12 @@ bool
 aot_validate_native_addr(AOTModuleInstance *module_inst,
                          void *native_ptr, uint32 size)
 {
-    uint8 *addr = (uint8 *)native_ptr;
     AOTMemoryInstance *memory_inst = aot_get_default_memory(module_inst);
+    uint8 *addr = (uint8 *)native_ptr;
+
+    if (!memory_inst) {
+        goto fail;
+    }
 
     /* integer overflow check */
     if (addr + size < addr) {
@@ -1413,7 +1423,13 @@ void *
 aot_addr_app_to_native(AOTModuleInstance *module_inst, uint32 app_offset)
 {
     AOTMemoryInstance *memory_inst = aot_get_default_memory(module_inst);
-    uint8 *addr = (uint8 *)memory_inst->memory_data.ptr + app_offset;
+    uint8 *addr;
+
+    if (!memory_inst) {
+        return NULL;
+    }
+
+    addr = (uint8 *)memory_inst->memory_data.ptr + app_offset;
 
     if ((uint8 *)memory_inst->memory_data.ptr <= addr
         && addr < (uint8 *)memory_inst->memory_data_end.ptr)
@@ -1424,8 +1440,12 @@ aot_addr_app_to_native(AOTModuleInstance *module_inst, uint32 app_offset)
 uint32
 aot_addr_native_to_app(AOTModuleInstance *module_inst, void *native_ptr)
 {
-    uint8 *addr = (uint8 *)native_ptr;
     AOTMemoryInstance *memory_inst = aot_get_default_memory(module_inst);
+    uint8 *addr = (uint8 *)native_ptr;
+
+    if (!memory_inst) {
+        return 0;
+    }
 
     if ((uint8 *)memory_inst->memory_data.ptr <= addr
         && addr < (uint8 *)memory_inst->memory_data_end.ptr)
@@ -1440,7 +1460,13 @@ aot_get_app_addr_range(AOTModuleInstance *module_inst,
                        uint32 *p_app_end_offset)
 {
     AOTMemoryInstance *memory_inst = aot_get_default_memory(module_inst);
-    uint32 memory_data_size = memory_inst->memory_data_size;
+    uint32 memory_data_size;
+
+    if (!memory_inst) {
+        return false;
+    }
+
+    memory_data_size = memory_inst->memory_data_size;
 
     if (app_offset < memory_data_size) {
         if (p_app_start_offset)
@@ -1458,8 +1484,12 @@ aot_get_native_addr_range(AOTModuleInstance *module_inst,
                           uint8 **p_native_start_addr,
                           uint8 **p_native_end_addr)
 {
-    uint8 *addr = (uint8 *)native_ptr;
     AOTMemoryInstance *memory_inst = aot_get_default_memory(module_inst);
+    uint8 *addr = (uint8 *)native_ptr;
+
+    if (!memory_inst) {
+        return false;
+    }
 
     if ((uint8 *)memory_inst->memory_data.ptr <= addr
         && addr < (uint8 *)memory_inst->memory_data_end.ptr) {
@@ -1477,17 +1507,24 @@ bool
 aot_enlarge_memory(AOTModuleInstance *module_inst, uint32 inc_page_count)
 {
     AOTMemoryInstance *memory_inst = aot_get_default_memory(module_inst);
-    uint32 num_bytes_per_page = memory_inst->num_bytes_per_page;
-    uint32 cur_page_count = memory_inst->cur_page_count;
-    uint32 max_page_count = memory_inst->max_page_count;
-    uint32 total_page_count = cur_page_count + inc_page_count;
-    uint32 total_size_old = memory_inst->memory_data_size;
-    uint64 total_size = (uint64)num_bytes_per_page * total_page_count;
-    uint32 heap_size = (uint32)((uint8 *)memory_inst->heap_data_end.ptr
-                                - (uint8 *)memory_inst->heap_data.ptr);
-    uint8 *memory_data_old = (uint8 *)memory_inst->memory_data.ptr;
-    uint8 *heap_data_old = (uint8 *)memory_inst->heap_data.ptr;
-    uint8 *memory_data, *heap_data;
+    uint32 num_bytes_per_page, cur_page_count, max_page_count;
+    uint32 total_page_count, total_size_old, heap_size;
+    uint64 total_size;
+    uint8 *memory_data_old, *heap_data_old, *memory_data, *heap_data;
+
+    if (!memory_inst)
+        return false;
+
+    num_bytes_per_page = memory_inst->num_bytes_per_page;
+    cur_page_count = memory_inst->cur_page_count;
+    max_page_count = memory_inst->max_page_count;
+    total_page_count = cur_page_count + inc_page_count;
+    total_size_old = memory_inst->memory_data_size;
+    total_size = (uint64)num_bytes_per_page * total_page_count;
+    heap_size = (uint32)((uint8 *)memory_inst->heap_data_end.ptr
+                         - (uint8 *)memory_inst->heap_data.ptr);
+    memory_data_old = (uint8 *)memory_inst->memory_data.ptr;
+    heap_data_old = (uint8 *)memory_inst->heap_data.ptr;
 
     if (inc_page_count <= 0)
         /* No need to enlarge memory */
@@ -1563,11 +1600,18 @@ bool
 aot_enlarge_memory(AOTModuleInstance *module_inst, uint32 inc_page_count)
 {
     AOTMemoryInstance *memory_inst = aot_get_default_memory(module_inst);
-    uint32 num_bytes_per_page = memory_inst->num_bytes_per_page;
-    uint32 cur_page_count = memory_inst->cur_page_count;
-    uint32 max_page_count = memory_inst->max_page_count;
-    uint32 total_page_count = cur_page_count + inc_page_count;
-    uint64 total_size = (uint64)num_bytes_per_page * total_page_count;
+    uint32 num_bytes_per_page, cur_page_count, max_page_count;
+    uint32 total_page_count;
+    uint64 total_size;
+
+    if (!memory_inst)
+        return false;
+
+    num_bytes_per_page = memory_inst->num_bytes_per_page;
+    cur_page_count = memory_inst->cur_page_count;
+    max_page_count = memory_inst->max_page_count;
+    total_page_count = cur_page_count + inc_page_count;
+    total_size = (uint64)num_bytes_per_page * total_page_count;
 
     if (inc_page_count <= 0)
         /* No need to enlarge memory */

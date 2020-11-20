@@ -1143,8 +1143,7 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
                                  error_buf, error_buf_size);
     if (!ret) {
         LOG_DEBUG("build a sub module list failed");
-        wasm_deinstantiate(module_inst, false);
-        return NULL;
+        goto fail;
     }
 #endif
 
@@ -1154,8 +1153,7 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
         && !(globals = globals_instantiate(module, module_inst,
                                            &global_data_size,
                                            error_buf, error_buf_size))) {
-        wasm_deinstantiate(module_inst, false);
-        return NULL;
+        goto fail;
     }
     module_inst->global_count = global_count;
     module_inst->globals = globals;
@@ -1178,8 +1176,7 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
     if (global_count > 0) {
         if (!(module_inst->global_data = runtime_malloc
                     (global_data_size, error_buf, error_buf_size))) {
-            wasm_deinstantiate(module_inst, false);
-            return NULL;
+            goto fail;
         }
     }
 
@@ -1210,8 +1207,7 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
                    error_buf, error_buf_size)))
 #endif
     ) {
-        wasm_deinstantiate(module_inst, false);
-        return NULL;
+        goto fail;
     }
 
     if (global_count > 0) {
@@ -1221,8 +1217,7 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
          */
         if (!globals_instantiate_fix(globals, module,
                                      error_buf, error_buf_size)) {
-            wasm_deinstantiate(module_inst, false);
-            return NULL;
+            goto fail;
         }
 
         /* Initialize the global data */
@@ -1250,8 +1245,7 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
     }
 
     if (!check_linked_symbol(module_inst, error_buf, error_buf_size)) {
-        wasm_deinstantiate(module_inst, false);
-        return NULL;
+        goto fail;
     }
 
     /* Initialize the memory data with data segment section */
@@ -1285,9 +1279,14 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
 
         if (data_seg->base_offset.init_expr_type
             == INIT_EXPR_TYPE_GET_GLOBAL) {
-            bh_assert(data_seg->base_offset.u.global_index < global_count
-                        && globals[data_seg->base_offset.u.global_index].type
-                            == VALUE_TYPE_I32);
+            if (!globals
+                || data_seg->base_offset.u.global_index >= global_count
+                || globals[data_seg->base_offset.u.global_index].type
+                   != VALUE_TYPE_I32) {
+                set_error_buf(error_buf, error_buf_size,
+                              "data segment does not fit");
+                goto fail;
+            }
             data_seg->base_offset.u.i32 =
                 globals[data_seg->base_offset.u.global_index]
                 .initial_value.i32;
@@ -1300,8 +1299,7 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
                       memory_size);
             set_error_buf(error_buf, error_buf_size,
                           "data segment does not fit");
-            wasm_deinstantiate(module_inst, false);
-            return NULL;
+            goto fail;
         }
 
         /* check offset + length(could be zero) */
@@ -1311,8 +1309,7 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
                       base_offset, length, memory_size);
             set_error_buf(error_buf, error_buf_size,
                           "data segment does not fit");
-            wasm_deinstantiate(module_inst, false);
-            return NULL;
+            goto fail;
         }
 
         bh_memcpy_s(memory_data + base_offset, memory_size - base_offset,
@@ -1357,8 +1354,7 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
                       table_seg->base_offset.u.i32, table->cur_size);
             set_error_buf(error_buf, error_buf_size,
                           "elements segment does not fit");
-            wasm_deinstantiate(module_inst, false);
-            return NULL;
+            goto fail;
         }
 
         /* check offset + length(could be zero) */
@@ -1368,8 +1364,7 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
                       table_seg->base_offset.u.i32, length, table->cur_size);
             set_error_buf(error_buf, error_buf_size,
                           "elements segment does not fit");
-            wasm_deinstantiate(module_inst, false);
-            return NULL;
+            goto fail;
         }
 
         /**
@@ -1420,8 +1415,7 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
                                        module->wasi_args.argv,
                                        module->wasi_args.argc,
                                        error_buf, error_buf_size)) {
-            wasm_deinstantiate(module_inst, false);
-            return NULL;
+            goto fail;
         }
     }
 #endif
@@ -1438,8 +1432,7 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
         || !execute_start_function(module_inst)) {
         set_error_buf(error_buf, error_buf_size,
                       module_inst->cur_exception);
-        wasm_deinstantiate(module_inst, false);
-        return NULL;
+        goto fail;
     }
 
 #if WASM_ENABLE_BULK_MEMORY != 0
@@ -1453,8 +1446,7 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
             if (!execute_memory_init_function(module_inst)) {
                 set_error_buf(error_buf, error_buf_size,
                               module_inst->cur_exception);
-                wasm_deinstantiate(module_inst, false);
-                return NULL;
+                goto fail;
             }
         }
 #if WASM_ENABLE_LIBC_WASI != 0
@@ -1468,6 +1460,9 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
 #endif
     (void)global_data_end;
     return module_inst;
+fail:
+    wasm_deinstantiate(module_inst, false);
+    return NULL;
 }
 
 void
@@ -1696,8 +1691,13 @@ wasm_validate_app_addr(WASMModuleInstance *module_inst,
                        uint32 app_offset, uint32 size)
 {
     WASMMemoryInstance *memory = module_inst->default_memory;
-    uint32 memory_data_size =
-        memory->num_bytes_per_page * memory->cur_page_count;
+    uint32 memory_data_size;
+
+    if (!memory) {
+        goto fail;
+    }
+
+    memory_data_size = memory->num_bytes_per_page * memory->cur_page_count;
 
     /* integer overflow check */
     if (app_offset + size < app_offset) {
@@ -1716,8 +1716,12 @@ bool
 wasm_validate_native_addr(WASMModuleInstance *module_inst,
                           void *native_ptr, uint32 size)
 {
-    uint8 *addr = (uint8 *)native_ptr;
     WASMMemoryInstance *memory = module_inst->default_memory;
+    uint8 *addr = (uint8 *)native_ptr;
+
+    if (!memory) {
+        goto fail;
+    }
 
     /* integer overflow check */
     if (addr + size < addr) {
@@ -1738,7 +1742,12 @@ wasm_addr_app_to_native(WASMModuleInstance *module_inst,
                         uint32 app_offset)
 {
     WASMMemoryInstance *memory = module_inst->default_memory;
-    uint8 *addr = memory->memory_data + app_offset;
+    uint8 *addr;
+
+    if (!memory)
+        return NULL;
+
+    addr = memory->memory_data + app_offset;
 
     if (memory->memory_data <= addr
         && addr < memory->memory_data_end)
@@ -1753,6 +1762,9 @@ wasm_addr_native_to_app(WASMModuleInstance *module_inst,
     WASMMemoryInstance *memory = module_inst->default_memory;
     uint8 *addr = (uint8 *)native_ptr;
 
+    if (!memory)
+        return 0;
+
     if (memory->memory_data <= addr
         && addr < memory->memory_data_end)
         return (uint32)(addr - memory->memory_data);
@@ -1766,8 +1778,12 @@ wasm_get_app_addr_range(WASMModuleInstance *module_inst,
                         uint32 *p_app_end_offset)
 {
     WASMMemoryInstance *memory = module_inst->default_memory;
-    uint32 memory_data_size =
-        memory->num_bytes_per_page * memory->cur_page_count;
+    uint32 memory_data_size;
+
+    if (!memory)
+        return false;
+
+    memory_data_size = memory->num_bytes_per_page * memory->cur_page_count;
 
     if (app_offset < memory_data_size) {
         if (p_app_start_offset)
@@ -1788,6 +1804,9 @@ wasm_get_native_addr_range(WASMModuleInstance *module_inst,
     WASMMemoryInstance *memory = module_inst->default_memory;
     uint8 *addr = (uint8 *)native_ptr;
 
+    if (!memory)
+        return false;
+
     if (memory->memory_data <= addr
         && addr < memory->memory_data_end) {
         if (p_native_start_addr)
@@ -1803,12 +1822,19 @@ bool
 wasm_enlarge_memory(WASMModuleInstance *module, uint32 inc_page_count)
 {
     WASMMemoryInstance *memory = module->default_memory;
-    uint8 *new_memory_data, *memory_data = memory->memory_data;
-    uint32 heap_size = memory->heap_data_end - memory->heap_data;
-    uint32 total_size_old = memory->memory_data_end - memory_data;
-    uint32 total_page_count = inc_page_count + memory->cur_page_count;
-    uint64 total_size = memory->num_bytes_per_page * (uint64)total_page_count;
-    uint8 *heap_data_old = memory->heap_data;
+    uint8 *new_memory_data, *memory_data, *heap_data_old;
+    uint32 heap_size, total_size_old, total_page_count;
+    uint64 total_size;
+
+    if (!memory)
+        return false;
+
+    memory_data = memory->memory_data;
+    heap_size = memory->heap_data_end - memory->heap_data;
+    total_size_old = memory->memory_data_end - memory_data;
+    total_page_count = inc_page_count + memory->cur_page_count;
+    total_size = memory->num_bytes_per_page * (uint64)total_page_count;
+    heap_data_old = memory->heap_data;
 
     if (inc_page_count <= 0)
         /* No need to enlarge memory */
