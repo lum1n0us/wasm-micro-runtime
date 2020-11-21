@@ -1341,9 +1341,14 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
 
         if (table_seg->base_offset.init_expr_type
             == INIT_EXPR_TYPE_GET_GLOBAL) {
-            bh_assert(table_seg->base_offset.u.global_index < global_count
-                      && globals[table_seg->base_offset.u.global_index].type
-                           == VALUE_TYPE_I32);
+            if (!globals
+                || table_seg->base_offset.u.global_index >= global_count
+                || globals[table_seg->base_offset.u.global_index].type
+                   != VALUE_TYPE_I32) {
+                set_error_buf(error_buf, error_buf_size,
+                              "elements segment does not fit");
+                goto fail;
+            }
             table_seg->base_offset.u.i32 =
               globals[table_seg->base_offset.u.global_index].initial_value.i32;
         }
