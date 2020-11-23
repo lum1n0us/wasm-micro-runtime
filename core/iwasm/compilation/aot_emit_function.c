@@ -379,14 +379,14 @@ aot_compile_op_call(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
                 goto fail;
             }
 
-            snprintf(buf, sizeof(buf), "ext_ret%d_ptr", func_idx, i);
+            snprintf(buf, sizeof(buf), "ext_ret%d_ptr", i);
             if (!(ext_ret_ptr = LLVMBuildInBoundsGEP(comp_ctx->builder,
                                                      func_ctx->argv_buf,
                                                      &ext_ret_idx, 1, buf))) {
                 aot_set_last_error("llvm build GEP failed.");
                 goto fail;
             }
-            snprintf(buf, sizeof(buf), "ext_ret%d_ptr_cast", func_idx, i);
+            snprintf(buf, sizeof(buf), "ext_ret%d_ptr_cast", i);
             if (!(ext_ret_ptr = LLVMBuildBitCast(comp_ctx->builder,
                                                  ext_ret_ptr, ext_ret_ptr_type,
                                                  buf))) {
