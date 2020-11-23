@@ -343,26 +343,22 @@ memories_instantiate(const WASMModule *module,
         uint32 actual_heap_size = heap_size;
 
 #if WASM_ENABLE_MULTI_MODULE != 0
-        WASMMemoryInstance *memory_inst_linked = NULL;
         if (import->u.memory.import_module != NULL) {
             WASMModuleInstance *module_inst_linked;
 
-            LOG_DEBUG("(%s, %s) is a memory of a sub-module",
-                      import->u.memory.module_name,
-                      import->u.memory.field_name);
+            if (!(module_inst_linked = get_sub_module_inst(
+                    module_inst, import->u.memory.import_module))) {
+                set_error_buf(error_buf, error_buf_size, "unknown memory");
+                memories_deinstantiate(module_inst, memories, memory_count);
+                return NULL;
+            }
 
-            module_inst_linked =
-                get_sub_module_inst(module_inst,
-                                    import->u.memory.import_module);
-            bh_assert(module_inst_linked);
-
-            memory_inst_linked =
-              wasm_lookup_memory(module_inst_linked,
-                                 import->u.memory.field_name);
-            bh_assert(memory_inst_linked);
-
-            memories[mem_index++] = memory_inst_linked;
-            memory = memory_inst_linked;
+            if (!(memory = memories[mem_index++] = wasm_lookup_memory(
+                    module_inst_linked, import->u.memory.field_name))) {
+                set_error_buf(error_buf, error_buf_size, "unknown memory");
+                memories_deinstantiate(module_inst, memories, memory_count);
+                return NULL;
+            }
         }
         else
 #endif
@@ -460,17 +456,19 @@ tables_instantiate(const WASMModule *module,
         WASMTableInstance *table_inst_linked = NULL;
         WASMModuleInstance *module_inst_linked = NULL;
         if (import->u.table.import_module) {
-            LOG_DEBUG("(%s, %s) is a table of a sub-module",
-                      import->u.table.module_name,
-                      import->u.memory.field_name);
+            if (!(module_inst_linked =
+              get_sub_module_inst(module_inst, import->u.table.import_module))) {
+                set_error_buf(error_buf, error_buf_size, "unknown table");
+                tables_deinstantiate(tables, table_count);
+                return NULL;
+            }
 
-            module_inst_linked =
-              get_sub_module_inst(module_inst, import->u.table.import_module);
-            bh_assert(module_inst_linked);
-
-            table_inst_linked = wasm_lookup_table(module_inst_linked,
-                                                  import->u.table.field_name);
-            bh_assert(table_inst_linked);
+            if (!(table_inst_linked = wasm_lookup_table(module_inst_linked,
+                                                  import->u.table.field_name))) {
+                set_error_buf(error_buf, error_buf_size, "unknown table");
+                tables_deinstantiate(tables, table_count);
+                return NULL;
+            }
 
             total_size = offsetof(WASMTableInstance, base_addr);
         }
@@ -699,16 +697,17 @@ globals_instantiate(const WASMModule *module,
         global->is_mutable = global_import->is_mutable;
 #if WASM_ENABLE_MULTI_MODULE != 0
         if (global_import->import_module) {
-            WASMModuleInstance *sub_module_inst = get_sub_module_inst(
-              module_inst, global_import->import_module);
-            bh_assert(sub_module_inst);
+            if (!(global->import_module_inst = get_sub_module_inst(
+                    module_inst, global_import->import_module))) {
+                set_error_buf(error_buf, error_buf_size, "unknown global");
+                return NULL;
+            }
 
-            WASMGlobalInstance *global_inst_linked =
-              wasm_lookup_global(sub_module_inst, global_import->field_name);
-            bh_assert(global_inst_linked);
-
-            global->import_global_inst = global_inst_linked;
-            global->import_module_inst = sub_module_inst;
+            if (!(global->import_global_inst = wasm_lookup_global(
+                    global->import_module_inst, global_import->field_name))) {
+                set_error_buf(error_buf, error_buf_size, "unknown global");
+                return NULL;
+            }
 
             /**
              * although, actually don't need initial_value for an imported
@@ -716,15 +715,11 @@ globals_instantiate(const WASMModule *module,
              * global-data and
              * (global $g2 i32 (global.get $g1))
              */
-            WASMGlobal *linked_global = global_import->import_global_linked;
-            InitializerExpression *linked_init_expr =
-              &(linked_global->init_expr);
-
-            bool ret = parse_init_expr(
-              linked_init_expr,
-              sub_module_inst->globals,
-              sub_module_inst->global_count, &(global->initial_value));
-            if (!ret) {
+            if (!parse_init_expr(
+                  &(global_import->import_global_linked->init_expr),
+                  global->import_module_inst->globals,
+                  global->import_module_inst->global_count,
+                  &(global->initial_value))) {
                 set_error_buf(error_buf, error_buf_size, "unknown global");
                 return NULL;
             }
