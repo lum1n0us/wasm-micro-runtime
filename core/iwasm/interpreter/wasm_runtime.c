@@ -374,6 +374,13 @@ memories_instantiate(const WASMModule *module,
                 memories_deinstantiate(module_inst, memories, memory_count);
                 return NULL;
             }
+#if WASM_ENABLE_MULTI_MODULE != 0
+            /* The module of the import memory is a builtin module, and
+               the memory is created by current module, set its owner
+               to current module, so the memory can be destroyed in
+               memories_deinstantiate. */
+            memory->owner = module_inst;
+#endif
         }
     }
 
@@ -1047,6 +1054,7 @@ sub_module_deinstantiate(WASMModuleInstance *module_inst)
         WASMSubModInstNode *next_node = bh_list_elem_next(node);
         bh_list_remove(list, node);
         wasm_deinstantiate(node->module_inst, false);
+        wasm_runtime_free(node);
         node = next_node;
     }
 }
