@@ -644,6 +644,24 @@ create_exports(AOTModuleInstance *module_inst, AOTModule *module,
 }
 
 static bool
+clear_wasi_proc_exit_exception(AOTModuleInstance *module_inst)
+{
+#if WASM_ENABLE_LIBC_WASI != 0
+    const char *exception = aot_get_exception(module_inst);
+    if (exception && !strcmp(exception, "Exception: wasi proc exit")) {
+        /* The "wasi proc exit" exception is thrown by native lib to
+           let wasm app exit, which is a normal behavior, we clear
+           the exception here. */
+        aot_set_exception(module_inst, NULL);
+        return true;
+    }
+    return false;
+#else
+    return false;
+#endif
+}
+
+static bool
 execute_post_inst_function(AOTModuleInstance *module_inst)
 {
     AOTFunctionInstance *post_inst_func =
@@ -677,6 +695,7 @@ execute_start_function(AOTModuleInstance *module_inst)
     u.f(exec_env);
 
     wasm_exec_env_destroy(exec_env);
+    (void)clear_wasi_proc_exit_exception(module_inst);
     return !aot_get_exception(module_inst);
 }
 
@@ -1107,6 +1126,8 @@ aot_call_function(WASMExecEnv *exec_env,
         if (!ret || aot_get_exception(module_inst)) {
             if (argv1 != argv1_buf)
                 wasm_runtime_free(argv1);
+            if (clear_wasi_proc_exit_exception(module_inst))
+                return true;
             return false;
         }
 
@@ -1135,6 +1156,8 @@ aot_call_function(WASMExecEnv *exec_env,
     else {
         ret = invoke_native_internal(exec_env, function->u.func.func_ptr,
                                      func_type, NULL, NULL, argv, argc, argv);
+        if (clear_wasi_proc_exit_exception(module_inst))
+            return true;
         return ret && !aot_get_exception(module_inst) ? true : false;
     }
 }
@@ -1846,6 +1869,8 @@ aot_call_indirect(WASMExecEnv *exec_env,
         if (!ret || aot_get_exception(module_inst)) {
             if (argv1 != argv1_buf)
                 wasm_runtime_free(argv1);
+            if (clear_wasi_proc_exit_exception(module_inst))
+                return true;
             return false;
         }
 
@@ -1873,9 +1898,12 @@ aot_call_indirect(WASMExecEnv *exec_env,
         return true;
     }
     else {
-        return invoke_native_internal(exec_env, func_ptr,
-                                      func_type, signature, attachment,
-                                      argv, argc, argv);
+        ret = invoke_native_internal(exec_env, func_ptr,
+                                     func_type, signature, attachment,
+                                     argv, argc, argv);
+        if (clear_wasi_proc_exit_exception(module_inst))
+            return true;
+        return ret;
     }
 }
 

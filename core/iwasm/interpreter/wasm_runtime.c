@@ -1558,6 +1558,24 @@ wasm_lookup_table(const WASMModuleInstance *module_inst, const char *name)
 }
 #endif
 
+static bool
+clear_wasi_proc_exit_exception(WASMModuleInstance *module_inst)
+{
+#if WASM_ENABLE_LIBC_WASI != 0
+    const char *exception = wasm_get_exception(module_inst);
+    if (exception && !strcmp(exception, "Exception: wasi proc exit")) {
+        /* The "wasi proc exit" exception is thrown by native lib to
+           let wasm app exit, which is a normal behavior, we clear
+           the exception here. */
+        wasm_set_exception(module_inst, NULL);
+        return true;
+    }
+    return false;
+#else
+    return false;
+#endif
+}
+
 bool
 wasm_call_function(WASMExecEnv *exec_env,
                    WASMFunctionInstance *function,
@@ -1565,6 +1583,7 @@ wasm_call_function(WASMExecEnv *exec_env,
 {
     WASMModuleInstance *module_inst = (WASMModuleInstance*)exec_env->module_inst;
     wasm_interp_call_wasm(module_inst, exec_env, function, argc, argv);
+    (void)clear_wasi_proc_exit_exception(module_inst);
     return !wasm_get_exception(module_inst) ? true : false;
 }
 
@@ -1945,6 +1964,7 @@ wasm_call_indirect(WASMExecEnv *exec_env,
 
     wasm_interp_call_wasm(module_inst, exec_env, function_inst, argc, argv);
 
+    (void)clear_wasi_proc_exit_exception(module_inst);
     return !wasm_get_exception(module_inst) ? true : false;
 
 got_exception:
