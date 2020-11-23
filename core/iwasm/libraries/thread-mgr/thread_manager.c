@@ -288,6 +288,8 @@ wasm_cluster_spawn_exec_env(WASMExecEnv *exec_env)
     WASMExecEnv *new_exec_env;
     uint32 aux_stack_start, aux_stack_size;
 
+    bh_assert(module);
+
     if (!(new_module_inst =
         wasm_runtime_instantiate_internal(module, true, 8192,
                                           0, NULL, 0))) {
