@@ -2129,6 +2129,9 @@ wasm_get_module_inst_mem_consumption(const WASMModuleInstance *module_inst,
         mem_conspn->memories_size += size;
         mem_conspn->app_heap_size += memory->heap_data_end
                                      - memory->heap_data;
+        /* size of app heap structure */
+        mem_conspn->memories_size +=
+            mem_allocator_get_heap_struct_size();
     }
 
     mem_conspn->tables_size = sizeof(WASMTableInstance *)
