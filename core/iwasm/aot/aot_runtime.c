@@ -2085,15 +2085,15 @@ aot_get_module_mem_consumption(const AOTModule *module,
         mem_conspn->data_segs_size += sizeof(AOTMemInitData);
     }
 
-    mem_conspn->const_strs_size =
-        bh_hash_map_get_struct_size(module->const_str_set);
-
-    const_string_size = 0;
     if (module->const_str_set) {
+        mem_conspn->const_strs_size =
+            bh_hash_map_get_struct_size(module->const_str_set);
+
+        const_string_size = 0;
         bh_hash_map_traverse(module->const_str_set,
                              const_string_node_size_cb);
+        mem_conspn->const_strs_size += const_string_size;
     }
-    mem_conspn->const_strs_size += const_string_size;
 
     /* code size + literal size + object data section size */
     mem_conspn->aot_code_size = module->code_size + module->literal_size
