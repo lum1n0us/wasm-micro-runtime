@@ -4,11 +4,11 @@
  */
 
 #include "platform_api_vmcore.h"
+#include "platform_api_extension.h"
 
-uint64
-os_time_get_boot_microsecond()
+uint8 *os_thread_get_stack_boundary()
 {
-    TickType_t ticks = xTaskGetTickCount();
-    return (uint64)1000 * 1000 / configTICK_RATE_HZ * ticks;
+    /* TODO: implement os_thread_get_stack_boundary */
+    return NULL;
 }
 
