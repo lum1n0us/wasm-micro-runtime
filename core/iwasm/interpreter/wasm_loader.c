@@ -2827,7 +2827,7 @@ load_from_sections(WASMModule *module, WASMSection *sections,
                         }
                     }
                     if (j == module->export_count) {
-                        module->malloc_function = -1;
+                        module->malloc_function = (uint32)-1;
                         LOG_VERBOSE("Can't find retain function,"
                                     "reset malloc function index to -1");
                     }

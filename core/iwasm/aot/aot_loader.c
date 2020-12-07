@@ -1744,7 +1744,7 @@ load_from_sections(AOTModule *module, AOTSection *sections,
                         }
                     }
                     if (j == module->export_count) {
-                        module->malloc_func_index = -1;
+                        module->malloc_func_index = (uint32)-1;
                         LOG_VERBOSE("Can't find retain function,"
                                     "reset malloc function index to -1");
                     }
