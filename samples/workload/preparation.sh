@@ -30,14 +30,14 @@ function install_deps() {
 
 #
 # install clang
-function install_clang() {
-  if [[ ! -f llvm.sh ]]; then
-    wget https://apt.llvm.org/llvm.sh
-  fi
-
-  chmod a+x llvm.sh
-  ./llvm.sh 11
-}
+#function install_clang() {
+#  if [[ ! -f llvm.sh ]]; then
+#    wget https://apt.llvm.org/llvm.sh
+#  fi
+#
+#  chmod a+x llvm.sh
+#  ./llvm.sh 11
+#}
 
 #
 # install wasi-sdk
