@@ -791,6 +791,12 @@ load_function_import(const WASMModule *parent_module, WASMModule *sub_module,
         return false;
     }
 
+#if (WASM_ENABLE_WAMR_COMPILER != 0) || (WASM_ENABLE_JIT != 0)
+    declare_type_index = wasm_get_smallest_type_idx(
+            parent_module->types, parent_module->type_count,
+            declare_type_index);
+#endif
+
     declare_func_type = parent_module->types[declare_type_index];
 
     if (wasm_runtime_is_host_module(sub_module_name)) {
@@ -1723,6 +1729,11 @@ load_function_section(const uint8 *buf, const uint8 *buf_end,
                 set_error_buf(error_buf, error_buf_size, "unknown type");
                 return false;
             }
+
+#if (WASM_ENABLE_WAMR_COMPILER != 0) || (WASM_ENABLE_JIT != 0)
+            type_index = wasm_get_smallest_type_idx(
+                    module->types, module->type_count, type_index);
+#endif
 
             read_leb_uint32(p_code, buf_code_end, code_size);
             if (code_size == 0

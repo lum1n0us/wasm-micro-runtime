@@ -1804,7 +1804,6 @@ aot_invoke_native(WASMExecEnv *exec_env, uint32 func_idx,
 
 bool
 aot_call_indirect(WASMExecEnv *exec_env,
-                  bool check_func_type, uint32 func_type_idx,
                   uint32 table_elem_idx,
                   uint32 argc, uint32 *argv)
 {
@@ -1816,8 +1815,7 @@ aot_call_indirect(WASMExecEnv *exec_env,
     AOTFuncType *func_type;
     void **func_ptrs = (void**)module_inst->func_ptrs.ptr, *func_ptr;
     uint32 table_size = module_inst->table_size;
-    uint32 func_idx, func_type_idx1;
-    uint32 ext_ret_count;
+    uint32 func_type_idx, func_idx, ext_ret_count;
     AOTImportFunc *import_func;
     const char *signature = NULL;
     void *attachment = NULL;
@@ -1844,15 +1842,8 @@ aot_call_indirect(WASMExecEnv *exec_env,
         return false;
     }
 
-    func_type_idx1 = func_type_indexes[func_idx];
-    if (check_func_type
-        && !aot_is_wasm_type_equal(module_inst, func_type_idx,
-                                   func_type_idx1)) {
-        aot_set_exception_with_id(module_inst,
-                                  EXCE_INVALID_FUNCTION_TYPE_INDEX);
-        return false;
-    }
-    func_type = aot_module->func_types[func_type_idx1];
+    func_type_idx = func_type_indexes[func_idx];
+    func_type = aot_module->func_types[func_type_idx];
 
     if (!(func_ptr = func_ptrs[func_idx])) {
         bh_assert(func_idx < aot_module->import_func_count);
