@@ -1381,7 +1381,17 @@ aot_module_malloc(AOTModuleInstance *module_inst, uint32 size,
     }
 
     if (!addr) {
-        aot_set_exception(module_inst, "out of memory");
+        if (memory_inst->heap_handle.ptr
+            && mem_allocator_is_heap_corrupted(memory_inst->heap_handle.ptr)) {
+            LOG_ERROR("Error: app heap is corrupted, if the wasm file "
+                      "is compiled by wasi-sdk-12.0 or larger version, "
+                      "please add -Wl,--export=malloc -Wl,--export=free "
+                      " to export malloc and free functions.");
+            aot_set_exception(module_inst, "app heap corrupted");
+        }
+        else {
+            aot_set_exception(module_inst, "out of memory");
+        }
         return 0;
     }
     if (p_native_addr)
