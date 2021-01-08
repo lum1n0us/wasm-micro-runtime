@@ -846,6 +846,16 @@ WASM_RUNTIME_API_EXTERN int32_t
 wasm_runtime_join_thread(wasm_thread_t tid, void **retval);
 #endif
 
+#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+/**
+ * dump the call stack
+ *
+ * @param exec_env the execution environment
+ */
+WASM_RUNTIME_API_EXTERN void
+wasm_runtime_dump_call_stack(wasm_exec_env_t exec_env);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

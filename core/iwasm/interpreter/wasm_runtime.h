@@ -383,6 +383,12 @@ wasm_get_module_mem_consumption(const WASMModule *module,
 void
 wasm_get_module_inst_mem_consumption(const WASMModuleInstance *module,
                                      WASMModuleInstMemConsumption *mem_conspn);
+
+#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+void
+wasm_interp_dump_call_stack(struct WASMExecEnv *exec_env);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

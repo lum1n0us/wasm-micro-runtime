@@ -50,6 +50,8 @@ cmake -DWAMR_BUILD_PLATFORM=linux -DWAMR_BUILD_TARGET=ARM
 
 > Note: if it is enabled, the call stack will be dumped when exception occurs.
 
+> For AoT/JIT mode, the function names are extracted from export section, please export as many functions as possible (for `wasi-sdk` you can use `-Wl,--export-all`) when compiling wasm module, and add `--enable-dump-call-stack` option to wamrc during compiling AoT module.
+
 #### **Enable Multi-Module feature**
 
 - **WAMR_BUILD_MULTI_MODULE**=1/0, default to disable if not set

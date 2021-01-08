@@ -568,6 +568,24 @@ void
 aot_get_module_inst_mem_consumption(const AOTModuleInstance *module_inst,
                                     WASMModuleInstMemConsumption *mem_conspn);
 
+#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+
+typedef struct AOTFrame {
+    struct AOTFrame *prev_frame;
+    uint32 func_index;
+} AOTFrame;
+
+bool
+aot_alloc_frame(WASMExecEnv *exec_env, uint32 func_index);
+
+void
+aot_free_frame(WASMExecEnv *exec_env);
+
+void
+aot_dump_call_stack(WASMExecEnv *exec_env);
+
+#endif /* end of WASM_ENABLE_CUSTOM_NAME_SECTION */
+
 #ifdef __cplusplus
 } /* end of extern "C" */
 #endif

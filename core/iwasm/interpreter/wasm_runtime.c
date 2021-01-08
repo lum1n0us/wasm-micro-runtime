@@ -2214,8 +2214,9 @@ wasm_interp_dump_call_stack(struct WASMExecEnv *exec_env)
     WASMInterpFrame *cur_frame =
         wasm_exec_env_get_cur_frame(exec_env);
     WASMFunctionInstance *func_inst;
+    WASMExportFuncInstance *export_func;
     const char *func_name = NULL;
-    uint32 n;
+    uint32 n, i;
 
     os_printf("\n");
     for (n = 0; cur_frame && cur_frame->function; n++) {
@@ -2226,6 +2227,17 @@ wasm_interp_dump_call_stack(struct WASMExecEnv *exec_env)
         }
         else {
             func_name = func_inst->u.func->field_name;
+            /* if custom name section is not generated,
+                search symbols from export table */
+            if (!func_name) {
+                for (i = 0; i < module_inst->export_func_count; i++) {
+                    export_func = module_inst->export_functions + i;
+                    if (export_func->function == func_inst) {
+                        func_name = export_func->name;
+                        break;
+                    }
+                }
+            }
         }
 
         /* function name not exported, print number instead */

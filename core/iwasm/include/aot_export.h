@@ -43,6 +43,7 @@ typedef struct AOTCompOption{
     bool enable_thread_mgr;
     bool enable_tail_call;
     bool enable_simd;
+    bool enable_dump_call_stack;
     bool is_sgx_platform;
     uint32_t opt_level;
     uint32_t size_level;

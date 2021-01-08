@@ -1128,8 +1128,20 @@ aot_call_function(WASMExecEnv *exec_env,
             cell_num += wasm_value_type_cell_num(ext_ret_types[i]);
         }
 
+#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+        if (!aot_alloc_frame(exec_env, function->func_index)) {
+            wasm_runtime_free(argv1);
+            return false;
+        }
+#endif
+
         ret = invoke_native_internal(exec_env, function->u.func.func_ptr,
                                      func_type, NULL, NULL, argv1, argc, argv);
+
+#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+        aot_free_frame(exec_env);
+#endif
+
         if (!ret || aot_get_exception(module_inst)) {
             if (argv1 != argv1_buf)
                 wasm_runtime_free(argv1);
@@ -1161,10 +1173,22 @@ aot_call_function(WASMExecEnv *exec_env,
         return true;
     }
     else {
+#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+        if (!aot_alloc_frame(exec_env, function->func_index)) {
+            return false;
+        }
+#endif
+
         ret = invoke_native_internal(exec_env, function->u.func.func_ptr,
                                      func_type, NULL, NULL, argv, argc, argv);
+
+#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+        aot_free_frame(exec_env);
+#endif
+
         if (clear_wasi_proc_exit_exception(module_inst))
             return true;
+
         return ret && !aot_get_exception(module_inst) ? true : false;
     }
 }
@@ -2224,3 +2248,79 @@ aot_get_module_inst_mem_consumption(const AOTModuleInstance *module_inst,
 }
 #endif /* end of (WASM_ENABLE_MEMORY_PROFILING != 0)
                  || (WASM_ENABLE_MEMORY_TRACING != 0) */
+
+#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+
+bool
+aot_alloc_frame(WASMExecEnv *exec_env, uint32 func_index)
+{
+    AOTFrame *frame =
+        wasm_exec_env_alloc_wasm_frame(exec_env, sizeof(AOTFrame));
+
+    if (!frame) {
+        aot_set_exception((AOTModuleInstance*)exec_env->module_inst,
+                          "auxiliary call stack overflow");
+        return false;
+    }
+
+    frame->prev_frame = (AOTFrame *)exec_env->cur_frame;
+    exec_env->cur_frame = (struct WASMInterpFrame *)frame;
+
+    frame->func_index = func_index;
+
+    return true;
+}
+
+void
+aot_free_frame(WASMExecEnv *exec_env)
+{
+    AOTFrame *cur_frame = (AOTFrame *)exec_env->cur_frame;
+    AOTFrame *prev_frame = cur_frame->prev_frame;
+    wasm_exec_env_free_wasm_frame(exec_env, prev_frame);
+    exec_env->cur_frame = (struct WASMInterpFrame *)prev_frame;
+}
+
+void
+aot_dump_call_stack(WASMExecEnv *exec_env)
+{
+    AOTFrame *cur_frame = (AOTFrame *)exec_env->cur_frame;
+    AOTModule *module =
+        ((AOTModuleInstance*)exec_env->module_inst)->aot_module.ptr;
+    const char *func_name;
+    uint32 n = 0;
+
+    os_printf("\n");
+    while (cur_frame) {
+        func_name = NULL;
+
+        if (cur_frame->func_index < module->import_func_count) {
+            func_name = module->import_funcs[cur_frame->func_index].func_name;
+        }
+        else {
+            uint32 i;
+
+            for (i = 0; i < module->export_count; i++) {
+                AOTExport export = module->exports[i];
+                if (export.index == cur_frame->func_index
+                    && export.kind == EXPORT_KIND_FUNC) {
+                    func_name = export.name;
+                    break;
+                }
+            }
+        }
+
+        /* function name not exported, print number instead */
+        if (func_name == NULL) {
+            os_printf("#%02d $f%d \n", n, cur_frame->func_index);
+        }
+        else {
+            os_printf("#%02d %s \n", n, func_name);
+        }
+
+        cur_frame = cur_frame->prev_frame;
+        n++;
+    }
+    os_printf("\n");
+}
+
+#endif /* end of WASM_ENABLE_CUSTOM_NAME_SECTION */

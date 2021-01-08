@@ -3453,3 +3453,22 @@ wasm_runtime_join_thread(wasm_thread_t tid, void **retval)
 }
 
 #endif
+
+#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+void
+wasm_runtime_dump_call_stack(WASMExecEnv *exec_env)
+{
+    WASMModuleInstanceCommon *module_inst
+        = wasm_exec_env_get_module_inst(exec_env);
+#if WASM_ENABLE_INTERP != 0
+    if (module_inst->module_type == Wasm_Module_Bytecode) {
+        wasm_interp_dump_call_stack(exec_env);
+    }
+#endif
+#if WASM_ENABLE_AOT != 0
+    if (module_inst->module_type == Wasm_Module_AoT) {
+        aot_dump_call_stack(exec_env);
+    }
+#endif
+}
+#endif
