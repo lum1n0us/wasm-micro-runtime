@@ -1657,6 +1657,47 @@ wasm_get_exception(WASMModuleInstance *module_inst)
         return module_inst->cur_exception;
 }
 
+#if WASM_ENABLE_PERF_PROFILING != 0
+void
+wasm_dump_perf_profiling(const WASMModuleInstance *module_inst)
+{
+    WASMExportFuncInstance *export_func;
+    WASMFunctionInstance *func_inst;
+    char *func_name;
+    uint32 i, j;
+
+    os_printf("Performance profiler data:\n");
+    for (i = 0; i < module_inst->function_count; i++) {
+        func_inst = module_inst->functions + i;
+        if (func_inst->is_import_func) {
+            func_name = func_inst->u.func_import->field_name;
+        }
+#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+        else if (func_inst->u.func->field_name) {
+            func_name = func_inst->u.func->field_name;
+        }
+#endif
+        else {
+            func_name = NULL;
+            for (j = 0; j < module_inst->export_func_count; j++) {
+                export_func = module_inst->export_functions + j;
+                if (export_func->function == func_inst) {
+                    func_name = export_func->name;
+                    break;
+                }
+            }
+        }
+
+        if (func_name)
+          os_printf("  func %s, execution time: %.3f ms\n",
+                    func_name, module_inst->functions[i].total_exec_time / 1000.0f);
+        else
+          os_printf("  func %d, execution time: %.3f ms\n",
+                    i, module_inst->functions[i].total_exec_time / 1000.0f);
+    }
+}
+#endif
+
 uint32
 wasm_module_malloc(WASMModuleInstance *module_inst, uint32 size,
                    void **p_native_addr)

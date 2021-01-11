@@ -120,6 +120,10 @@ struct WASMFunctionInstance {
     WASMModuleInstance *import_module_inst;
     WASMFunctionInstance *import_func_inst;
 #endif
+#if WASM_ENABLE_PERF_PROFILING != 0
+    /* total execution time */
+    uint64 total_exec_time;
+#endif
 };
 
 typedef struct WASMExportFuncInstance {
@@ -282,11 +286,14 @@ wasm_instantiate(WASMModule *module, bool is_sub_inst,
                  char *error_buf, uint32 error_buf_size);
 
 void
+wasm_dump_perf_profiling(const WASMModuleInstance *module_inst);
+
+void
 wasm_deinstantiate(WASMModuleInstance *module_inst, bool is_sub_inst);
 
 WASMFunctionInstance *
 wasm_lookup_function(const WASMModuleInstance *module_inst,
-                             const char *name, const char *signature);
+                     const char *name, const char *signature);
 
 #if WASM_ENABLE_MULTI_MODULE != 0
 WASMGlobalInstance *

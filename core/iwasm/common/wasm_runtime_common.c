@@ -960,6 +960,23 @@ wasm_runtime_dump_mem_consumption(WASMExecEnv *exec_env)
 #endif /* end of (WASM_ENABLE_MEMORY_PROFILING != 0)
                  || (WASM_ENABLE_MEMORY_TRACING != 0) */
 
+#if WASM_ENABLE_PERF_PROFILING != 0
+void
+wasm_runtime_dump_perf_profiling(WASMModuleInstanceCommon *module_inst)
+{
+#if WASM_ENABLE_INTERP != 0
+    if (module_inst->module_type == Wasm_Module_Bytecode) {
+        wasm_dump_perf_profiling((WASMModuleInstance*)module_inst);
+    }
+#endif
+#if WASM_ENABLE_AOT != 0
+    if (module_inst->module_type == Wasm_Module_AoT) {
+        /* TODO */
+    }
+#endif
+}
+#endif
+
 WASMModuleInstanceCommon *
 wasm_runtime_get_module_inst(WASMExecEnv *exec_env)
 {

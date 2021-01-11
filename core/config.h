@@ -180,6 +180,11 @@
 #define WASM_ENABLE_MEMORY_TRACING 0
 #endif
 
+/* Performance profiling */
+#ifndef WASM_ENABLE_PERF_PROFILING
+#define WASM_ENABLE_PERF_PROFILING 0
+#endif
+
 /* Heap verification */
 #ifndef BH_ENABLE_GC_VERIFY
 #define BH_ENABLE_GC_VERIFY 0

@@ -81,6 +81,10 @@ cmake -DWAMR_BUILD_PLATFORM=linux -DWAMR_BUILD_TARGET=ARM
 > Note: if it is enabled, developer can use API `void wasm_runtime_dump_mem_consumption(wasm_exec_env_t exec_env)` to dump the memory consumption info.
 Currently we only profile the memory consumption of module, module_instance and exec_env, the memory consumed by other components such as `wasi-ctx`, `multi-module` and `thread-manager` are not included.
 
+#### **Enable performance profiling (Experiment)**
+- **WAMR_BUILD_PERF_PROFILING**=1/0, default to disable if not set
+> Note: if it is enabled, developer can use API `void wasm_runtime_dump_perf_profiling(wasm_exec_env_t exec_env)` to dump the performance consumption info. Currently we only profile the performance consumption of each WASM function.
+
 #### **Set maximum app thread stack size**
 - **WAMR_APP_THREAD_STACK_SIZE_MAX**=n, default to 8 MB (8388608) if not set
 > Note: the AOT boundary check with hardware trap mechanism might consume large stack since the OS may lazily grow the stack mapping as a guard page is hit, we may use this configuration to reduce the total stack usage, e.g. -DWAMR_APP_THREAD_STACK_SIZE_MAX=131072 (128 KB).

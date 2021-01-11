@@ -787,6 +787,14 @@ wasm_runtime_get_user_data(wasm_exec_env_t exec_env);
 WASM_RUNTIME_API_EXTERN void
 wasm_runtime_dump_mem_consumption(wasm_exec_env_t exec_env);
 
+/**
+ * Dump runtime performance profiler data of each function
+ *
+ * @param module_inst the WASM module instance to profile
+ */
+WASM_RUNTIME_API_EXTERN void
+wasm_runtime_dump_perf_profiling(wasm_module_inst_t module_inst);
+
 #if WASM_ENABLE_THREAD_MGR != 0
 /* wasm thread callback function type */
 typedef void* (*wasm_thread_callback_t)(wasm_exec_env_t, void *);
