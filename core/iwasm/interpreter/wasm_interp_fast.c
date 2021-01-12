@@ -1096,9 +1096,6 @@ wasm_interp_dump_op_count()
 #else
 #define HANDLE_OP(opcode) HANDLE_##opcode
 #endif
-#if WASM_ENABLE_FAST_INTERP == 0
-#define FETCH_OPCODE_AND_DISPATCH() goto *handle_table[*frame_ip++]
-#else
 #if WASM_ENABLE_ABS_LABEL_ADDR != 0
 #define FETCH_OPCODE_AND_DISPATCH() do {                    \
     const void *p_label_addr = *(void**)frame_ip;           \
@@ -1113,7 +1110,6 @@ wasm_interp_dump_op_count()
     goto *p_label_addr;                                     \
   } while (0)
 #endif
-#endif
 #define HANDLE_OP_END() FETCH_OPCODE_AND_DISPATCH()
 
 #else   /* else of WASM_ENABLE_LABELS_AS_VALUES */
@@ -1123,9 +1119,7 @@ wasm_interp_dump_op_count()
 
 #endif  /* end of WASM_ENABLE_LABELS_AS_VALUES */
 
-#if WASM_ENABLE_FAST_INTERP != 0
 static void **global_handle_table;
-#endif
 
 static void
 wasm_interp_call_func_bytecode(WASMModuleInstance *module,
@@ -1160,12 +1154,10 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
   #define HANDLE_OPCODE(op) &&HANDLE_##op
   DEFINE_GOTO_TABLE (const void*, handle_table);
   #undef HANDLE_OPCODE
-#if WASM_ENABLE_FAST_INTERP != 0
   if (exec_env == NULL) {
       global_handle_table = (void **)handle_table;
       return;
   }
-#endif
 #endif
 
 #if WASM_ENABLE_LABELS_AS_VALUES == 0
@@ -3340,7 +3332,6 @@ recover_br_info:
 #endif
 }
 
-#if WASM_ENABLE_FAST_INTERP != 0
 void **
 wasm_interp_get_handle_table()
 {
@@ -3349,7 +3340,6 @@ wasm_interp_get_handle_table()
     wasm_interp_call_func_bytecode(&module, NULL, NULL, NULL);
     return global_handle_table;
 }
-#endif
 
 void
 wasm_interp_call_wasm(WASMModuleInstance *module_inst,
