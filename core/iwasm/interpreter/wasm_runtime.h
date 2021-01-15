@@ -123,6 +123,8 @@ struct WASMFunctionInstance {
 #if WASM_ENABLE_PERF_PROFILING != 0
     /* total execution time */
     uint64 total_exec_time;
+    /* total execution count */
+    uint32 total_exec_cnt;
 #endif
 };
 
@@ -391,7 +393,7 @@ void
 wasm_get_module_inst_mem_consumption(const WASMModuleInstance *module,
                                      WASMModuleInstMemConsumption *mem_conspn);
 
-#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+#if WASM_ENABLE_DUMP_CALL_STACK != 0
 void
 wasm_interp_dump_call_stack(struct WASMExecEnv *exec_env);
 #endif

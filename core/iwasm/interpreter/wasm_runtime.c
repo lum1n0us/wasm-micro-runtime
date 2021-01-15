@@ -1689,11 +1689,13 @@ wasm_dump_perf_profiling(const WASMModuleInstance *module_inst)
         }
 
         if (func_name)
-          os_printf("  func %s, execution time: %.3f ms\n",
-                    func_name, module_inst->functions[i].total_exec_time / 1000.0f);
+          os_printf("  func %s, execution time: %.3f ms, execution count: %d times\n",
+                    func_name, module_inst->functions[i].total_exec_time / 1000.0f,
+                    module_inst->functions[i].total_exec_cnt);
         else
-          os_printf("  func %d, execution time: %.3f ms\n",
-                    i, module_inst->functions[i].total_exec_time / 1000.0f);
+          os_printf("  func %d, execution time: %.3f ms, execution count: %d times\n",
+                    i, module_inst->functions[i].total_exec_time / 1000.0f,
+                    module_inst->functions[i].total_exec_cnt);
     }
 }
 #endif
@@ -2246,7 +2248,7 @@ wasm_get_module_inst_mem_consumption(const WASMModuleInstance *module_inst,
 #endif /* end of (WASM_ENABLE_MEMORY_PROFILING != 0)
                  || (WASM_ENABLE_MEMORY_TRACING != 0) */
 
-#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+#if WASM_ENABLE_DUMP_CALL_STACK != 0
 void
 wasm_interp_dump_call_stack(struct WASMExecEnv *exec_env)
 {
@@ -2261,13 +2263,16 @@ wasm_interp_dump_call_stack(struct WASMExecEnv *exec_env)
 
     os_printf("\n");
     for (n = 0; cur_frame && cur_frame->function; n++) {
+        func_name = NULL;
         func_inst = cur_frame->function;
 
         if (func_inst->is_import_func) {
             func_name = func_inst->u.func_import->field_name;
         }
         else {
+#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
             func_name = func_inst->u.func->field_name;
+#endif
             /* if custom name section is not generated,
                 search symbols from export table */
             if (!func_name) {
@@ -2293,4 +2298,4 @@ wasm_interp_dump_call_stack(struct WASMExecEnv *exec_env)
     }
     os_printf("\n");
 }
-#endif /* end of WASM_ENABLE_CUSTOM_NAME_SECTION */
+#endif /* end of WASM_ENABLE_DUMP_CALL_STACK */

@@ -971,7 +971,7 @@ wasm_runtime_dump_perf_profiling(WASMModuleInstanceCommon *module_inst)
 #endif
 #if WASM_ENABLE_AOT != 0
     if (module_inst->module_type == Wasm_Module_AoT) {
-        /* TODO */
+        aot_dump_perf_profiling((AOTModuleInstance*)module_inst);
     }
 #endif
 }
@@ -3471,7 +3471,7 @@ wasm_runtime_join_thread(wasm_thread_t tid, void **retval)
 
 #endif
 
-#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+#if WASM_ENABLE_DUMP_CALL_STACK != 0
 void
 wasm_runtime_dump_call_stack(WASMExecEnv *exec_env)
 {
@@ -3488,4 +3488,4 @@ wasm_runtime_dump_call_stack(WASMExecEnv *exec_env)
     }
 #endif
 }
-#endif
+#endif /* end of WASM_ENABLE_DUMP_CALL_STACK */

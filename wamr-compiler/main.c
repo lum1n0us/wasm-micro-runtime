@@ -45,6 +45,7 @@ print_help()
   printf("  --enable-tail-call        Enable the post-MVP tail call feature\n");
   printf("  --enable-simd             Enable the post-MVP 128-bit SIMD feature\n");
   printf("  --enable-dump-call-stack  Enable stack trace feature\n");
+  printf("  --enable-perf-profiling   Enable function performance profiling\n");
   printf("  -v=n                      Set log verbose level (0 to 5, default is 2), larger with more log\n");
   printf("Examples: wamrc -o test.aot test.wasm\n");
   printf("          wamrc --target=i386 -o test.aot test.wasm\n");
@@ -157,7 +158,10 @@ main(int argc, char *argv[])
         option.enable_simd = true;
     }
     else if (!strcmp(argv[0], "--enable-dump-call-stack")) {
-        option.enable_dump_call_stack = true;
+        option.enable_aux_stack_frame = true;
+    }
+    else if (!strcmp(argv[0], "--enable-perf-profiling")) {
+        option.enable_aux_stack_frame = true;
     }
     else
       return print_help();

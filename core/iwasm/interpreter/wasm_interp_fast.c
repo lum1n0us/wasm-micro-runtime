@@ -930,6 +930,7 @@ FREE_FRAME(WASMExecEnv *exec_env, WASMInterpFrame *frame)
     if (frame->function) {
         frame->function->total_exec_time += os_time_get_boot_microsecond()
                                             - frame->time_started;
+        frame->function->total_exec_cnt++;
     }
 #endif
     wasm_exec_env_free_wasm_frame(exec_env, frame);
@@ -3412,7 +3413,7 @@ wasm_interp_call_wasm(WASMModuleInstance *module_inst,
             argv[i] = *(frame->lp + i);
     }
     else {
-#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+#if WASM_ENABLE_DUMP_CALL_STACK != 0
         wasm_interp_dump_call_stack(exec_env);
 #endif
     }

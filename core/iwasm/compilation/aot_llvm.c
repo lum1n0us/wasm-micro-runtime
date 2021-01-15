@@ -1163,8 +1163,8 @@ aot_create_comp_context(AOTCompData *comp_data,
     if (option->enable_simd)
         comp_ctx->enable_simd = true;
 
-    if (option->enable_dump_call_stack)
-        comp_ctx->enable_dump_call_stack = true;
+    if (option->enable_aux_stack_frame)
+        comp_ctx->enable_aux_stack_frame = true;
 
     if (option->is_jit_mode) {
         char *triple_jit = NULL;

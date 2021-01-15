@@ -223,8 +223,8 @@ typedef struct AOTCompContext {
   /* 128-bit SIMD */
   bool enable_simd;
 
-  /* stack trace */
-  bool enable_dump_call_stack;
+  /* generate auxiliary stack frame */
+  bool enable_aux_stack_frame;
 
   /* Thread Manager */
   bool enable_thread_mgr;
@@ -274,7 +274,7 @@ typedef struct AOTCompOption{
     bool enable_thread_mgr;
     bool enable_tail_call;
     bool enable_simd;
-    bool enable_dump_call_stack;
+    bool enable_aux_stack_frame;
     bool is_sgx_platform;
     uint32 opt_level;
     uint32 size_level;

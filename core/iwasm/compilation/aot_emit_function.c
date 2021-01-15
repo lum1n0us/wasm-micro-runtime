@@ -278,7 +278,7 @@ call_aot_invoke_native_func(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
     return true;
 }
 
-#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
+#if (WASM_ENABLE_DUMP_CALL_STACK != 0) || (WASM_ENABLE_PERF_PROFILING != 0)
 static bool
 call_aot_alloc_frame_func(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
                           LLVMValueRef func_idx)
@@ -360,7 +360,8 @@ call_aot_free_frame_func(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx)
 
     return true;
 }
-#endif
+#endif /* end of (WASM_ENABLE_DUMP_CALL_STACK != 0)
+                 || (WASM_ENABLE_PERF_PROFILING != 0) */
 
 static bool
 check_stack_boundary(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
@@ -457,8 +458,8 @@ aot_compile_op_call(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
     /* Get param cell number */
     param_cell_num = func_type->param_cell_num;
 
-#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
-    if (comp_ctx->enable_dump_call_stack) {
+#if (WASM_ENABLE_DUMP_CALL_STACK != 0) || (WASM_ENABLE_PERF_PROFILING != 0)
+    if (comp_ctx->enable_aux_stack_frame) {
         LLVMValueRef func_idx_const;
 
         if (!(func_idx_const = I32_CONST(func_idx))) {
@@ -621,8 +622,8 @@ aot_compile_op_call(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
         }
     }
 
-#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
-    if (comp_ctx->enable_dump_call_stack) {
+#if (WASM_ENABLE_DUMP_CALL_STACK != 0) || (WASM_ENABLE_PERF_PROFILING != 0)
+    if (comp_ctx->enable_aux_stack_frame) {
         if (!call_aot_free_frame_func(comp_ctx, func_ctx))
             goto fail;
     }
@@ -1032,8 +1033,8 @@ aot_compile_op_call_indirect(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
     }
 #endif
 
-#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
-    if (comp_ctx->enable_dump_call_stack) {
+#if (WASM_ENABLE_DUMP_CALL_STACK != 0) || (WASM_ENABLE_PERF_PROFILING != 0)
+    if (comp_ctx->enable_aux_stack_frame) {
         if (!call_aot_alloc_frame_func(comp_ctx, func_ctx, func_idx))
             goto fail;
     }
@@ -1216,8 +1217,8 @@ aot_compile_op_call_indirect(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
         PUSH(result_phis[i], func_type->types[func_param_count + i]);
     }
 
-#if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
-    if (comp_ctx->enable_dump_call_stack) {
+#if (WASM_ENABLE_DUMP_CALL_STACK != 0) || (WASM_ENABLE_PERF_PROFILING != 0)
+    if (comp_ctx->enable_aux_stack_frame) {
         if (!call_aot_free_frame_func(comp_ctx, func_ctx))
             goto fail;
     }
