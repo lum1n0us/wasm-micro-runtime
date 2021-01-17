@@ -41,8 +41,8 @@ print_help()
   printf("                              llvmir-opt     Optimized LLVM IR\n");
   printf("  --enable-bulk-memory      Enable the post-MVP bulk memory feature\n");
   printf("  --enable-multi-thread     Enable multi-thread feature, the dependent features bulk-memory and\n");
-  printf("  --enable-tail-call        Enable the post-MVP tail call feature\n");
   printf("                            thread-mgr will be enabled automatically\n");
+  printf("  --enable-tail-call        Enable the post-MVP tail call feature\n");
   printf("  --enable-simd             Enable the post-MVP 128-bit SIMD feature\n");
   printf("  --enable-dump-call-stack  Enable stack trace feature\n");
   printf("  -v=n                      Set log verbose level (0 to 5, default is 2), larger with more log\n");
