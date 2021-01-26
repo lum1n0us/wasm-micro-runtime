@@ -187,7 +187,7 @@ wasm_engine_new_internal(mem_alloc_type_t type,
         goto failed;
     }
 
-#if BH_DEBUG == 1
+#if BH_DEBUG != 0
     bh_log_set_verbose_level(5);
 #else
     bh_log_set_verbose_level(3);

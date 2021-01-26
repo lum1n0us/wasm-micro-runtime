@@ -1105,13 +1105,15 @@ aot_compile_op_call_indirect(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
     LLVMPositionBuilderAtEnd(comp_ctx->builder, block_call_import);
 
     /* Allocate memory for result values */
-    total_size = sizeof(LLVMValueRef) * (uint64)func_result_count;
-    if (total_size >= UINT32_MAX
-        || !(value_rets = wasm_runtime_malloc((uint32)total_size))) {
-        aot_set_last_error("allocate memory failed.");
-        goto fail;
+    if (func_result_count > 0) {
+        total_size = sizeof(LLVMValueRef) * (uint64)func_result_count;
+        if (total_size >= UINT32_MAX
+            || !(value_rets = wasm_runtime_malloc((uint32)total_size))) {
+            aot_set_last_error("allocate memory failed.");
+            goto fail;
+        }
+        memset(value_rets, 0, (uint32)total_size);
     }
-    memset(value_rets, 0, total_size);
 
     param_cell_num = func_type->param_cell_num;
     wasm_ret_types = func_type->types + func_type->param_count;

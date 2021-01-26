@@ -1712,9 +1712,11 @@ wasm_runtime_init_wasi(WASMModuleInstanceCommon *module_inst,
 
     total_size = sizeof(char *) * (uint64)argc;
     if (total_size >= UINT32_MAX
-        || !(argv_list = wasm_runtime_malloc((uint32)total_size))
+        || (total_size > 0 &&
+            !(argv_list = wasm_runtime_malloc((uint32)total_size)))
         || argv_buf_size >= UINT32_MAX
-        || !(argv_buf = wasm_runtime_malloc((uint32)argv_buf_size))) {
+        || (argv_buf_size > 0 &&
+            !(argv_buf = wasm_runtime_malloc((uint32)argv_buf_size)))) {
         set_error_buf(error_buf, error_buf_size,
                       "Init wasi environment failed: allocate memory failed");
         goto fail;
@@ -1732,9 +1734,11 @@ wasm_runtime_init_wasi(WASMModuleInstanceCommon *module_inst,
 
     total_size = sizeof(char *) * (uint64)argc;
     if (total_size >= UINT32_MAX
-        || !(env_list = wasm_runtime_malloc((uint32)total_size))
+        || (total_size > 0
+            && !(env_list = wasm_runtime_malloc((uint32)total_size)))
         || env_buf_size >= UINT32_MAX
-        || !(env_buf = wasm_runtime_malloc((uint32)env_buf_size))) {
+        || (env_buf_size >0
+            && !(env_buf = wasm_runtime_malloc((uint32)env_buf_size)))) {
         set_error_buf(error_buf, error_buf_size,
                       "Init wasi environment failed: allocate memory failed");
         goto fail;

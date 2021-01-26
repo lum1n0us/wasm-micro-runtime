@@ -1476,7 +1476,9 @@ aot_create_comp_context(AOTCompData *comp_data,
 
     /* Create function context for each function */
     comp_ctx->func_ctx_count = comp_data->func_count;
-    if (!(comp_ctx->func_ctxes = aot_create_func_contexts(comp_data, comp_ctx)))
+    if (comp_data->func_count > 0
+        && !(comp_ctx->func_ctxes =
+                aot_create_func_contexts(comp_data, comp_ctx)))
         goto fail;
 
     ret = comp_ctx;
@@ -1521,7 +1523,8 @@ aot_destroy_comp_context(AOTCompContext *comp_ctx)
         LLVMContextDispose(comp_ctx->context);
 
     if (comp_ctx->func_ctxes)
-        aot_destroy_func_contexts(comp_ctx->func_ctxes, comp_ctx->func_ctx_count);
+        aot_destroy_func_contexts(comp_ctx->func_ctxes,
+                                  comp_ctx->func_ctx_count);
 
     wasm_runtime_free(comp_ctx);
 }
