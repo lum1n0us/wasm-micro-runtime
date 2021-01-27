@@ -5698,7 +5698,7 @@ wasm_loader_prepare_bytecode(WASMModule *module, WASMFunction *func,
     uint32 segment_index;
 #endif
 #if WASM_ENABLE_FAST_INTERP != 0
-    uint8 *func_const_end, *func_const;
+    uint8 *func_const_end, *func_const = NULL;
     int16 operand_offset;
     uint8 last_op = 0;
     bool disable_emit, preserve_local = false;
