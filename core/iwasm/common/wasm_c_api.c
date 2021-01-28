@@ -1113,6 +1113,7 @@ failed:
     return 0;
 }
 
+//TODO: do we need to check the length of argv ?
 static void
 native_func_trampoline(wasm_exec_env_t exec_env, uint64 *argv)
 {
@@ -1143,9 +1144,14 @@ native_func_trampoline(wasm_exec_env_t exec_env, uint64 *argv)
     }
 
     result_count = wasm_func_result_arity(func);
-    if (result_count
-        && !(results = malloc_internal(result_count * sizeof(wasm_val_t)))) {
-        goto failed;
+    if (result_count) {
+        if (!argv) {
+            goto failed;
+        }
+
+        if (!(results = malloc_internal(result_count * sizeof(wasm_val_t)))) {
+            goto failed;
+        }
     }
 
     if (func->with_env) {
@@ -1174,8 +1180,7 @@ native_func_trampoline(wasm_exec_env_t exec_env, uint64 *argv)
     /* there is no trap and there is return values */
     if (!trap && result_count) {
         /* wasm_val_t results[] -> argv */
-        if (!(argc = results_to_argv(
-                results, wasm_functype_results(wasm_func_type(func)), argv))) {
+        if (!(argc = results_to_argv(results, result_count, argv))) {
             goto failed;
         }
     }
@@ -1539,7 +1544,7 @@ wasm_func_call(const wasm_func_t *func,
         /* copy parametes */
         if (!(argc = params_to_argv(params,
                                     wasm_functype_params(wasm_func_type(func)),
-                                    wasm_func_param_arity(func), argv))) {
+                                    param_count, argv))) {
             goto failed;
         }
     }
@@ -1552,9 +1557,8 @@ wasm_func_call(const wasm_func_t *func,
 
     /* copy results */
     if (result_count
-        && !(argc = argv_to_results(
-               argv, wasm_functype_results(wasm_func_type(func)),
-               wasm_func_result_arity(func), results))) {
+        && !(argc =
+               argv_to_results(argv, result_count, param_count, results))) {
         goto failed;
     }
 
