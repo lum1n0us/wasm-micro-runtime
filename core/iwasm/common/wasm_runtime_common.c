@@ -2846,6 +2846,7 @@ wasm_runtime_invoke_native(WASMExecEnv *exec_env, void *func_ptr,
                         n_stacks++;
                     n_stacks += 2;
                 }
+                break;
 #endif /* BUILD_TARGET_RISCV32_ILP32D */
             default:
                 bh_assert(0);
