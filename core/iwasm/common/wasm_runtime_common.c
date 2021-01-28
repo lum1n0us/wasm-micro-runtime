@@ -1732,7 +1732,7 @@ wasm_runtime_init_wasi(WASMModuleInstanceCommon *module_inst,
     for (i = 0; i < env_count; i++)
         env_buf_size += strlen(env[i]) + 1;
 
-    total_size = sizeof(char *) * (uint64)argc;
+    total_size = sizeof(char *) * (uint64)env_count;
     if (total_size >= UINT32_MAX
         || (total_size > 0
             && !(env_list = wasm_runtime_malloc((uint32)total_size)))

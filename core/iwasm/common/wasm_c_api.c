@@ -1180,7 +1180,8 @@ native_func_trampoline(wasm_exec_env_t exec_env, uint64 *argv)
     /* there is no trap and there is return values */
     if (!trap && result_count) {
         /* wasm_val_t results[] -> argv */
-        if (!(argc = results_to_argv(results, result_count, argv))) {
+        if (!(argc = results_to_argv(
+                results, wasm_functype_results(wasm_func_type(func)), argv))) {
             goto failed;
         }
     }
@@ -1544,7 +1545,7 @@ wasm_func_call(const wasm_func_t *func,
         /* copy parametes */
         if (!(argc = params_to_argv(params,
                                     wasm_functype_params(wasm_func_type(func)),
-                                    param_count, argv))) {
+                                    wasm_func_param_arity(func), argv))) {
             goto failed;
         }
     }
@@ -1557,8 +1558,9 @@ wasm_func_call(const wasm_func_t *func,
 
     /* copy results */
     if (result_count
-        && !(argc =
-               argv_to_results(argv, result_count, param_count, results))) {
+        && !(argc = argv_to_results(
+               argv, wasm_functype_results(wasm_func_type(func)),
+               wasm_func_result_arity(func), results))) {
         goto failed;
     }
 
