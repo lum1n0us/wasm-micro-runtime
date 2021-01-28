@@ -1541,13 +1541,14 @@ wasm_func_call(const wasm_func_t *func,
         if (!(argv = malloc_internal(sizeof(uint64) * alloc_count))) {
             goto failed;
         }
+    }
 
-        /* copy parametes */
-        if (!(argc = params_to_argv(params,
-                                    wasm_functype_params(wasm_func_type(func)),
-                                    wasm_func_param_arity(func), argv))) {
-            goto failed;
-        }
+    /* copy parametes */
+    if (param_count
+        && !(argc = params_to_argv(params,
+                                   wasm_functype_params(wasm_func_type(func)),
+                                   wasm_func_param_arity(func), argv))) {
+        goto failed;
     }
 
     if (!wasm_runtime_create_exec_env_and_call_wasm(
