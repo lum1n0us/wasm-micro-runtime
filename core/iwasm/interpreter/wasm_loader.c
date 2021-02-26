@@ -1276,6 +1276,14 @@ load_global_import(const uint8 **p_buf, const uint8 *buf_end,
 #if WASM_ENABLE_LIBC_BUILTIN != 0
     global->is_linked = wasm_native_lookup_libc_builtin_global(
                                 sub_module_name, global_name, global);
+    if (global->is_linked) {
+        if (global->type != declare_type
+            || global->is_mutable != declare_mutable) {
+            set_error_buf(error_buf, error_buf_size,
+                          "incompatible import type");
+            return false;
+        }
+    }
 #endif
 #if WASM_ENABLE_MULTI_MODULE != 0
     if (!global->is_linked
