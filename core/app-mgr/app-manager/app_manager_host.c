@@ -216,7 +216,7 @@ static int on_imrt_link_byte_arrive(unsigned char ch, recv_context_t *ctx)
     return 0;
 }
 
-int aee_host_msg_callback(void *msg, uint16_t msg_len)
+int aee_host_msg_callback(void *msg, uint32_t msg_len)
 {
     unsigned char *p = msg, *p_end = p + msg_len;
 
