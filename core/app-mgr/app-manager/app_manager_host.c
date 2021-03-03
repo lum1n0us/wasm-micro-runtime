@@ -24,7 +24,8 @@ typedef enum recv_phase_t {
     Phase_Leading,
     Phase_Type,
     Phase_Size,
-    Phase_Payload
+    Phase_Payload,
+    Phase_Ignoring
 } recv_phase_t;
 
 /* IMRTLink Receive Context */
@@ -114,7 +115,7 @@ static int on_imrt_link_byte_arrive(unsigned char ch, recv_context_t *ctx)
 
         if (enable_log)
             app_manager_printf("##On byte arrive: got payload_size, byte %d\n",
-                    ctx->size_in_phase);
+                               ctx->size_in_phase);
         p[ctx->size_in_phase++] = ch;
 
         if (ctx->size_in_phase == sizeof(ctx->message.payload_size)) {
@@ -123,7 +124,7 @@ static int on_imrt_link_byte_arrive(unsigned char ch, recv_context_t *ctx)
 
             if (enable_log)
                 app_manager_printf("##On byte arrive: payload_size: %d\n",
-                        ctx->message.payload_size);
+                                   ctx->message.payload_size);
             if (ctx->message.payload) {
                 APP_MGR_FREE(ctx->message.payload);
                 ctx->message.payload = NULL;
@@ -172,11 +173,15 @@ static int on_imrt_link_byte_arrive(unsigned char ch, recv_context_t *ctx)
                 }
                 else {
                     /* receive or handle fail */
-                    ctx->phase = Phase_Non_Start;
-                    ctx->size_in_phase = 0;
+                    if (ctx->size_in_phase < ctx->message.payload_size) {
+                        ctx->phase = Phase_Ignoring;
+                    }
+                    else {
+                        ctx->phase = Phase_Non_Start;
+                        ctx->size_in_phase = 0;
+                    }
                     return 0;
                 }
-                return 0;
             }
             else {
                 ctx->phase = Phase_Non_Start;
@@ -198,6 +203,15 @@ static int on_imrt_link_byte_arrive(unsigned char ch, recv_context_t *ctx)
             return 0;
         }
     }
+    else if (ctx->phase == Phase_Ignoring) {
+        ctx->size_in_phase++;
+        if (ctx->size_in_phase == ctx->message.payload_size) {
+            if (ctx->message.payload)
+                APP_MGR_FREE(ctx->message.payload);
+            memset(ctx, 0, sizeof(*ctx));
+            return 0;
+        }
+    }
 
     return 0;
 }
@@ -206,9 +220,7 @@ int aee_host_msg_callback(void *msg, uint16_t msg_len)
 {
     unsigned char *p = msg, *p_end = p + msg_len;
 
-    if (enable_log)
-        app_manager_printf("App Manager receive %d bytes from Host\n",
-                           msg_len);
+    /*app_manager_printf("App Manager receive %d bytes from Host\n", msg_len);*/
 
     for (; p < p_end; p++) {
         int ret = on_imrt_link_byte_arrive(*p, &recv_ctx);
