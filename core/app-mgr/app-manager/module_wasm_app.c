@@ -1048,6 +1048,7 @@ wasm_app_module_on_install_request_byte_arrive(uint8 ch,
                                                int *received_size)
 {
     uint8 *p;
+    int magic;
     package_type_t package_type = Package_Type_Unknown;
 
     if (recv_ctx.phase == Phase_Req_Ver) {
@@ -1127,7 +1128,7 @@ wasm_app_module_on_install_request_byte_arrive(uint8 ch,
 
         if (recv_ctx.size_in_phase ==
                 sizeof(recv_ctx.message.app_file_magic)) {
-            int magic = recv_ctx.message.app_file_magic;
+            magic = recv_ctx.message.app_file_magic;
             package_type = get_package_type((uint8 *)&magic, sizeof(magic) + 1);
             switch (package_type) {
 #if WASM_ENABLE_INTERP != 0 || WASM_ENABLE_JIT != 0
@@ -1280,7 +1281,12 @@ wasm_app_module_on_install_request_byte_arrive(uint8 ch,
                     SEND_ERR_RESPONSE(recv_ctx.message.request_mid,
                                       "Install WASM app failed: "
                                       "handle install message failed");
-                    goto fail;
+                    /**
+                     * The sections were destroyed inside
+                     * module_wasm_app_handle_install_msg(),
+                     * no need to destroy again.
+                     */
+                    return false;
                 }
             }
             else {
@@ -1464,7 +1470,12 @@ wasm_app_module_on_install_request_byte_arrive(uint8 ch,
                     SEND_ERR_RESPONSE(recv_ctx.message.request_mid,
                                       "Install WASM app failed: "
                                       "handle install message failed");
-                    goto fail;
+                    /**
+                     * The sections were destroyed inside
+                     * module_wasm_app_handle_install_msg(),
+                     * no need to destroy again.
+                     */
+                    return false;
                 }
             }
             else {
@@ -1479,6 +1490,9 @@ wasm_app_module_on_install_request_byte_arrive(uint8 ch,
 #endif /* end of WASM_ENABLE_AOT != 0 */
 
 fail:
+    /* Restore the package type */
+    magic = recv_ctx.message.app_file_magic;
+    package_type = get_package_type((uint8 *)&magic, sizeof(magic) + 1);
     switch (package_type) {
 #if WASM_ENABLE_INTERP != 0 || WASM_ENABLE_JIT != 0
         case Wasm_Module_Bytecode:
