@@ -56,18 +56,6 @@ cmake -DWAMR_BUILD_PLATFORM=linux -DWAMR_BUILD_TARGET=ARM
 > git clone https://github.com/nodejs/uvwasi.git
 > ```
 
-#### **Configure Debug**
-
-- **WAMR_BUILD_CUSTOM_NAME_SECTION**=1/0, load the function name from custom name section, default to disable if not set
-
-#### **Enable dump call stack feature**
-- **WAMR_BUILD_DUMP_CALL_STACK**=1/0, default to disable if not set
-
-> Note: if it is enabled, the call stack will be dumped when exception occurs.
-
-> - For interpreter mode, the function names are firstly extracted from *custom name section*, if this section doesn't exist or the feature is not enabled, then the name will be extracted from the import/export sections
-> - For AoT/JIT mode, the function names are extracted from import/export section, please export as many functions as possible (for `wasi-sdk` you can use `-Wl,--export-all`) when compiling wasm module, and add `--enable-dump-call-stack` option to wamrc during compiling AoT module.
-
 #### **Enable Multi-Module feature**
 
 - **WAMR_BUILD_MULTI_MODULE**=1/0, default to disable if not set
@@ -92,6 +80,25 @@ cmake -DWAMR_BUILD_PLATFORM=linux -DWAMR_BUILD_TARGET=ARM
 - **WAMR_DISABLE_HW_BOUND_CHECK**=1/0, default to enable if not set and supported by platform
 > Note: by default only platform linux/darwin/android/vxworks 64-bit will enable boundary check with hardware trap in AOT or JIT mode, and the wamrc tool will generate AOT code without boundary check instructions in all 64-bit targets except SGX to improve performance.
 
+#### **Enable tail call feature**
+- **WAMR_BUILD_TAIL_CALL**=1/0, default to disable if not set
+
+#### **Enable 128-bit SIMD feature**
+- **WAMR_BUILD_SIMD**=1/0, default to enable if not set
+> Note: only supported in AOT mode for x86-64 target.
+
+#### **Configure Debug**
+
+- **WAMR_BUILD_CUSTOM_NAME_SECTION**=1/0, load the function name from custom name section, default to disable if not set
+
+#### **Enable dump call stack feature**
+- **WAMR_BUILD_DUMP_CALL_STACK**=1/0, default to disable if not set
+
+> Note: if it is enabled, the call stack will be dumped when exception occurs.
+
+> - For interpreter mode, the function names are firstly extracted from *custom name section*, if this section doesn't exist or the feature is not enabled, then the name will be extracted from the import/export sections
+> - For AoT/JIT mode, the function names are extracted from import/export section, please export as many functions as possible (for `wasi-sdk` you can use `-Wl,--export-all`) when compiling wasm module, and add `--enable-dump-call-stack` option to wamrc during compiling AoT module.
+
 #### **Enable memory profiling (Experiment)**
 - **WAMR_BUILD_MEMORY_PROFILING**=1/0, default to disable if not set
 > Note: if it is enabled, developer can use API `void wasm_runtime_dump_mem_consumption(wasm_exec_env_t exec_env)` to dump the memory consumption info.
@@ -106,13 +113,6 @@ Currently we only profile the memory consumption of module, module_instance and 
 #### **Set maximum app thread stack size**
 - **WAMR_APP_THREAD_STACK_SIZE_MAX**=n, default to 8 MB (8388608) if not set
 > Note: the AOT boundary check with hardware trap mechanism might consume large stack since the OS may lazily grow the stack mapping as a guard page is hit, we may use this configuration to reduce the total stack usage, e.g. -DWAMR_APP_THREAD_STACK_SIZE_MAX=131072 (128 KB).
-
-#### **Enable tail call feature**
-- **WAMR_BUILD_TAIL_CALL**=1/0, default to disable if not set
-
-#### **Enable 128-bit SIMD feature**
-- **WAMR_BUILD_SIMD**=1/0, default to disable if not set
-> Note: only supported in AOT mode, and the *--enable-simd* flag should be added for wamrc when generating aot file.
 
 **Combination of configurations:**
 
