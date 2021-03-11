@@ -299,9 +299,14 @@ get_import_global_info_size(AOTCompData *comp_data)
 static uint32
 get_global_size(AOTGlobal *global)
 {
-    /* type (1 byte) + is_mutable (1 byte)
-       + init expr type (2 byes) + init expr value (8 byes) */
-    return sizeof(uint8) * 2 + sizeof(uint16) + sizeof(uint64);
+    if (global->init_expr.init_expr_type != INIT_EXPR_TYPE_V128_CONST)
+        /* type (1 byte) + is_mutable (1 byte)
+           + init expr type (2 byes) + init expr value (8 byes) */
+        return sizeof(uint8) * 2 + sizeof(uint16) + sizeof(uint64);
+    else
+        /* type (1 byte) + is_mutable (1 byte)
+           + init expr type (2 byes) + v128 value (16 byes) */
+        return sizeof(uint8) * 2 + sizeof(uint16) + sizeof(uint64) * 2;
 }
 
 static uint32
@@ -800,8 +805,26 @@ exchange_uint32(uint8 *p_data)
 static void
 exchange_uint64(uint8 *pData)
 {
+    uint32 value;
+
+    value = *(uint32 *)pData;
+    *(uint32 *)pData = *(uint32 *)(pData + 4);
+    *(uint32 *)(pData + 4) = value;
     exchange_uint32(pData);
     exchange_uint32(pData + 4);
+}
+
+static void
+exchange_uint128(uint8 *pData)
+{
+    /* swap high 64bit and low 64bit */
+    uint64 value = *(uint64*)pData;
+    *(uint64*)pData = *(uint64*)(pData + 8);
+    *(uint64*)(pData + 8) = value;
+    /* exchange high 64bit */
+    exchange_uint64(pData);
+    /* exchange low 64bit */
+    exchange_uint64(pData + 8);
 }
 
 static union {
@@ -848,6 +871,17 @@ static union {
     if (!is_little_endian())                \
       exchange_uint64((uint8*)&t);          \
     PUT_U64_TO_ADDR(buf + offset, t);       \
+    offset += (uint32)sizeof(uint64);       \
+  } while (0)
+
+#define EMIT_V128(v)  do {                  \
+    uint64 *t = (uint64*)v.i64x2;           \
+    CHECK_BUF(16);                          \
+    if (!is_little_endian())                \
+        exchange_uint128((uint8 *)t);       \
+    PUT_U64_TO_ADDR(buf + offset, t[0]);    \
+    offset += (uint32)sizeof(uint64);       \
+    PUT_U64_TO_ADDR(buf + offset, t[1]);    \
     offset += (uint32)sizeof(uint64);       \
   } while (0)
 
@@ -1093,7 +1127,10 @@ aot_emit_global_info(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
         EMIT_U8(global->type);
         EMIT_U8(global->is_mutable);
         EMIT_U16(global->init_expr.init_expr_type);
-        EMIT_U64(global->init_expr.u.i64);
+        if (global->init_expr.init_expr_type != INIT_EXPR_TYPE_V128_CONST)
+            EMIT_U64(global->init_expr.u.i64);
+        else
+            EMIT_V128(global->init_expr.u.v128);
     }
 
     if (offset - *p_offset != get_global_info_size(comp_data)) {
@@ -1714,16 +1751,18 @@ aot_resolve_functions(AOTCompContext *comp_ctx, AOTObjectData *obj_data)
     AOTObjectFunc *func;
     LLVMSymbolIteratorRef sym_itr;
     char *name, *prefix = AOT_FUNC_PREFIX;
-    uint32 func_index;
+    uint32 func_index, total_size;
 
     /* allocate memory for aot function */
     obj_data->func_count = comp_ctx->comp_data->func_count;
-    if (!(obj_data->funcs
-                = wasm_runtime_malloc((uint32)sizeof(AOTObjectFunc) * obj_data->func_count))) {
-        aot_set_last_error("allocate memory for functions failed.");
-        return false;
+    if (obj_data->func_count) {
+        total_size = (uint32)sizeof(AOTObjectFunc) * obj_data->func_count;
+        if (!(obj_data->funcs = wasm_runtime_malloc(total_size))) {
+            aot_set_last_error("allocate memory for functions failed.");
+            return false;
+        }
+        memset(obj_data->funcs, 0, total_size);
     }
-    memset(obj_data->funcs, 0, sizeof(AOTObjectFunc) * obj_data->func_count);
 
     if (!(sym_itr = LLVMObjectFileCopySymbolIterator(obj_data->binary))) {
         aot_set_last_error("llvm get symbol iterator failed.");

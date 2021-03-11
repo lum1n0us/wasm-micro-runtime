@@ -151,9 +151,11 @@ wasm_cluster_create(WASMExecEnv *exec_env)
     }
 
     cluster->stack_size = aux_stack_size / (cluster_max_thread_num + 1);
-    if (cluster->stack_size == 0) {
+    if (cluster->stack_size < WASM_THREAD_AUX_STACK_SIZE_MIN) {
         goto fail;
     }
+    /* Make stack size 16-byte aligned */
+    cluster->stack_size = cluster->stack_size & (~15);
 
     /* Set initial aux stack top to the instance and
         aux stack boundary to the main exec_env */
@@ -287,6 +289,10 @@ wasm_cluster_spawn_exec_env(WASMExecEnv *exec_env)
     wasm_module_inst_t new_module_inst;
     WASMExecEnv *new_exec_env;
     uint32 aux_stack_start, aux_stack_size;
+
+    if (!module) {
+        return NULL;
+    }
 
     if (!(new_module_inst =
         wasm_runtime_instantiate_internal(module, true, 8192,

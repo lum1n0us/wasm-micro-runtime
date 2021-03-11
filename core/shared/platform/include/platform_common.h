@@ -19,8 +19,7 @@ extern "C" {
 #define BHT_TIMED_OUT (1)
 #define BHT_OK (0)
 
-#define BHT_NO_WAIT 0x00000000
-#define BHT_WAIT_FOREVER 0xFFFFFFFF
+#define BHT_WAIT_FOREVER ((uint64)-1LL)
 
 #define BH_KB (1024)
 #define BH_MB ((BH_KB)*1024)
@@ -35,11 +34,19 @@ extern "C" {
 #endif
 
 #if defined(MSVC)
-__declspec(dllimport)  void *BH_MALLOC(unsigned int size);
-__declspec(dllimport)  void BH_FREE(void *ptr);
+__declspec(dllimport) void *BH_MALLOC(unsigned int size);
+__declspec(dllimport) void BH_FREE(void *ptr);
 #else
 void *BH_MALLOC(unsigned int size);
 void BH_FREE(void *ptr);
+#endif
+
+#if defined(BH_VPRINTF)
+#if defined(MSVC)
+__declspec(dllimport) int BH_VPRINTF(const char *format, va_list ap);
+#else
+int BH_VPRINTF(const char *format, va_list ap);
+#endif
 #endif
 
 #ifndef NULL

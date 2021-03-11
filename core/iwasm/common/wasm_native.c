@@ -7,7 +7,8 @@
 #include "wasm_runtime_common.h"
 #include "bh_log.h"
 
-#if !defined(BH_PLATFORM_ZEPHYR) && !defined(BH_PLATFORM_ALIOS_THINGS)
+#if !defined(BH_PLATFORM_ZEPHYR) && !defined(BH_PLATFORM_ALIOS_THINGS) \
+    && !defined(BH_PLATFORM_OPENRTOS) && !defined(BH_PLATFORM_ESP_IDF)
 #define ENABLE_QUICKSORT 1
 #else
 #define ENABLE_QUICKSORT 0
@@ -20,7 +21,6 @@
 #endif
 
 static NativeSymbolsList g_native_symbols_list = NULL;
-static NativeSymbolsList g_native_symbols_list_end = NULL;
 
 uint32
 get_libc_builtin_export_apis(NativeSymbol **p_libc_builtin_apis);
@@ -49,6 +49,9 @@ lib_pthread_destroy();
 uint32
 get_lib_pthread_export_apis(NativeSymbol **p_lib_pthread_apis);
 #endif
+
+uint32
+get_libc_emcc_export_apis(NativeSymbol **p_libc_emcc_apis);
 
 static bool
 check_symbol_signature(const WASMType *type, const char *signature)
@@ -283,15 +286,10 @@ register_natives(const char *module_name,
     node->native_symbols = native_symbols;
     node->n_native_symbols = n_native_symbols;
     node->call_conv_raw = call_conv_raw;
-    node->next = NULL;
 
-    if (g_native_symbols_list_end) {
-        g_native_symbols_list_end->next = node;
-        g_native_symbols_list_end = node;
-    }
-    else {
-        g_native_symbols_list = g_native_symbols_list_end = node;
-    }
+    /* Add to list head */
+    node->next = g_native_symbols_list;
+    g_native_symbols_list = node;
 
 #if ENABLE_SORT_DEBUG != 0
     gettimeofday(&start, NULL);
@@ -386,6 +384,14 @@ wasm_native_init()
         return false;
 #endif
 
+#if WASM_ENABLE_LIBC_EMCC != 0
+    n_native_symbols = get_libc_emcc_export_apis(&native_symbols);
+    if (n_native_symbols > 0
+        && !wasm_native_register_natives("env",
+                                         native_symbols, n_native_symbols))
+        return false;
+#endif /* WASM_ENABLE_LIBC_EMCC */
+
     return true;
 }
 
@@ -405,5 +411,5 @@ wasm_native_destroy()
         node = node_next;
     }
 
-    g_native_symbols_list = g_native_symbols_list_end = NULL;
+    g_native_symbols_list = NULL;
 }
