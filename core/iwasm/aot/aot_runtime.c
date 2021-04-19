@@ -1293,6 +1293,9 @@ aot_call_function(WASMExecEnv *exec_env,
     uint32 ext_ret_count = result_count > 1 ? result_count - 1 : 0;
     bool ret;
 
+    /* set thread handle and stack boundary */
+    wasm_exec_env_set_thread_info(exec_env);
+
     if (ext_ret_count > 0) {
         uint32 cell_num = 0, i;
         uint8 *ext_ret_types = func_type->types + func_type->param_count + 1;
@@ -1436,8 +1439,6 @@ aot_create_exec_env_and_call_function(AOTModuleInstance *module_inst,
             return false;
         }
 
-        /* set thread handle and stack boundary */
-        wasm_exec_env_set_thread_info(exec_env);
 #if WASM_ENABLE_THREAD_MGR != 0
     }
 #endif
