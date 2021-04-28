@@ -3221,6 +3221,11 @@ aot_link_func(const wasm_instance_t *inst,
         return false;
     }
 
+    if (!bh_vector_append((Vector *)inst->imports, &cloned)) {
+        wasm_func_delete(cloned);
+        return false;
+    }
+
     import_aot_func->call_conv_raw = true;
     import_aot_func->attachment = cloned;
     import_aot_func->func_ptr_linked = native_func_trampoline;
@@ -3243,7 +3248,7 @@ aot_link_global(const AOTModule *module_aot,
     bh_assert(import_aot_global);
 
     //TODO: import->type ?
-    val_type = wasm_globaltype_content(wasm_global_type(import));
+    val_type = wasm_globaltype_content(import->type);
     bh_assert(val_type);
 
     switch (wasm_valtype_kind(val_type)) {
