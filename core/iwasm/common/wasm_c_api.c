@@ -1203,7 +1203,7 @@ wasm_trap_new_internal(const char *string)
         goto failed;
     }
 
-    wasm_name_new_from_string_nt(trap->message, string);
+    wasm_name_new_from_string(trap->message, string);
     if (strlen(string) && !trap->message->data) {
         goto failed;
     }
@@ -1409,12 +1409,12 @@ wasm_module_imports(const wasm_module_t *module,
                 continue;
             }
 
-            wasm_name_new_from_string_nt(&module_name, module_name_rt);
+            wasm_name_new_from_string(&module_name, module_name_rt);
             if (strlen(module_name_rt) && !module_name.data) {
                 goto failed;
             }
 
-            wasm_name_new_from_string_nt(&name, field_name_rt);
+            wasm_name_new_from_string(&name, field_name_rt);
             if (strlen(field_name_rt) && !name.data) {
                 goto failed;
             }
@@ -1494,12 +1494,12 @@ wasm_module_imports(const wasm_module_t *module,
                 continue;
             }
 
-            wasm_name_new_from_string_nt(&module_name, module_name_rt);
+            wasm_name_new_from_string(&module_name, module_name_rt);
             if (strlen(module_name_rt) && !module_name.data) {
                 goto failed;
             }
 
-            wasm_name_new_from_string_nt(&name, field_name_rt);
+            wasm_name_new_from_string(&name, field_name_rt);
             if (strlen(field_name_rt) && !name.data) {
                 goto failed;
             }
@@ -1623,7 +1623,7 @@ wasm_module_exports(const wasm_module_t *module, wasm_exporttype_vec_t *out)
         }
 
         /* byte* -> wasm_byte_vec_t */
-        wasm_name_new_from_string_nt(&name, export->name);
+        wasm_name_new_from_string(&name, export->name);
         if (strlen(export->name) && !name.data) {
             goto failed;
         }
