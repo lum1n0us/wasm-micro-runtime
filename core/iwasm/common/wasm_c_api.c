@@ -2003,10 +2003,10 @@ wasm_func_new_internal(wasm_store_t *store,
             type_rt = (module_aot->import_funcs + func_idx_rt)->func_type;
         }
         else {
-            func_idx_rt -= module_aot->import_func_count;
             type_rt =
               module_aot
-                ->func_types[module_aot->func_type_indexes[func_idx_rt]];
+                ->func_types[module_aot->func_type_indexes
+                               [func_idx_rt - module_aot->import_func_count]];
         }
 #endif
     }
@@ -2220,8 +2220,6 @@ wasm_func_call(const wasm_func_t *func,
 
     bh_assert(func && func->type && func->inst_comm_rt);
 
-    /* TODO: how to check whether its store still exists */
-
     cur_trap = NULL;
 
     if (run_with_bytecode_module_inst(func->inst_comm_rt)) {
@@ -2233,8 +2231,21 @@ wasm_func_call(const wasm_func_t *func,
     else {
 #if WASM_ENABLE_AOT != 0
         AOTModuleInstance *inst_aot = (AOTModuleInstance *)func->inst_comm_rt;
-        func_comm_rt = (AOTFunctionInstance *)inst_aot->export_funcs.ptr
-                       + func->func_idx_rt;
+        AOTModule *module_aot = (AOTModule *)inst_aot->aot_module.ptr;
+
+        uint32 export_i = 0, export_func_j = 0;
+        for (; export_i < module_aot->export_count; ++export_i) {
+            AOTExport *export = module_aot->exports + export_i;
+            if (export->kind == EXPORT_KIND_FUNC) {
+                if (export->index == func->func_idx_rt) {
+                    func_comm_rt =
+                      (AOTFunctionInstance *)inst_aot->export_funcs.ptr
+                      + export_func_j;
+                    break;
+                }
+                export_func_j++;
+            }
+        }
 #endif
     }
     if (!func_comm_rt) {
@@ -3405,6 +3416,15 @@ aot_process_export(wasm_store_t *store,
                 goto failed;
         }
 
+        if (!(external->name = malloc_internal(sizeof(wasm_byte_vec_t)))) {
+            goto failed;
+        }
+
+        wasm_name_new_from_string(external->name, export->name);
+        if (strlen(export->name) && !external->name->data) {
+            goto failed;
+        }
+
         if (!bh_vector_append((Vector *)externals, &external)) {
             goto failed;
         }
@@ -3637,6 +3657,12 @@ wasm_extern_delete(wasm_extern_t *external)
 {
     if (!external) {
         return;
+    }
+
+    if (external->name) {
+        wasm_byte_vec_delete(external->name);
+        wasm_runtime_free(external->name);
+        external->name = NULL;
     }
 
     switch (wasm_extern_kind(external)) {
