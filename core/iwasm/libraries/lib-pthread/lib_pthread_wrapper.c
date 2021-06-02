@@ -1046,6 +1046,22 @@ pthread_key_delete_wrapper(wasm_exec_env_t exec_env, int32 key)
     return 0;
 }
 
+/* Currently the memory allocator doesn't support alloc specific aligned
+    space, we wrap posix_memalign to simply malloc memory */
+static int32
+posix_memalign_wrapper(wasm_exec_env_t exec_env,
+                       void **memptr, int32 align, int32 size)
+{
+    wasm_module_inst_t module_inst = get_module_inst(exec_env);
+    void *p = NULL;
+
+    *((int32 *)memptr) = module_malloc(size, (void**)&p);
+    if (!p)
+        return -1;
+
+    return 0;
+}
+
 #define REG_NATIVE_FUNC(func_name, signature)  \
     { #func_name, func_name##_wrapper, signature, NULL }
 
@@ -1069,6 +1085,7 @@ static NativeSymbol native_symbols_lib_pthread[] = {
     REG_NATIVE_FUNC(pthread_setspecific,    "(ii)i"),
     REG_NATIVE_FUNC(pthread_getspecific,    "(i)i"),
     REG_NATIVE_FUNC(pthread_key_delete,     "(i)i"),
+    REG_NATIVE_FUNC(posix_memalign,         "(*ii)i"),
 };
 
 uint32
