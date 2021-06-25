@@ -4030,7 +4030,7 @@ wasm_runtime_get_memory_data_size(
 static inline bool
 argv_to_params(wasm_val_t *out_params,
                const uint32 *argv,
-               AOTFuncType *func_type)
+               WASMType *func_type)
 {
     wasm_val_t *param = out_params;
     uint32 i = 0, *u32;
@@ -4068,7 +4068,7 @@ argv_to_params(wasm_val_t *out_params,
 static inline bool
 results_to_argv(uint32 *out_argv,
                 const wasm_val_t *results,
-                AOTFuncType *func_type)
+                WASMType *func_type)
 {
     const wasm_val_t *result = results;
     uint32 *argv = out_argv, *u32, i;
