@@ -189,7 +189,7 @@ failed:                                                                       \
         size_t i = 0;                                                         \
         memset(out, 0, sizeof(Vector));                                       \
                                                                               \
-        if (!src->size) {                                                     \
+        if (!src || !src->size) {                                             \
             return;                                                           \
         }                                                                     \
                                                                               \
@@ -232,6 +232,7 @@ WASM_DEFINE_VEC_OWN(store, wasm_store_delete)
 WASM_DEFINE_VEC_OWN(module, wasm_module_delete_internal)
 WASM_DEFINE_VEC_OWN(instance, wasm_instance_delete_internal)
 WASM_DEFINE_VEC_OWN(extern, wasm_extern_delete)
+WASM_DEFINE_VEC_OWN(frame, wasm_frame_delete)
 
 static inline bool
 valid_module_type(uint32 module_type)
@@ -1289,10 +1290,106 @@ wasm_val_same(const wasm_val_t *v1, const wasm_val_t *v2)
     return false;
 }
 
+static wasm_frame_t *
+wasm_frame_new(wasm_instance_t *instance,
+               size_t module_offset,
+               uint32 func_index,
+               size_t func_offset)
+{
+    wasm_frame_t *frame;
+
+    if (!(frame = malloc_internal(sizeof(wasm_frame_t)))) {
+        return NULL;
+    }
+
+    frame->instance = instance;
+    frame->module_offset = module_offset;
+    frame->func_index = func_index;
+    frame->func_offset = func_offset;
+    return frame;
+}
+
+own wasm_frame_t *
+wasm_frame_copy(const wasm_frame_t *src)
+{
+    if (!src) {
+        return NULL;
+    }
+
+    return wasm_frame_new(src->instance, src->module_offset, src->func_index,
+                          src->func_offset);
+}
+
+void
+wasm_frame_delete(own wasm_frame_t *frame)
+{
+    if (!frame) {
+        return;
+    }
+
+    wasm_runtime_free(frame);
+}
+
+struct wasm_instance_t *
+wasm_frame_instance(const wasm_frame_t *frame)
+{
+    return frame ? frame->instance : NULL;
+}
+
+size_t
+wasm_frame_module_offset(const wasm_frame_t *frame)
+{
+    return frame ? frame->module_offset : 0;
+}
+
+uint32_t
+wasm_frame_func_index(const wasm_frame_t *frame)
+{
+    return frame ? frame->func_index : 0;
+}
+
+size_t
+wasm_frame_func_offset(const wasm_frame_t *frame)
+{
+    return frame ? frame->func_offset : 0;
+}
+
 static wasm_trap_t *
-wasm_trap_new_internal(const char *string)
+wasm_trap_new_internal(WASMModuleInstanceCommon *inst_comm_rt,
+                       const char *default_error_info)
 {
     wasm_trap_t *trap;
+    const char *error_info = NULL;
+    wasm_instance_vec_t *instances;
+    wasm_instance_t *frame_instance = NULL;
+    uint32 i;
+
+    if (!singleton_engine || !singleton_engine->stores
+        || !singleton_engine->stores->num_elems) {
+        return NULL;
+    }
+
+#if WASM_ENABLE_INTERP != 0
+    if (inst_comm_rt->module_type == Wasm_Module_Bytecode) {
+        if (!(error_info =
+                wasm_get_exception((WASMModuleInstance *)inst_comm_rt))) {
+            return NULL;
+        }
+    }
+#endif
+
+#if WASM_ENABLE_AOT != 0
+    if (inst_comm_rt->module_type == Wasm_Module_AoT) {
+        if (!(error_info =
+                aot_get_exception((AOTModuleInstance *)inst_comm_rt))) {
+            return NULL;
+        }
+    }
+#endif
+
+    if (!error_info && !(error_info = default_error_info)) {
+        return NULL;
+    }
 
     if (!(trap = malloc_internal(sizeof(wasm_trap_t)))) {
         return NULL;
@@ -1302,9 +1399,36 @@ wasm_trap_new_internal(const char *string)
         goto failed;
     }
 
-    wasm_name_new_from_string(trap->message, string);
-    if (strlen(string) && !trap->message->data) {
+    wasm_name_new_from_string_nt(trap->message, error_info);
+    if (strlen(error_info) && !trap->message->data) {
         goto failed;
+    }
+
+#if WASM_ENABLE_DUMP_CALL_STACK != 0
+#if WASM_ENABLE_INTERP != 0
+    if (inst_comm_rt->module_type == Wasm_Module_Bytecode) {
+        trap->frames = ((WASMModuleInstance *)inst_comm_rt)->frames;
+    }
+#endif
+#endif /* WASM_ENABLE_DUMP_CALL_STACK != 0 */
+
+    if (!trap->frames) {
+        goto failed;
+    }
+
+    if (!(instances = singleton_engine->stores->data[0]->instances)) {
+        goto failed;
+    }
+
+    for (i = 0; i < instances->num_elems; i++) {
+        if (instances->data[i]->inst_comm_rt == inst_comm_rt) {
+            frame_instance = instances->data[i];
+            break;
+        }
+    }
+
+    for (i = 0; i < trap->frames->num_elems; i++) {
+        (((wasm_frame_t *)trap->frames->data) + i)->instance = frame_instance;
     }
 
     return trap;
@@ -1342,6 +1466,7 @@ wasm_trap_delete(wasm_trap_t *trap)
     }
 
     DEINIT_VEC(trap->message, wasm_byte_vec_delete);
+    /* reuse frames of WASMModuleInstance, do not free it here */
 
     wasm_runtime_free(trap);
 }
@@ -1354,6 +1479,60 @@ wasm_trap_message(const wasm_trap_t *trap, own wasm_message_t *out)
     }
 
     wasm_byte_vec_copy(out, trap->message);
+}
+
+own wasm_frame_t *
+wasm_trap_origin(const wasm_trap_t *trap)
+{
+    wasm_frame_t *latest_frame;
+
+    if (!trap || !trap->frames || !trap->frames->num_elems) {
+        return NULL;
+    }
+
+    /* first frame is the latest frame */
+    latest_frame = (wasm_frame_t *)trap->frames->data;
+    return wasm_frame_copy(latest_frame);
+}
+
+void
+wasm_trap_trace(const wasm_trap_t *trap, own wasm_frame_vec_t *out)
+{
+    uint32 i;
+
+    if (!trap || !out) {
+        return;
+    }
+
+    wasm_frame_vec_new_uninitialized(out, trap->frames->max_elems);
+    if (out->size && !out->data) {
+        return;
+    }
+
+    for (i = 0; i < trap->frames->num_elems; i++) {
+        wasm_frame_t *frame;
+
+        frame = ((wasm_frame_t *)trap->frames->data) + i;
+
+        if (!(out->data[i] =
+                wasm_frame_new(frame->instance, frame->module_offset,
+                               frame->func_index, frame->func_offset))) {
+            goto failed;
+        }
+        out->num_elems++;
+    }
+
+    return;
+failed:
+    for (i = 0; i < out->num_elems; i++) {
+        if (out->data[i]) {
+            wasm_runtime_free(out->data[i]);
+        }
+    }
+
+    if (out->data) {
+        wasm_runtime_free(out->data);
+    }
 }
 
 struct wasm_module_ex_t {
@@ -2255,12 +2434,13 @@ failed:
     if (argv != argv_buf)
         wasm_runtime_free(argv);
 
+    /* trap -> exception -> trap */
     if (wasm_runtime_get_exception(func->inst_comm_rt)) {
-        return wasm_trap_new_internal(
-          wasm_runtime_get_exception(func->inst_comm_rt));
+        return wasm_trap_new_internal(func->inst_comm_rt, NULL);
     }
     else {
-        return wasm_trap_new_internal("wasm_func_call failed");
+        return wasm_trap_new_internal(func->inst_comm_rt,
+                                      "wasm_func_call failed");
     }
 }
 
