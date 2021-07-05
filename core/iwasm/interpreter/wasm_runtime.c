@@ -1925,7 +1925,7 @@ wasm_validate_app_addr(WASMModuleInstance *module_inst,
     memory_data_size = memory->num_bytes_per_page * memory->cur_page_count;
 
     /* integer overflow check */
-    if (app_offset + size < app_offset) {
+    if (app_offset > UINT32_MAX - size) {
         goto fail;
     }
 
@@ -1949,7 +1949,7 @@ wasm_validate_native_addr(WASMModuleInstance *module_inst,
     }
 
     /* integer overflow check */
-    if (addr + size < addr) {
+    if ((uintptr_t)addr > UINTPTR_MAX - size) {
         goto fail;
     }
 
