@@ -3626,8 +3626,8 @@ wasm_instance_new(wasm_store_t *store,
                   own wasm_trap_t **traps)
 {
     char error_buf[128] = { 0 };
-    const uint32 stack_size = 16 * 1024;
-    const uint32 heap_size = 16 * 1024;
+    const uint32 stack_size = 32 * 1024;
+    const uint32 heap_size = 32 * 1024;
     uint32 import_count = 0;
     wasm_instance_t *instance = NULL;
     uint32 i = 0;
