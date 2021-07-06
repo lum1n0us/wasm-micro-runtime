@@ -256,6 +256,7 @@ valid_module_type(uint32 module_type)
     return result;
 }
 
+/* conflicting declaration between aot_export.h and aot.h */
 #if WASM_ENABLE_AOT != 0 && WASM_ENABLE_JIT != 0
 bool
 aot_compile_wasm_file_init();
@@ -1436,8 +1437,9 @@ wasm_trap_new_internal(WASMModuleInstanceCommon *inst_comm_rt,
 #endif
 #endif /* WASM_ENABLE_DUMP_CALL_STACK != 0 */
 
+    /* allow a NULL frames list */
     if (!trap->frames) {
-        goto failed;
+        return trap;
     }
 
     if (!(instances = singleton_engine->stores->data[0]->instances)) {
@@ -1528,7 +1530,12 @@ wasm_trap_trace(const wasm_trap_t *trap, own wasm_frame_vec_t *out)
         return;
     }
 
-    wasm_frame_vec_new_uninitialized(out, trap->frames->max_elems);
+    if (!trap->frames || !trap->frames->num_elems) {
+        wasm_frame_vec_new_empty(out);
+        return;
+    }
+
+    wasm_frame_vec_new_uninitialized(out, trap->frames->num_elems);
     if (out->size && !out->data) {
         return;
     }
@@ -1609,20 +1616,20 @@ wasm_module_new(wasm_store_t *store, const wasm_byte_vec_t *binary)
     INIT_VEC(module_ex->binary, wasm_byte_vec_new, binary->size, binary->data);
 
 #if WASM_ENABLE_AOT != 0 && WASM_ENABLE_JIT != 0
-    if (get_package_type((uint8*)module_ex->binary->data,
+    if (get_package_type((uint8 *)module_ex->binary->data,
                          (uint32)module_ex->binary->size)
         == Wasm_Module_Bytecode) {
-        aot_file_buf = aot_compile_wasm_file(
-            (uint8 *)module_ex->binary->data, (uint32)module_ex->binary->size,
-            3, 3, error_buf, (uint32)sizeof(error_buf), &aot_file_size);
-        if (!aot_file_buf) {
+        if (!(aot_file_buf = aot_compile_wasm_file(
+                (uint8 *)module_ex->binary->data,
+                (uint32)module_ex->binary->size, 3, 3, error_buf,
+                (uint32)sizeof(error_buf), &aot_file_size))) {
             LOG_ERROR(error_buf);
             goto failed;
         }
-        module_ex->module_comm_rt = wasm_runtime_load(
-                aot_file_buf, aot_file_size,
-                error_buf, (uint32)sizeof(error_buf));
-        if (!(module_ex->module_comm_rt)) {
+
+        if (!(module_ex->module_comm_rt =
+                wasm_runtime_load(aot_file_buf, aot_file_size, error_buf,
+                                  (uint32)sizeof(error_buf)))) {
             LOG_ERROR(error_buf);
             goto failed;
         }
@@ -1631,8 +1638,8 @@ wasm_module_new(wasm_store_t *store, const wasm_byte_vec_t *binary)
 #endif
     {
         module_ex->module_comm_rt = wasm_runtime_load(
-            (uint8 *)module_ex->binary->data, (uint32)module_ex->binary->size,
-            error_buf, (uint32)sizeof(error_buf));
+          (uint8 *)module_ex->binary->data, (uint32)module_ex->binary->size,
+          error_buf, (uint32)sizeof(error_buf));
         if (!(module_ex->module_comm_rt)) {
             LOG_ERROR(error_buf);
             goto failed;

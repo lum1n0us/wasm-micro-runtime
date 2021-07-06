@@ -83,7 +83,7 @@ aot_compile_wasm_file_init();
 uint8_t*
 aot_compile_wasm_file(const uint8_t *wasm_file_buf, uint32_t wasm_file_size,
                       uint32_t opt_level, uint32_t size_level,
-                      char *error_buf, uint32 error_buf_size,
+                      char *error_buf, uint32_t error_buf_size,
                       uint32_t *p_aot_file_size);
 
 void
