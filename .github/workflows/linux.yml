@@ -6,8 +6,6 @@ name: Linux
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the main branch
 on:
-  push:
-    branches: [ internal/feature ]
   pull_request:
     branches: [ internal/feature ]
 
@@ -16,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, ubuntu-20.04]
+        os: [ubuntu-20.10]
     steps:
     - uses: actions/checkout@v2
 
@@ -83,6 +81,14 @@ jobs:
         cmake .. -DWAMR_BUILD_CUSTOM_NAME_SECTION=1
         make
         cd .. && rm -rf build
+    - name: download llvm and clang release
+      run: |
+        cd /opt
+        wget https://github.com/llvm/llvm-project/releases/download/llvmorg-11.1.0/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+        tar -xzf clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+        ln -sf clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10 clang_llvm
+        export PATH="/opt/clang_llvm/bin/:${PATH}"
+        rm clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
     - name: Build wamrc
       run: |
         cd wamr-compiler
@@ -93,15 +99,17 @@ jobs:
     - name: download and install wasi-sdk
       run: |
         cd /opt
-        wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-8/wasi-sdk-8.0-linux.tar.gz
-        tar -xzf wasi-sdk-8.0-linux.tar.gz
-        mv wasi-sdk-8.0 wasi-sdk
+        wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-12/wasi-sdk-12.0-linux.tar.gz
+        tar -xzf wasi-sdk-12.0-linux.tar.gz
+        mv wasi-sdk-12.0 wasi-sdk
+        rm wasi-sdk-12.0-linux.tar.gz
     - name: download and install wabt
       run: |
         cd /opt
-        wget https://github.com/WebAssembly/wabt/releases/download/1.0.19/wabt-1.0.19-ubuntu.tar.gz
-        tar -xzf wabt-1.0.19-ubuntu.tar.gz
-        mv wabt-1.0.19 wabt
+        wget https://github.com/WebAssembly/wabt/releases/download/1.0.23/wabt-1.0.23-ubuntu.tar.gz
+        tar -xzf wabt-1.0.23-ubuntu.tar.gz
+        mv wabt-1.0.23 wabt
+        rm wabt-1.0.23-ubuntu.tar.gz
     - name: Build Sample [wasm-c-api]
       run: |
         cd samples/wasm-c-api
