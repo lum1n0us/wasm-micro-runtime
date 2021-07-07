@@ -7,12 +7,11 @@ name: Linux
 # events but only for the main branch
 on:
   push:
-    branches: [ main ]
+    branches: [ internal/feature ]
   pull_request:
-    branches: [ main ]
+    branches: [ internal/feature ]
 
 jobs:
-
   build:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -84,6 +83,13 @@ jobs:
         cmake .. -DWAMR_BUILD_CUSTOM_NAME_SECTION=1
         make
         cd .. && rm -rf build
+    - name: Build wamrc
+      run: |
+        cd wamr-compiler
+        mkdir build && cd build
+        cmake ..
+        make
+        cd ..
     - name: download and install wasi-sdk
       run: |
         cd /opt
@@ -102,9 +108,36 @@ jobs:
         mkdir build && cd build
         cmake ..
         make
-        ./hello
-        ./global
         ./callback
+        ./calllback_chain
+        ./global
+        ./hello
+        ./reflect
+        ./trap
+    - name: Build Sample [wasm-c-api] [Jit]
+      run: |
+        cd samples/wasm-c-api
+        mkdir build && cd build
+        cmake -DWAMR_BUILD_INTERP=0 -DWAMR_BUILD_JIT=1 -DWAMR_BUILD_AOT=1 ..
+        make
+        ./callback
+        ./calllback_chain
+        ./global
+        ./hello
+        ./reflect
+        ./trap
+    - name: Build Sample [wasm-c-api] [Aot]
+      run: |
+        cd samples/wasm-c-api
+        mkdir build && cd build
+        cmake -DWAMR_BUILD_INTERP=0 -DWAMR_BUILD_JIT=0 -DWAMR_BUILD_AOT=1 ..
+        make
+        ./callback
+        ./calllback_chain
+        ./global
+        ./hello
+        ./reflect
+        ./trap
     - name: Build Sample [basic]
       run: |
         cd samples/basic
