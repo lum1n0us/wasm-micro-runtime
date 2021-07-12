@@ -89,6 +89,7 @@ jobs:
         cd .. && rm -rf build
     - name: Cache LLVM libraries
       uses: actions/cache@v2
+      id: cache_llvm
       env:
         cache-name: llvm_libraries
       with:
@@ -96,6 +97,7 @@ jobs:
         key: ${{ runner.os }}-build-${{env.cache-name}}
         restore-keys: ${{ runner.os }}-build-${{env.cache-name}}
     - name: Build llvm and clang from source
+      if: steps.cache_llvm.outputs.cache-hit != 'true'
       run: |
         cd wamr-compiler
         ./build_llvm.sh
