@@ -266,8 +266,8 @@ apply_relocation(AOTModule *module, uint8 *target_section_addr,
                  * Suppose the symbol address is in +-4MB relative
                  * to the relocation address.
                  */
-                /* operation: ((S + A) | T) - P  where S is symbol address and T
-                 * is 1 */
+                /* operation: ((S + A) | T) - P  where S is symbol address
+                   and T is 1 */
                 result =
                     (int32)(((intptr_t)((uint8 *)symbol_addr + reloc_addend)
                              | 1)
@@ -287,8 +287,8 @@ apply_relocation(AOTModule *module, uint8 *target_section_addr,
                  * beyond of the +-4MB space. Apply relocation with
                  * the PLT which branch to the target symbol address.
                  */
-                /* operation: ((S + A) | T) - P  where S is PLT address and T is
-                 * 1 */
+                /* operation: ((S + A) | T) - P  where S is PLT address
+                   and T is 1 */
                 uint8 *plt = (uint8 *)module->code + module->code_size
                              - get_plt_table_size()
                              + get_plt_item_size() * symbol_index + 1;
