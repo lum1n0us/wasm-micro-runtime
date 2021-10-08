@@ -19,7 +19,7 @@
 
 #include "bh_log.h"
 #include "bh_platform.h"
-#include "wasm_runtime.h"
+#include "../../interpreter/wasm_runtime.h"
 
 #include <stdio.h>
 #include <assert.h>
