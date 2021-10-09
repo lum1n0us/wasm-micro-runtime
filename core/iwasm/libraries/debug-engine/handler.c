@@ -146,6 +146,12 @@ handle_generay_query(WASMGDBServer *server, char *payload)
 
     if (!strcmp(name, "Xfer")) {
         name = args;
+
+        if (!args) {
+            LOG_ERROR("payload parse error during handle_generay_query");
+            return;
+        }
+
         args = strchr(args, ':');
 
         if (args) {
@@ -206,7 +212,7 @@ handle_generay_query(WASMGDBServer *server, char *payload)
         write_packet(server, "");
     }
 
-    if (!strcmp(name, "MemoryRegionInfo")) {
+    if (args && (!strcmp(name, "MemoryRegionInfo"))) {
         uint64_t addr = strtol(args, NULL, 16);
         WASMDebugMemoryInfo *mem_info = wasm_debug_instance_get_memregion(
           (WASMDebugInstance *)server->thread->debug_instance, addr);
@@ -233,7 +239,7 @@ handle_generay_query(WASMGDBServer *server, char *payload)
         write_packet(server, "");
     }
 
-    if (!strcmp(name, "WasmCallStack")) {
+    if (args && (!strcmp(name, "WasmCallStack"))) {
         uint64_t tid = strtol(args, NULL, 16);
         uint64_t buf[1024 / sizeof(uint64_t)];
         uint64_t count = wasm_debug_instance_get_call_stack_pcs(
@@ -247,11 +253,11 @@ handle_generay_query(WASMGDBServer *server, char *payload)
             write_packet(server, "");
     }
 
-    if (!strcmp(name, "WasmLocal")) {
+    if (args && (!strcmp(name, "WasmLocal"))) {
         porcess_wasm_local(server, args);
     }
 
-    if (!strcmp(name, "WasmGlobal")) {
+    if (args && (!strcmp(name, "WasmGlobal"))) {
         porcess_wasm_global(server, args);
     }
 }

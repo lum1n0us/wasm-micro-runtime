@@ -993,7 +993,8 @@ wasm_debug_instance_get_global(WASMDebugInstance *instance,
     global_data = module_inst->global_data;
     globals = module_inst->globals;
 
-    if (global_index >= module_inst->global_count) {
+    if ((global_index < 0)
+        || ((uint32)global_index >= module_inst->global_count)) {
         return false;
     }
     global = globals + global_index;
