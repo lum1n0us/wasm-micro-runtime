@@ -51,7 +51,8 @@ process_xfer(WASMGDBServer *server, const char *name, char *args)
     const char *mode = args;
 
     args = strchr(args, ':');
-    *args++ = '\0';
+    if (args)
+        *args++ = '\0';
 
     if (!strcmp(name, "libraries") && !strcmp(mode, "read")) {
         //TODO: how to get current wasm file name?
@@ -146,8 +147,11 @@ handle_generay_query(WASMGDBServer *server, char *payload)
     if (!strcmp(name, "Xfer")) {
         name = args;
         args = strchr(args, ':');
-        *args++ = '\0';
-        process_xfer(server, name, args);
+
+        if (args) {
+            *args++ = '\0';
+            process_xfer(server, name, args);
+        }
     }
 
     if (!strcmp(name, "HostInfo")) {
@@ -320,7 +324,7 @@ handle_v_packet(WASMGDBServer *server, char *payload)
         write_packet(server, "vCont;c;C;s;S;");
 
     if (!strcmp("Cont", name)) {
-        if (args[0] == 's') {
+        if (args && args[0] == 's') {
             char *numstring = strchr(args, ':');
             if (numstring) {
                 *numstring++ = '\0';
@@ -539,8 +543,13 @@ handle_malloc(WASMGDBServer *server, char *payload)
     sprintf(tmpbuf, "%s", "E03");
 
     args = strstr(payload, ",");
-    if (args)
+    if (args) {
         *args++ = '\0';
+    }
+    else {
+        LOG_ERROR("Payload parse error during handle malloc");
+        return;
+    }
 
     size = strtol(payload, NULL, 16);
     if (size > 0) {

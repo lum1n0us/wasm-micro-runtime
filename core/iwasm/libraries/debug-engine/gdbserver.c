@@ -116,7 +116,7 @@ wasm_launch_gdbserver(char *host, int port)
     return server;
 
 fail:
-    if (listen_fd > 0) {
+    if (listen_fd >= 0) {
         shutdown(listen_fd, SHUT_RDWR);
         close(listen_fd);
     }

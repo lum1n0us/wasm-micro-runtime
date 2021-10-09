@@ -932,6 +932,10 @@ wasm_debug_instance_get_local(WASMDebugInstance *instance,
         return false;
 
     param_count = cur_func->param_count;
+
+    if (local_index >= param_count + cur_func->local_count)
+        return false;
+
     local_offset = cur_func->local_offsets[local_index];
     if (local_index < param_count)
         local_type = cur_func->param_types[local_index];
@@ -988,6 +992,10 @@ wasm_debug_instance_get_global(WASMDebugInstance *instance,
     module_inst = (WASMModuleInstance *)exec_env->module_inst;
     global_data = module_inst->global_data;
     globals = module_inst->globals;
+
+    if (global_index >= module_inst->global_count) {
+        return false;
+    }
     global = globals + global_index;
 
 #if WASM_ENABLE_MULTI_MODULE == 0
