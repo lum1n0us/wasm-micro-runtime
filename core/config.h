@@ -6,6 +6,7 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
+/* clang-format off */
 #if !defined(BUILD_TARGET_X86_64) \
     && !defined(BUILD_TARGET_AMD_64) \
     && !defined(BUILD_TARGET_AARCH64) \
@@ -21,6 +22,7 @@
     && !defined(BUILD_TARGET_RISCV32_ILP32D) \
     && !defined(BUILD_TARGET_RISCV32_ILP32) \
     && !defined(BUILD_TARGET_ARC)
+/* clang-format on */
 #if defined(__x86_64__) || defined(__x86_64)
 #define BUILD_TARGET_X86_64
 #elif defined(__amd64__) || defined(__amd64)
@@ -54,7 +56,7 @@
 #define BH_DEBUG 0
 #endif
 
-#define MEM_ALLOCATOR_EMS  0
+#define MEM_ALLOCATOR_EMS 0
 #define MEM_ALLOCATOR_TLSF 1
 
 /* Default memory allocator */
@@ -263,13 +265,13 @@
 #define WASM_THREAD_AUX_STACK_SIZE_MIN (256)
 
 /* Default/min/max stack size of each app thread */
-#if !defined(BH_PLATFORM_ZEPHYR) && !defined(BH_PLATFORM_ALIOS_THINGS) \
-    && !defined(BH_PLATFORM_ESP_IDF) && !defined(BH_PLATFORM_OPENRTOS)
-#define APP_THREAD_STACK_SIZE_DEFAULT (32 * 1024)
-#define APP_THREAD_STACK_SIZE_MIN (24 * 1024)
-#else
+#if defined(BH_PLATFORM_ZEPHYR) || defined(BH_PLATFORM_ALIOS_THINGS) \
+    || defined(BH_PLATFORM_ESP_IDF) || defined(BH_PLATFORM_OPENRTOS)
 #define APP_THREAD_STACK_SIZE_DEFAULT (6 * 1024)
 #define APP_THREAD_STACK_SIZE_MIN (4 * 1024)
+#else
+#define APP_THREAD_STACK_SIZE_DEFAULT (32 * 1024)
+#define APP_THREAD_STACK_SIZE_MIN (24 * 1024)
 #endif
 #if !defined(APP_THREAD_STACK_SIZE_MAX)
 #define APP_THREAD_STACK_SIZE_MAX (8 * 1024 * 1024)
@@ -309,4 +311,3 @@
 #endif
 
 #endif /* end of _CONFIG_H_ */
-
