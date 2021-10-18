@@ -94,9 +94,16 @@ def run_clang_format(file_path: pathlib, root: pathlib) -> bool:
         return False
 
 
-def run_clang_format_diff(root: pathlib, commit: str) -> bool:
+def run_clang_format_diff(root: pathlib, commits: str) -> bool:
     try:
-        COMMAND = f"{GIT_CLANG_FORMAT_CMD} --binary {shutil.which(CLANG_FORMAT_CMD)} --style file --extensions c,cpp,h --diff --commit {commit}"
+        before, after = commits.split("..")
+        after = after if after else "HEAD"
+        COMMAND = (
+            f"{GIT_CLANG_FORMAT_CMD} -v --binary "
+            f"{shutil.which(CLANG_FORMAT_CMD)} --style file "
+            f"--extensions c,cpp,h --diff {before} {after}"
+        )
+
         p = subprocess.Popen(
             shlex.split(COMMAND),
             stdout=subprocess.PIPE,
@@ -106,16 +113,16 @@ def run_clang_format_diff(root: pathlib, commit: str) -> bool:
         )
 
         stdout, _ = p.communicate()
-        if stdout.startswith("diff --git"):
-            diff_content = stdout.split('\n')
-            for summary in  [x for x in diff_content if x.startswith('diff --git')]:
-                # b/path/to/file -> path/to/file
-                with_invalid_format = re.split("\s+", summary)[-1][2:]
-                print(f"-- {with_invalid_format} failed on code style checking")
-            else:
-                return False
-        else:
+        if not stdout.startswith("diff --git"):
             return True
+
+        diff_content = stdout.split("\n")
+        for summary in [x for x in diff_content if x.startswith("diff --git")]:
+            # b/path/to/file -> path/to/file
+            with_invalid_format = re.split("\s+", summary)[-1][2:]
+            print(f"-- {with_invalid_format} failed on code style checking")
+        else:
+            return False
     except subprocess.subprocess.CalledProcessError:
         return False
 
@@ -156,6 +163,7 @@ def parse_commits_range(root: pathlib, commits: str) -> list:
 def analysis_new_item_name(root: pathlib, commit: str) -> bool:
     GIT_SHOW_CMD = f"git show --oneline --name-status --diff-filter A {commit}"
     try:
+        invalid_items = True
         output = subprocess.check_output(
             shlex.split(GIT_SHOW_CMD), cwd=root, universal_newlines=True
         )
@@ -183,7 +191,8 @@ def analysis_new_item_name(root: pathlib, commit: str) -> bool:
             if new_item.is_file():
                 if not check_file_name(new_item):
                     print(f"-- {new_item} does not have an valid file name")
-                    return False
+                    invalid_items = False
+                    continue
 
                 if not new_item.suffix in C_SUFFIXES:
                     continue
@@ -192,9 +201,10 @@ def analysis_new_item_name(root: pathlib, commit: str) -> bool:
 
             if not check_dir_name(new_item, root):
                 print(f"-- {new_item} does not have an valid directory name")
-                return False
+                invalid_items = False
+                continue
         else:
-            return True
+            return invalid_items
 
     except subprocess.CalledProcessError:
         return False
@@ -210,14 +220,15 @@ def process_entire_pr(root: pathlib, commits: str) -> bool:
         print(f"Quit since there is no commit to check with")
         return True
 
-    for commit in commit_list:
-        if not analysis_new_item_name(root, commit):
-            print(f"{commit} failed on new files/directory name checking")
-            return False
+    print(f"there are {len(commit_list)} commits in the PR")
 
-        if not run_clang_format_diff(root, commit):
-            print(f"{commit} failed on code style checking")
-            return False
+    if not analysis_new_item_name(root, commits):
+        print(f"Failed on new files/directory name checking")
+        return False
+
+    if not run_clang_format_diff(root, commits):
+        print(f"Failed on code style checking")
+        return False
 
     return True
 
