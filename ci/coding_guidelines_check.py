@@ -38,7 +38,9 @@ EXCLUDE_PATHS = [
 
 C_SUFFIXES = [".c", ".cpp", ".h"]
 VALID_DIR_NAME = r"([a-zA-Z0-9]+\-*)+[a-zA-Z0-9]*"
+INVALID_DIR_NAME_SEGMENT = r"([a-zA-Z0-9]+\_[a-zA-Z0-9]+)"
 VALID_FILE_NAME = r"\.?([a-zA-Z0-9]+\_*)+[a-zA-Z0-9]*\.*\w*"
+INVALID_FILE_NAME_SEGMENT = r"([a-zA-Z0-9]+\-[a-zA-Z0-9]+)"
 
 
 def locate_command(command: str) -> bool:
@@ -120,7 +122,7 @@ def run_clang_format_diff(root: pathlib, commits: str) -> bool:
         for summary in [x for x in diff_content if x.startswith("diff --git")]:
             # b/path/to/file -> path/to/file
             with_invalid_format = re.split("\s+", summary)[-1][2:]
-            print(f"-- {with_invalid_format} failed on code style checking")
+            print(f"--- {with_invalid_format} failed on code style checking")
         else:
             return False
     except subprocess.subprocess.CalledProcessError:
@@ -134,18 +136,24 @@ def run_aspell(file_path: pathlib, root: pathlib) -> bool:
 def check_dir_name(path: pathlib, root: pathlib) -> bool:
     # since we don't want to check the path beyond root.
     # we hope "-" only will be used in a dir name as separators
-    return all(
-        [
-            re.match(VALID_DIR_NAME, path_part)
-            for path_part in path.relative_to(root).parts
-        ]
-    )
+    found = False
+    for path_part in path.relative_to(root).parts:
+        m = re.search(INVALID_DIR_NAME_SEGMENT, path_part)
+        if m:
+            print(f"--- found a wrong partial like {m.groups()} in {path}")
+            found = True
+    else:
+        return not found
 
 
 def check_file_name(path: pathlib) -> bool:
     # since we don't want to check the path beyond root.
     # we hope "_" only will be used in a file name as separators
-    return re.match(VALID_FILE_NAME, path.name) is not None
+    m = re.search(INVALID_FILE_NAME_SEGMENT, path.stem)
+    if m:
+        print(f"--- found a wrong partial like {m.groups()} in {path}")
+
+    return not m
 
 
 def parse_commits_range(root: pathlib, commits: str) -> list:
@@ -190,17 +198,12 @@ def analysis_new_item_name(root: pathlib, commit: str) -> bool:
 
             if new_item.is_file():
                 if not check_file_name(new_item):
-                    print(f"-- {new_item} does not have an valid file name")
                     invalid_items = False
-                    continue
-
-                if not new_item.suffix in C_SUFFIXES:
                     continue
 
                 new_item = new_item.parent
 
             if not check_dir_name(new_item, root):
-                print(f"-- {new_item} does not have an valid directory name")
                 invalid_items = False
                 continue
         else:
@@ -222,15 +225,16 @@ def process_entire_pr(root: pathlib, commits: str) -> bool:
 
     print(f"there are {len(commit_list)} commits in the PR")
 
+    found = False
     if not analysis_new_item_name(root, commits):
-        print(f"Failed on new files/directory name checking")
-        return False
+        # print(f"Failed on new files/directory name checking")
+        found = True
 
     if not run_clang_format_diff(root, commits):
-        print(f"Failed on code style checking")
-        return False
+        # print(f"Failed on code style checking")
+        found = True
 
-    return True
+    return not found
 
 
 def main() -> int:
