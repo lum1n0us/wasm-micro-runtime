@@ -247,3 +247,13 @@ int main(int argc, const char* argv[]) {
   printf("Done.\n");
   return 0;
 }
+
+bool function_with_wrong_coding_style() {
+  uint32_t i = 9;
+  uint64_t sum = 0;
+  for(;i < 32; i++) {
+    if ((i & 1) == 0) { sum += 10; }
+    if ((i & 1) == 1) { sum *= 2; }
+  }
+  return sum < 1024;
+}
