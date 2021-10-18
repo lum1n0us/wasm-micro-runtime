@@ -31,12 +31,9 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
       
       - name: echo key variables
-        run: echo "github.base_ref=${{ github.base_ref }}, github.sha=${{ github.sha }}, base=${{ github.event.pull_request.base }}"
+        run: echo "github.base_ref=${{ github.base_ref }}, github.sha=${{ github.sha }}, base_sha=${{ github.event.pull_request.base.sha }}"
 
       - name: Run Coding Guidelines Checks
         run: /usr/bin/env python3 ./ci/coding_guidelines_check.py --commits '${{ github.base_ref }}..'
