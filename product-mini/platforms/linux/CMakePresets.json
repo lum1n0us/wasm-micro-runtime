@@ -1,0 +1,96 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base_",
+      "description": "disable all in once. has to be the last one in the inherits array",
+      "cacheVariables": {
+        "WAMR_BUILD_AOT": "0",
+        "WAMR_BUILD_BULK_MEMORY": "0",
+        "WAMR_BUILD_CUSTOM_NAME_SECTION": "0",
+        "WAMR_BUILD_DEBUG_AOT": "0",
+        "WAMR_BUILD_DEBUG_INTERP": "0",
+        "WAMR_BUILD_DUMP_CALL_STACK": "0",
+        "WAMR_BUILD_FAST_INTERP": "0",
+        "WAMR_BUILD_INTERP": "0",
+        "WAMR_BUILD_JIT": "0",
+        "WAMR_BUILD_LAZY_JIT": "0",
+        "WAMR_BUILD_LIB_PTHREAD": "0",
+        "WAMR_BUILD_LOAD_CUSTOM_SECTION": "0",
+        "WAMR_BUILD_MEMORY_PROFILING": "0",
+        "WAMR_BUILD_MINI_LOADER": "0",
+        "WAMR_BUILD_MULTI_MODULE": "0",
+        "WAMR_BUILD_PERF_PROFILING": "0",
+        "WAMR_BUILD_REF_TYPES": "0",
+        "WAMR_BUILD_SIMD": "0",
+        "WAMR_BUILD_TAIL_CALL": "0",
+        "WAMR_BUILD_THREAD_MGR": "0",
+        "WAMR_DISABLE_HW_BOUND_CHECK": "0"
+      }
+    },
+    {
+      "name": "pthread_",
+      "description": "support pthread",
+      "cacheVariables": {
+        "WAMR_BUILD_LIB_PTHREAD": "1",
+        "WAMR_BUILD_THREAD_MGR": "1"
+      }
+    },
+    {
+      "name": "mvp_",
+      "cacheVariables": {
+        "WAMR_BUILD_BULK_MEMORY": "1",
+        "WAMR_BUILD_REF_TYPES": "1"
+      }
+    },
+    {
+      "name": "aot_",
+      "cacheVariables": {
+        "WAMR_BUILD_AOT": "1"
+      }
+    },
+    {
+      "name": "classic_interp_",
+      "cacheVariables": {
+        "WAMR_BUILD_INTERP": "1"
+      }
+    },
+    {
+      "name": "jit_",
+      "cacheVariables": {
+        "WAMR_BUILD_AOT": "1",
+        "WAMR_BUILD_JIT": "1",
+        "WAMR_BUILD_LAZY_JIT": "1"
+      }
+    },
+    {
+      "name": "dev_",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "On",
+        "WAMR_BUILD_DUMP_CALL_STACK": "1",
+        "WAMR_BUILD_MEMORY_PROFILING": "1",
+        "WAMR_BUILD_PERF_PROFILING": "1"
+      }
+    },
+    {
+      "name": "default",
+      "inherits": ["classic_interp_", "mvp_", "pthread_", "base_"]
+    },
+    {
+      "name": "compile_commands",
+      "inherits": ["dev_", "jit_", "mvp_", "pthread_", "base_"]
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default"
+    }
+  ]
+}
