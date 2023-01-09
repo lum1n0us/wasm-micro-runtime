@@ -3,8 +3,8 @@
 
 # See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/cpp/.devcontainer/base.Dockerfile
 # [Choice] Debian / Ubuntu version (use Debian 12/11/9, Ubuntu 18.04/21.04 on local arm64/Apple Silicon): debian-12, debian-11, debian-10, debian-9, ubuntu-21.04, ubuntu-20.04, ubuntu-18.04
-ARG VARIANT=debian-12
-FROM mcr.microsoft.com/vscode/devcontainers/cpp:${VARIANT}
+ARG VARIANT=jammy
+FROM mcr.microsoft.com/devcontainers/base:${VARIANT}
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asian/Shanghai
@@ -13,13 +13,11 @@ ENV TZ=Asian/Shanghai
 RUN apt-get update \
   && apt-get upgrade -y \
   && apt-get install -y apt-transport-https apt-utils build-essential \
-  ca-certificates ccache cmake curl g++-multilib git gnupg \
-  libgcc-12-dev lib32gcc-12-dev lsb-release \
-  ninja-build ocaml ocamlbuild \
+  ca-certificates ccache clang curl g++-multilib git gnupg \
+  libgcc-12-dev lib32gcc-12-dev libstdc++-12-dev lsb-release llvm \
+  ninja-build opam ocaml ocamlbuild \
   software-properties-common tree tzdata \
-  unzip valgrind vim wget zip --no-install-recommends \
-  && apt-get clean -y \
-  && rm -rf /var/lib/apt/lists/*
+  unzip valgrind vim wget zip --no-install-recommends
 
 #
 # binaryen
@@ -36,12 +34,12 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
 ARG CMAKE_VER=3.27.0
 RUN wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-${CMAKE_VER}-Linux-x86_64.sh \
-      -q -O /tmp/cmake-install.sh \
-      && chmod u+x /tmp/cmake-install.sh \
-      && mkdir /opt/cmake-${CMAKE_VER} \
-      && /tmp/cmake-install.sh --skip-license --prefix=/opt/cmake-${CMAKE_VER} \
-      && rm /tmp/cmake-install.sh \
-      && ln -s /opt/cmake-${CMAKE_VER}/bin/* /usr/local/bin
+  -q -O /tmp/cmake-install.sh \
+  && chmod u+x /tmp/cmake-install.sh \
+  && mkdir /opt/cmake-${CMAKE_VER} \
+  && /tmp/cmake-install.sh --skip-license --prefix=/opt/cmake-${CMAKE_VER} \
+  && rm /tmp/cmake-install.sh \
+  && ln -s /opt/cmake-${CMAKE_VER}/bin/* /usr/local/bin
 
 #
 # install emsdk
@@ -57,7 +55,7 @@ RUN  git pull \
 
 #
 # install wasi-sdk
-ARG WASI_SDK_VER=20
+ARG WASI_SDK_VER=21
 RUN wget -c --progress=dot:giga https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_VER}/wasi-sdk-${WASI_SDK_VER}.0-linux.tar.gz -P /opt \
   && tar xf /opt/wasi-sdk-${WASI_SDK_VER}.0-linux.tar.gz -C /opt \
   && ln -sf /opt/wasi-sdk-${WASI_SDK_VER}.0 /opt/wasi-sdk \
@@ -65,11 +63,11 @@ RUN wget -c --progress=dot:giga https://github.com/WebAssembly/wasi-sdk/releases
 
 #
 #install wabt
-ARG WABT_VER=1.0.33
-RUN wget -c --progress=dot:giga https://github.com/WebAssembly/wabt/releases/download/${WABT_VER}/wabt-${WABT_VER}-ubuntu.tar.gz -P /opt \
-  && tar xf /opt/wabt-${WABT_VER}-ubuntu.tar.gz -C /opt \
+ARG WABT_VER=1.0.34
+RUN wget -c --progress=dot:giga https://github.com/WebAssembly/wabt/releases/download/${WABT_VER}/wabt-${WABT_VER}-ubuntu-20.04.tar.gz -P /opt \
+  && tar xf /opt/wabt-${WABT_VER}-ubuntu-20.04.tar.gz -C /opt \
   && ln -sf /opt/wabt-${WABT_VER} /opt/wabt \
-  && rm /opt/wabt-${WABT_VER}-ubuntu.tar.gz
+  && rm /opt/wabt-${WABT_VER}-ubuntu-20.04.tar.gz
 
 #
 # install bazelisk
@@ -81,47 +79,18 @@ RUN mkdir /opt/bazelisk \
 
 #
 # install clang+llvm
-ARG LLVM_VER=16
-RUN apt-get purge -y clang-14 llvm-14 && apt-get autoremove -y
-WORKDIR /etc/apt/apt.conf.d
-RUN touch 99verfiy-peer.conf \
-  && echo "Acquire { https::Verify-Peer false }" > 99verfiy-peer.conf
-
-WORKDIR /tmp
-#RUN wget --progress=dot:giga https://apt.llvm.org/llvm.sh \
-#  && chmod a+x ./llvm.sh \
-#  && ./llvm.sh ${LLVM_VER} all
-
-# Workaround due to https://github.com/llvm/llvm-project/issues/62475
-# hadolint ignore=DL3008
-RUN set -ex \
-    && echo "deb http://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-${LLVM_VER} main" > /etc/apt/sources.list.d/apt.llvm.org.list \
-    && wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc \
-    && apt-get update \
-    && apt-get install -y \
-    clang-${LLVM_VER} lldb-${LLVM_VER} lld-${LLVM_VER} clangd-${LLVM_VER} clang-tidy-${LLVM_VER} clang-format-${LLVM_VER} clang-tools-${LLVM_VER} \
-    llvm-${LLVM_VER}-dev lld-${LLVM_VER} lldb-${LLVM_VER} llvm-${LLVM_VER}-tools libomp-${LLVM_VER}-dev libc++-${LLVM_VER}-dev libc++abi-${LLVM_VER}-dev \
-    libclang-common-${LLVM_VER}-dev libclang-${LLVM_VER}-dev libclang-cpp${LLVM_VER}-dev libunwind-${LLVM_VER}-dev \
-    libclang-rt-${LLVM_VER}-dev libpolly-${LLVM_VER}-dev --no-install-recommends \
-    && apt-get clean -y \
-    && rm -rf /var/lib/apt/lists/*
-
-#
-# [Optional]
+ARG LLVM_VER=15.0.6
+RUN wget https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VER}/clang+llvm-${LLVM_VER}-x86_64-linux-gnu-ubuntu-18.04.tar.xz
+RUN tar -xvf clang+llvm-${LLVM_VER}-x86_64-linux-gnu-ubuntu-18.04.tar.xz \
+  && mv clang+llvm-${LLVM_VER}-x86_64-linux-gnu-ubuntu-18.04 llvm-${LLVM_VER} \
+  && rm clang+llvm-${LLVM_VER}-x86_64-linux-gnu-ubuntu-18.04.tar.xz
 
 #
 # Install pip
 # hadolint ignore=DL3008
 RUN apt-get update \
   && apt-get install -y --reinstall python3-venv python3-pip --no-install-recommends \
-  && apt-get clean -y \
-  && rm -rf /var/lib/apt/lists/*
-
-#
-# Install required python packages
-# hadolint ignore=DL3013
-RUN python3 -m pip install --no-cache-dir --break-system-packages --upgrade pip \
-  && pip3 install --no-cache-dir --break-system-packages black nose pycparser pylint
+  && pip install --no-cache-dir --upgrade pip
 
 #
 # Install github-cli. It doens't work as a feature of devcontainer.json
@@ -132,19 +101,70 @@ RUN wget -q https://github.com/cli/cli/releases/download/v${GH_CLI_VER}/gh_${GH_
 
 #
 # Install NodeJS
-RUN wget -qO- https://deb.nodesource.com/setup_20.x | bash -
-# hadolint ignore=DL3008
-RUN apt-get install -y nodejs --no-install-recommends
+# RUN wget -qO- https://deb.nodesource.com/setup_20.x | bash -
+# # hadolint ignore=DL3008
+# RUN apt-get install -y nodejs --no-install-recommends
+
+#
+# SGX setup
+RUN mkdir -p /opt/intel
+
+WORKDIR /opt/intel
+RUN wget -q https://download.01.org/intel-sgx/sgx-linux/2.21/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.21.100.1.bin \
+  && chmod +x sgx_linux_x64_sdk_2.21.100.1.bin
+RUN echo 'yes' | ./sgx_linux_x64_sdk_2.21.100.1.bin
+RUN source /opt/intel/sgxsdk/environment
+
+RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list \
+   && wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
+
+RUN apt update \
+   && apt install -y libsgx-launch libsgx-urts
+
+#
+# Install wasm-tools from binary releasing
+ARG WASM_TOOLS_VER=1.201.0
+WORKDIR /opt
+RUN wget -c --progress=dot:giga https://github.com/bytecodealliance/wasm-tools/releases/download/v${WASM_TOOLS_VER}/wasm-tools-${WASM_TOOLS_VER}-x86_64-linux.tar.gz
+RUN tar xzf wasm-tools-${WASM_TOOLS_VER}-x86_64-linux.tar.gz \
+  && rm wasm-tools-${WASM_TOOLS_VER}-x86_64-linux.tar.gz \
+  && ln -sf /opt/wasm-tools-${WASM_TOOLS_VER}-x86_64-linux/wasm-tools /usr/bin/wasm-tools
+
+#
+# Install wit-bindgen
+ARG WIT_BINDGEN_VER=0.21.0
+WORKDIR /opt
+RUN wget -c --progress=dot:giga https://github.com/bytecodealliance/wit-bindgen/releases/download/v${WIT_BINDGEN_VER}/wit-bindgen-${WIT_BINDGEN_VER}-x86_64-linux.tar.gz
+RUN tar xzf wit-bindgen-${WIT_BINDGEN_VER}-x86_64-linux.tar.gz \
+  && rm wit-bindgen-${WIT_BINDGEN_VER}-x86_64-linux.tar.gz
+
+#
+# Install perf
+ARG KERNEL_VER=5.15.0-97
+RUN apt update \
+      && apt-get install -y linux-tools-generic linux-tools-${KERNEL_VER}-generic \
+      && apt-get install -y linux-headers-${KERNEL_VER}
+
+#
+# Install extra clang tools and lldb
+RUN apt update \
+  && apt install -y clang-tools clang-tidy clang-format clangd \
+  && apt install -y lldb python3-lldb
+
+#
+# Install Rust
+ENV CARGO_HOME=/home/vscode/.cargo
+ENV RUSTUP_HOME=/home/vscode/.rustup
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="${CARGO_HOME}/bin:${PATH}"
 
 # set path
-ENV PATH="/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
-ENV CC=/usr/lib/llvm-${LLVM_VER}/bin/clang CXX=/usr/lib/llvm-${LLVM_VER}/bin/clang++
-RUN printf "%s\n" "PS1='\n[ \u@wamr-dev-docker \W ]\n$ '" >> /root/.bashrc \
-  && apt-get autoremove -y \
+ENV PATH="/home/vscode/.opam/default/bin:/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
+# clean
+RUN apt-get autoremove -y \
   && apt-get clean -y \
   && rm -rf /var/lib/apt/lists/* \
   && rm -rf /tmp/*
 
 # set workdir when container run
-VOLUME /workspaces
 WORKDIR /workspaces

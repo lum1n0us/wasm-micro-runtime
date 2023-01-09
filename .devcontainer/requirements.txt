@@ -1,0 +1,6 @@
+black
+jupyter
+nose
+numpy
+pycparser
+pylint
