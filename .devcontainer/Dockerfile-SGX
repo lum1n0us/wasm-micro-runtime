@@ -3,8 +3,8 @@
 
 # See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/cpp/.devcontainer/base.Dockerfile
 # [Choice] Debian / Ubuntu version (use Debian 12/11/9, Ubuntu 18.04/21.04 on local arm64/Apple Silicon): debian-12, debian-11, debian-10, debian-9, ubuntu-21.04, ubuntu-20.04, ubuntu-18.04
-ARG VARIANT=ubuntu-22.04
-FROM mcr.microsoft.com/vscode/devcontainers/cpp:${VARIANT}
+ARG VARIANT=jammy
+FROM mcr.microsoft.com/devcontainers/base:${VARIANT}
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asian/Shanghai
@@ -17,9 +17,7 @@ RUN apt-get update \
   libgcc-12-dev lib32gcc-12-dev lsb-release \
   ninja-build ocaml ocamlbuild \
   software-properties-common tree tzdata \
-  unzip valgrind vim wget zip --no-install-recommends \
-  && apt-get clean -y \
-  && rm -rf /var/lib/apt/lists/*
+  unzip valgrind vim wget zip --no-install-recommends
 
 #
 # binaryen
@@ -182,6 +180,12 @@ ARG KERNEL_VER=5.15.0-89
 RUN apt update \
       && apt-get install -y linux-tools-generic linux-tools-${KERNEL_VER}-generic \
       && apt-get install -y linux-headers-${KERNEL_VER}
+
+#
+# Install rust source code
+RUN rustup component add rust-src
+RUN rustup target add wasm32-unknown-emscripten wasm32-unknown-unknown wasm32-wasi wasm32-wasi-preview1-threads
+RUN rustup component add clippy
 
 # set path
 ENV PATH="/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"

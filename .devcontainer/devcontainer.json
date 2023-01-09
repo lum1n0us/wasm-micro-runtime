@@ -5,26 +5,22 @@
 {
   "name": "WAMR-Dev",
   "build": {
-    "dockerfile": "Dockerfile",
+    "dockerfile": "Dockerfile-SGX",
     // Update 'VARIANT' to pick an Debian / Ubuntu OS version: debian-12, debian-11, debian-10, debian-9, ubuntu-21.04, ubuntu-20.04, ubuntu-18.04
     // Use Debian 12, Debian 11, Debian 9, Ubuntu 18.04 or Ubuntu 21.04 on local arm64/Apple Silicon
     "args": {
-      "BINARYEN_VER": "114",
-      "BAZELISK_VER": "1.17.0",
+      "BAZELISK_VER": "1.19.0",
+      "BINARYEN_VER": "116",
       "CMAKE_VER": "3.27.0",
       "EMSDK_VER": "3.1.43",
-      "GH_CLI_VER": "2.32.0",
+      "GH_CLI_VER": "2.40.1",
       "LLVM_VER": "16",
-      "VARIANT": "debian-12",
+      "WABT_VER": "1.0.34",
       "WASI_SDK_VER": "20",
-      "WABT_VER": "1.0.33"
+      "VARIANT": "jammy"
     }
   },
-  "runArgs": [
-    "--cap-add=SYS_PTRACE",
-    "--security-opt",
-    "seccomp=unconfined"
-  ],
+  "privileged": true,
   // Configure tool-specific properties.
   "customizations": {
     // Configure properties specific to VS Code.
@@ -33,18 +29,40 @@
       "settings": {},
       // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
+        "bierner.markdown-mermaid",
+        "code-spell-checker",
         "dtsvet.vscode-wasm",
+        "eamodio.gitlens",
+        "esbenp.prettier-vscode",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "GitHub.copilot-labs",
+        "GitHub.vscode-pull-request-github",
         "llvm-vs-code-extensions.vscode-clangd",
+        "ms-python.pylint",
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-vscode.cmake-tools"
+        "ms-toolsai.jupyter",
+        "ms-toolsai.jupyter-keymap",
+        "ms-toolsai.jupyter-renderers",
+        "ms-toolsai.vscode-jupyter-cell-tags",
+        "ms-toolsai.vscode-jupyter-slideshow",
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb"
       ]
     }
   },
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "curl https://sh.rustup.rs -sSf | bash -s -- -y",
+  // "postCreateCommand": "",
   // Comment out this line to run as root instead.
-  "remoteUser": "vscode"
+  "remoteUser": "vscode",
+  "mounts": ["source=/mnt/workspace/SDF,target=/SDF,type=bind"],
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "containerEnv": {
+    "CARGO_HOME": "/home/vscode/.cargo"
+  }
 }
