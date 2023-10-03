@@ -550,6 +550,9 @@ aot_value_stack_push(const AOTCompContext *comp_ctx, AOTValueStack *stack,
 AOTValue *
 aot_value_stack_pop(const AOTCompContext *comp_ctx, AOTValueStack *stack);
 
+AOTValue *
+aot_value_stack_peek(AOTValueStack *stack, int32 depth);
+
 void
 aot_value_stack_destroy(AOTCompContext *comp_ctx, AOTValueStack *stack);
 

@@ -8,6 +8,7 @@
 
 #include "aot_runtime.h"
 #include "aot_intrinsic.h"
+#include "aot_trace_exec.h"
 
 #if WASM_ENABLE_STRINGREF != 0
 #include "string_object.h"
@@ -60,6 +61,13 @@ typedef struct {
     REG_SYM(aot_frame_update_profile_info),
 #else
 #define REG_AOT_TRACE_SYM()
+#endif
+
+#if WASM_ENABLE_JIT != 0 || WASM_ENABLE_AOT != 0
+#define REG_TRACE_MODE_SYM()              \
+    REG_SYM(aot_trace_exec_helper),
+#else
+#define REG_TRACE_MODE_SYM()
 #endif
 
 #if WASM_ENABLE_AOT_INTRINSICS != 0
@@ -213,6 +221,7 @@ typedef struct {
     REG_LLVM_PGO_SYM()                    \
     REG_GC_SYM()                          \
     REG_STRINGREF_SYM()                   \
+    REG_TRACE_MODE_SYM()
 
 #define CHECK_RELOC_OFFSET(data_size) do {              \
     if (!check_reloc_offset(target_section_size,        \

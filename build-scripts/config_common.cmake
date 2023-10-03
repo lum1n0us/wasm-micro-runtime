@@ -554,3 +554,8 @@ else ()
   # Disable aot intrinsics for interp, fast-jit and llvm-jit
   add_definitions (-DWASM_ENABLE_AOT_INTRINSICS=0)
 endif ()
+
+if (WAMR_TRACE_MODE EQUAL 1)
+  add_definitions (-DWASM_TRACE_MODE=1)
+  message("      Include trace mode")
+endif ()

@@ -41,6 +41,7 @@
 #include "string_object.h"
 #include "aot_emit_stringref.h"
 #endif
+#include "../aot/aot_trace_exec.h"
 
 #define CHECK_BUF(buf, buf_end, length)                             \
     do {                                                            \
@@ -2697,6 +2698,11 @@ aot_compile_func(AOTCompContext *comp_ctx, uint32 func_index)
                 /* opcode1 was checked in loader and is no larger than
                    UINT8_MAX */
                 opcode = (uint8)opcode1;
+                opcode = *frame_ip++;
+
+                aot_trace_exec_build_call_helper(comp_ctx, func_ctx, func_index,
+                                                 WASM_OP_SIMD_PREFIX, opcode,
+                                                 frame_ip);
 
                 /* follow the order of enum WASMSimdEXTOpcode in
                    wasm_opcode.h */
@@ -3728,8 +3734,7 @@ aot_compile_func(AOTCompContext *comp_ctx, uint32 func_index)
                         break;
                     }
 
-                        /* f64x2 Op */
-
+                    /* f64x2 Op */
                     case SIMD_f64x2_abs:
                     {
                         if (!aot_compile_simd_f64x2_abs(comp_ctx, func_ctx))
