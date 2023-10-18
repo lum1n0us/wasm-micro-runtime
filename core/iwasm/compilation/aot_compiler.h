@@ -700,6 +700,13 @@ set_local_gc_ref(AOTCompFrame *frame, int n, LLVMValueRef value, uint8 ref_type)
         }                                                    \
     } while (0)
 
+/* require:
+     LLVMTypeRef func_type, ret_type, param_types[]
+     LLVMValueRef func, value
+     unsigned argc
+     char *name
+     label fail
+*/
 #define GET_AOT_FUNCTION(name, argc)                                        \
     do {                                                                    \
         if (!(func_type =                                                   \
