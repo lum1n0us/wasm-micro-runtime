@@ -2692,6 +2692,7 @@ static const char *exception_msgs[] = {
     "create stringref failed",        /* EXCE_FAILED_TO_CREATE_STRINGREF */
     "create stringview failed",       /* EXCE_FAILED_TO_CREATE_STRINGVIEW */
     "encode failed",                  /* EXCE_FAILED_TO_ENCODE_STRING */
+    "failed to grow table",           /* EXCE_FAILED_TO_TABLE_GROW */
     "",                               /* EXCE_ALREADY_THROWN */
 };
 /* clang-format on */

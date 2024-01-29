@@ -3506,26 +3506,6 @@ aot_value_stack_peek(AOTValueStack *stack, int32 depth)
     return value;
 }
 
-AOTValue *
-aot_value_stack_peek(AOTValueStack *stack, int32 depth)
-{
-    AOTValue *value = stack->value_list_end;
-
-    bh_assert(stack->value_list_end);
-
-    while (value && depth > 0) {
-        value = value->prev;
-        depth--;
-    }
-
-    if (depth > 0) {
-        LOG_ERROR("Value stack doesn't have expected depth");
-        return NULL;
-    }
-
-    return value;
-}
-
 void
 aot_value_stack_destroy(AOTCompContext *comp_ctx, AOTValueStack *stack)
 {

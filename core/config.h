@@ -585,6 +585,7 @@
 
 #ifndef WASM_TABLE_MAX_SIZE
 #define WASM_TABLE_MAX_SIZE 1024
+#endif
 
 /* Disable mmap based shared memory by default */
 #ifndef WASM_ENABLE_SHARED_MEMORY_MMAP

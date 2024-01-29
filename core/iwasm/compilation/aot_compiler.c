@@ -41,7 +41,9 @@
 #include "string_object.h"
 #include "aot_emit_stringref.h"
 #endif
-#include "../aot/aot_trace_exec.h"
+#if WASM_ENABLE_TRACE_MODE != 0
+#include "../trace-exec/trace_exec.h"
+#endif
 
 #define CHECK_BUF(buf, buf_end, length)                             \
     do {                                                            \
@@ -972,10 +974,12 @@ aot_compile_func(AOTCompContext *comp_ctx, uint32 func_index)
         }
 #endif
 
+#if WASM_ENABLE_TRACE_MODE != 0
         if (opcode < WASM_OP_MISC_PREFIX) {
-            aot_trace_exec_build_call_helper(comp_ctx, func_ctx, func_index,
-                                             opcode, 0x0, frame_ip);
+            trace_exec_build_call_helper(comp_ctx, func_ctx, func_index, opcode,
+                                         0x0, frame_ip);
         }
+#endif
 
         switch (opcode) {
             case WASM_OP_UNREACHABLE:
@@ -2378,6 +2382,12 @@ aot_compile_func(AOTCompContext *comp_ctx, uint32 func_index)
                    UINT8_MAX */
                 opcode = (uint8)opcode1;
 
+#if WASM_ENABLE_TRACE_MODE != 0
+                trace_exec_build_call_helper(comp_ctx, func_ctx, func_index,
+                                             WASM_OP_MISC_PREFIX, opcode,
+                                             frame_ip);
+#endif
+
 #if WASM_ENABLE_BULK_MEMORY != 0
                 if (WASM_OP_MEMORY_INIT <= opcode
                     && opcode <= WASM_OP_MEMORY_FILL
@@ -2703,11 +2713,12 @@ aot_compile_func(AOTCompContext *comp_ctx, uint32 func_index)
                 /* opcode1 was checked in loader and is no larger than
                    UINT8_MAX */
                 opcode = (uint8)opcode1;
-                opcode = *frame_ip++;
 
-                aot_trace_exec_build_call_helper(comp_ctx, func_ctx, func_index,
-                                                 WASM_OP_SIMD_PREFIX, opcode,
-                                                 frame_ip);
+#if WASM_ENABLE_TRACE_MODE != 0
+                trace_exec_build_call_helper(comp_ctx, func_ctx, func_index,
+                                             WASM_OP_SIMD_PREFIX, opcode,
+                                             frame_ip);
+#endif
 
                 /* follow the order of enum WASMSimdEXTOpcode in
                    wasm_opcode.h */

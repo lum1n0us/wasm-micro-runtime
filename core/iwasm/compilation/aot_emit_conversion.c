@@ -81,7 +81,7 @@ trunc_float_to_int(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
 
     is_greater =
         call_fcmp_intrinsic(comp_ctx, func_ctx, FLOAT_GE, LLVMRealOGE, operand,
-                            max_value, src_type, "fcmp_min_value");
+                            max_value, src_type, "fcmp_max_value");
 
     if (!is_greater) {
         aot_set_last_error("llvm build fcmp failed.");
@@ -104,8 +104,9 @@ trunc_float_to_int(AOTCompContext *comp_ctx, AOTFuncContext *func_ctx,
     LLVMMoveBasicBlockAfter(check_overflow_succ,
                             LLVMGetInsertBlock(comp_ctx->builder));
 
-    if (!(aot_emit_exception(comp_ctx, func_ctx, EXCE_INTEGER_OVERFLOW, true,
-                             res, check_overflow_succ)))
+    if (!(aot_emit_exception(comp_ctx, func_ctx,
+                             EXCE_INVALID_CONVERSION_TO_INTEGER, true, res,
+                             check_overflow_succ)))
         goto fail;
 
     if (comp_ctx->disable_llvm_intrinsics
