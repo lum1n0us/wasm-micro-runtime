@@ -55,7 +55,7 @@ RUN  git pull \
 
 #
 # install wasi-sdk
-ARG WASI_SDK_VER=20
+ARG WASI_SDK_VER=21
 RUN wget -c --progress=dot:giga https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_VER}/wasi-sdk-${WASI_SDK_VER}.0-linux.tar.gz -P /opt \
   && tar xf /opt/wasi-sdk-${WASI_SDK_VER}.0-linux.tar.gz -C /opt \
   && ln -sf /opt/wasi-sdk-${WASI_SDK_VER}.0 /opt/wasi-sdk \
@@ -63,7 +63,7 @@ RUN wget -c --progress=dot:giga https://github.com/WebAssembly/wasi-sdk/releases
 
 #
 #install wabt
-ARG WABT_VER=1.0.33
+ARG WABT_VER=1.0.34
 RUN wget -c --progress=dot:giga https://github.com/WebAssembly/wabt/releases/download/${WABT_VER}/wabt-${WABT_VER}-ubuntu.tar.gz -P /opt \
   && tar xf /opt/wabt-${WABT_VER}-ubuntu.tar.gz -C /opt \
   && ln -sf /opt/wabt-${WABT_VER} /opt/wabt \
@@ -163,29 +163,35 @@ ENV PATH="/usr/local/cargo/bin:${PATH}"
 
 #
 # Install wasm-tools from binary releasing
-ARG WASM_TOOLS_VER=1.0.38
+ARG WASM_TOOLS_VER=1.201.0
 WORKDIR /opt
-RUN wget -c --progress=dot:giga https://github.com/bytecodealliance/wasm-tools/releases/download/wasm-tools-${WASM_TOOLS_VER}/wasm-tools-${WASM_TOOLS_VER}-x86_64-linux.tar.gz
+RUN wget -c --progress=dot:giga https://github.com/bytecodealliance/wasm-tools/releases/download/v${WASM_TOOLS_VER}/wasm-tools-${WASM_TOOLS_VER}-x86_64-linux.tar.gz
 RUN tar xzf wasm-tools-${WASM_TOOLS_VER}-x86_64-linux.tar.gz \
   && rm wasm-tools-${WASM_TOOLS_VER}-x86_64-linux.tar.gz \
   && ln -sf /opt/wasm-tools-${WASM_TOOLS_VER}-x86_64-linux/wasm-tools /usr/bin/wasm-tools
 
 #
 # Install wit-bindgen
-RUN cargo install --git https://github.com/bytecodealliance/wit-bindgen wit-bindgen-cli
+# ARG WIT_BINDGEN_VER=0.21.0
+WORKDIR /opt
+RUN wget -c --progress=dot:giga https://github.com/bytecodealliance/wit-bindgen/releases/download/v${WIT_BINDGEN_VER}/wit-bindgen-${WIT_BINDGEN_VER}-x86_64-linux.tar.gz
+RUN tar xzf wit-bindgen-${WIT_BINDGEN_VER}-x86_64-linux.tar.gz \
+  && rm wit-bindgen-${WIT_BINDGEN_VER}-x86_64-linux.tar.gz
 
 #
 # Install perf
-ARG KERNEL_VER=5.15.0-89
+ARG KERNEL_VER=5.15.0-97
 RUN apt update \
       && apt-get install -y linux-tools-generic linux-tools-${KERNEL_VER}-generic \
       && apt-get install -y linux-headers-${KERNEL_VER}
 
 #
 # Install rust source code
-RUN rustup component add rust-src
-RUN rustup target add wasm32-unknown-emscripten wasm32-unknown-unknown wasm32-wasi wasm32-wasi-preview1-threads
-RUN rustup component add clippy
+# TODO: move to postCreateCommands
+# RUN rustup component add rust-src
+# RUN rustup target add wasm32-unknown-emscripten wasm32-unknown-unknown wasm32-wasi wasm32-wasi-preview1-threads
+# RUN rustup component add clippy
+# RUN cargo install cargo-readme
 
 # set path
 ENV PATH="/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
