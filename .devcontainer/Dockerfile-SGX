@@ -79,16 +79,16 @@ RUN mkdir /opt/bazelisk \
 
 #
 # install clang+llvm
-ARG LLVM_VER=16
-RUN apt-get purge -y clang-14 llvm-14 && apt-get autoremove -y
-WORKDIR /etc/apt/apt.conf.d
-RUN touch 99verfiy-peer.conf \
-  && echo "Acquire { https::Verify-Peer false }" > 99verfiy-peer.conf
-
-WORKDIR /tmp
-RUN wget --progress=dot:giga https://apt.llvm.org/llvm.sh \
-  && chmod a+x ./llvm.sh \
-  && ./llvm.sh ${LLVM_VER} all
+ARG LLVM_VER=15
+# RUN apt-get purge -y clang-14 llvm-14 && apt-get autoremove -y
+# WORKDIR /etc/apt/apt.conf.d
+# RUN touch 99verfiy-peer.conf \
+#   && echo "Acquire { https::Verify-Peer false }" > 99verfiy-peer.conf
+#
+# WORKDIR /tmp
+# RUN wget --progress=dot:giga https://apt.llvm.org/llvm.sh \
+#   && chmod a+x ./llvm.sh \
+#   && ./llvm.sh ${LLVM_VER} all
 
 # Workaround due to https://github.com/llvm/llvm-project/issues/62475
 # hadolint ignore=DL3008nn
@@ -106,6 +106,10 @@ RUN wget --progress=dot:giga https://apt.llvm.org/llvm.sh \
 #
 #
 # [Optional]
+
+RUN apt update \
+  && apt install -y llvm-${LLVM_VER} libmlir-${LLVM_VER}-dev \
+    libclang-common-${LLVM_VER}-dev libedit-dev libpfm4-dev
 
 #
 # Install pip
@@ -172,7 +176,7 @@ RUN tar xzf wasm-tools-${WASM_TOOLS_VER}-x86_64-linux.tar.gz \
 
 #
 # Install wit-bindgen
-# ARG WIT_BINDGEN_VER=0.21.0
+ARG WIT_BINDGEN_VER=0.21.0
 WORKDIR /opt
 RUN wget -c --progress=dot:giga https://github.com/bytecodealliance/wit-bindgen/releases/download/v${WIT_BINDGEN_VER}/wit-bindgen-${WIT_BINDGEN_VER}-x86_64-linux.tar.gz
 RUN tar xzf wit-bindgen-${WIT_BINDGEN_VER}-x86_64-linux.tar.gz \
@@ -194,7 +198,8 @@ RUN apt update \
 # RUN cargo install cargo-readme
 
 # set path
-ENV PATH="/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
+#ENV PATH="/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
+ENV PATH="/opt/bazelisk:${PATH}"
 # ENV CC=/usr/lib/llvm-${LLVM_VER}/bin/clang CXX=/usr/lib/llvm-${LLVM_VER}/bin/clang++
 RUN printf "%s\n" "PS1='\n[ \u@wamr-dev-docker \W ]\n$ '" >> /root/.bashrc \
   && apt-get autoremove -y \
