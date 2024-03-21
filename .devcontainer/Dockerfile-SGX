@@ -197,9 +197,14 @@ RUN apt update \
 # RUN rustup component add clippy
 # RUN cargo install cargo-readme
 
+#
+# Install extra clang tools and lldb
+RUN apt update \
+  && apt install -y clang-tools-${LLVM_VER} clang-tidy-${LLVM_VER} clang-format-${LLVM_VER} clangd-${LLVM_VER} \
+  && apt install -y lldb-${LLVM_VER} python3-lldb-${LLVM_VER}
+
 # set path
-#ENV PATH="/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
-ENV PATH="/opt/bazelisk:${PATH}"
+ENV PATH="/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
 # ENV CC=/usr/lib/llvm-${LLVM_VER}/bin/clang CXX=/usr/lib/llvm-${LLVM_VER}/bin/clang++
 RUN printf "%s\n" "PS1='\n[ \u@wamr-dev-docker \W ]\n$ '" >> /root/.bashrc \
   && apt-get autoremove -y \
