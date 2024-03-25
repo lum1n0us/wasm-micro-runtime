@@ -155,13 +155,13 @@ RUN source /opt/intel/sgxsdk/environment
 
 #
 # Install Rust
-WORKDIR /tmp
-ENV RUSTUP_HOME=/usr/local/cargo
-ENV CARGO_HOME=/usr/local/cargo
-RUN curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf -o install_rust.sh
-RUN chmod a+x install_rust.sh \
-  && ./install_rust.sh -v -y
-ENV PATH="/usr/local/cargo/bin:${PATH}"
+# WORKDIR /tmp
+# ENV RUSTUP_HOME=/usr/local/cargo
+# ENV CARGO_HOME=/usr/local/cargo
+# RUN curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf -o install_rust.sh
+# RUN chmod a+x install_rust.sh \
+#   && ./install_rust.sh -v -y
+# ENV PATH="/usr/local/cargo/bin:${PATH}"
 
 #
 # Install wasm-tools from binary releasing
@@ -178,10 +178,8 @@ RUN cargo install --git https://github.com/bytecodealliance/wit-bindgen wit-bind
 
 #
 # Install perf
-ARG KERNEL_VER=5.15.0-89
 RUN apt update \
-      && apt-get install -y linux-tools-generic linux-tools-${KERNEL_VER}-generic \
-      && apt-get install -y linux-headers-${KERNEL_VER}
+      && apt-get install -y linux-tools-generic linux-tools-$(uname -a | awk '{print $3}') \
 
 # set path
 ENV PATH="/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"

@@ -127,16 +127,16 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
 
 #
 # Install github-cli. It doens't work as a feature of devcontainer.json
-ARG GH_CLI_VER=2.32.0
-WORKDIR /tmp
-RUN wget -q https://github.com/cli/cli/releases/download/v${GH_CLI_VER}/gh_${GH_CLI_VER}_linux_amd64.deb \
-  && dpkg -i gh_${GH_CLI_VER}_linux_amd64.deb
+# ARG GH_CLI_VER=2.32.0
+# WORKDIR /tmp
+# RUN wget -q https://github.com/cli/cli/releases/download/v${GH_CLI_VER}/gh_${GH_CLI_VER}_linux_amd64.deb \
+#   && dpkg -i gh_${GH_CLI_VER}_linux_amd64.deb
 
 #
 # Install NodeJS
-RUN wget -qO- https://deb.nodesource.com/setup_20.x | bash -
-# hadolint ignore=DL3008
-RUN apt-get install -y nodejs --no-install-recommends
+# RUN wget -qO- https://deb.nodesource.com/setup_20.x | bash -
+# # hadolint ignore=DL3008
+# RUN apt-get install -y nodejs --no-install-recommends
 
 #
 # SGX setup

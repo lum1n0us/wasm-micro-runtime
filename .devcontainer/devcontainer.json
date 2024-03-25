@@ -20,23 +20,7 @@
       "WASM_TOOLS_VER": "1.201.0",
       "WIT_BINDGEN_VER": "0.21.0",
       "VARIANT": "jammy",
-      // "HTTP_PROXY": "http://proxy-us.intel.com:914",
-      // "HTTPS_PROXY": "http://proxy-us.intel.com:914",
-      // "http_proxy": "http://proxy-us.intel.com:914",
-      // "https_proxy": "http://proxy-us.intel.com:914"
     }
-  },
-  "containerEnv": {
-    "HTTP_PROXY": "http://proxy-us.intel.com:914",
-    "HTTPS_PROXY": "http://proxy-us.intel.com:914",
-    "http_proxy": "http://proxy-us.intel.com:914",
-    "https_proxy": "http://proxy-us.intel.com:914"
-  },
-  "remoteEnv": {
-    "HTTP_PROXY": "http://proxy-us.intel.com:914",
-    "HTTPS_PROXY": "http://proxy-us.intel.com:914",
-    "http_proxy": "http://proxy-us.intel.com:914",
-    "https_proxy": "http://proxy-us.intel.com:914"
   },
   "privileged": true,
   // Configure tool-specific properties.
@@ -58,13 +42,11 @@
         "llvm-vs-code-extensions.vscode-clangd",
         "ms-python.pylint",
         "ms-python.python",
-        "ms-python.vscode-pylance",
         "ms-toolsai.jupyter",
         "ms-toolsai.jupyter-keymap",
         "ms-toolsai.jupyter-renderers",
         "ms-toolsai.vscode-jupyter-cell-tags",
         "ms-toolsai.vscode-jupyter-slideshow",
-        "rust-lang.rust-analyzer",
         "streetsidesoftware.code-spell-checker",
         "vadimcn.vscode-lldb"
       ]
@@ -73,16 +55,10 @@
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
   // Use 'postCreateCommand' to run commands after the container is created.
-  // "postCreateCommand": "",
+  "postCreateCommand": "bash .devcontainer/finalize.sh",
   // Comment out this line to run as root instead.
   "remoteUser": "vscode",
   "mounts": [
     "source=/mnt/workspace/SDF,target=/SDF,type=bind"
-  ],
-  // "features": {
-  //   "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
-  // },
-  "containerEnv": {
-    "CARGO_HOME": "/home/vscode/.cargo"
-  }
+  ]
 }
