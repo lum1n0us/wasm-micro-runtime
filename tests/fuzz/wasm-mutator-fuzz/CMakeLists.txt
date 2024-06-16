@@ -120,16 +120,18 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 add_definitions(-DWAMR_USE_MEM_POOL=0 -DWASM_ENABLE_FUZZ_TEST=1)
 
-# Enable fuzzer
-add_compile_options(-fsanitize=fuzzer)
-add_link_options(-fsanitize=fuzzer)
-
 # if not calling from oss-fuzz helper, enable all support sanitizers
 # oss-fuzz will define FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION in CFLAGS and CXXFLAGS
 set(CFLAGS_ENV $ENV{CFLAGS})
 string(FIND "${CFLAGS_ENV}" "-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION" IN_OSS_FUZZ)
 if (IN_OSS_FUZZ EQUAL -1)
   message("[ceith]:Enable ASan and UBSan in non-oss-fuzz environment")
+
+  # Enable fuzzer
+  add_compile_options(-fsanitize=fuzzer)
+  add_link_options(-fsanitize=fuzzer)
+
+  # Enable Sans
   add_compile_options(
     -fprofile-instr-generate -fcoverage-mapping
     -fno-sanitize-recover=all
