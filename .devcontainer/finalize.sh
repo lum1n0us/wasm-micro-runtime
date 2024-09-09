@@ -7,7 +7,7 @@ sudo chown -R vscode ${CARGO_HOME}
 sudo chown -R vscode ${RUSTUP_HOME}
 # rustup update stable --no-self-update
 # rustup default stable
-rustup target add wasm32-unknown-unknown
+#rustup target add wasm32-unknown-unknown
 rustup target add wasm32-wasi
 rustup component add clippy
 rustup component add rustfmt
