@@ -55,11 +55,11 @@ RUN  git pull \
 
 #
 # install wasi-sdk
-ARG WASI_SDK_VER=21
-RUN wget -c --progress=dot:giga https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_VER}/wasi-sdk-${WASI_SDK_VER}.0-linux.tar.gz -P /opt \
-  && tar xf /opt/wasi-sdk-${WASI_SDK_VER}.0-linux.tar.gz -C /opt \
+ARG WASI_SDK_VER=24
+RUN wget -c --progress=dot:giga https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_VER}/wasi-sdk-${WASI_SDK_VER}.0-x86_64-linux.tar.gz -P /opt \
+  && tar xf /opt/wasi-sdk-${WASI_SDK_VER}.0-x86_64-linux.tar.gz -C /opt \
   && ln -sf /opt/wasi-sdk-${WASI_SDK_VER}.0 /opt/wasi-sdk \
-  && rm /opt/wasi-sdk-${WASI_SDK_VER}.0-linux.tar.gz
+  && rm /opt/wasi-sdk-${WASI_SDK_VER}.0-x86_64-linux.tar.gz
 
 #
 #install wabt
