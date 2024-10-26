@@ -30,6 +30,8 @@
       // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
         "esbenp.prettier-vscode",
+        "GitHub.vscode-codeql",
+        "GitHub.vscode-pull-request-github",
         "ms-python.debugpy",
         "ms-python.python",
         "ms-python.black-formatter",
