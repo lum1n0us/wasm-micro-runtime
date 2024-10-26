@@ -158,6 +158,14 @@ ENV RUSTUP_HOME=/home/vscode/.rustup
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="${CARGO_HOME}/bin:${PATH}"
 
+#
+# Install CodeQL CLI
+RUN cd /opt \
+  && wget https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.19.2/codeql-bundle-linux64.tar.gz \
+  && tar xf codeql-bundle-linux64.tar.gz \
+  && rm codeql-bundle-linux64.tar.gz
+ENV PATH="/opt/codeql:${PATH}"
+
 # set path
 ENV PATH="/home/vscode/.opam/default/bin:/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
 # clean
