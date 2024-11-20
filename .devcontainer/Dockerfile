@@ -58,7 +58,7 @@ RUN  git pull \
 ARG WASI_SDK_VER=24
 RUN wget -c --progress=dot:giga https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_VER}/wasi-sdk-${WASI_SDK_VER}.0-x86_64-linux.tar.gz -P /opt \
   && tar xf /opt/wasi-sdk-${WASI_SDK_VER}.0-x86_64-linux.tar.gz -C /opt \
-  && ln -sf /opt/wasi-sdk-${WASI_SDK_VER}.0 /opt/wasi-sdk \
+  && ln -sf /opt/wasi-sdk-${WASI_SDK_VER}.0-x86_64-linux /opt/wasi-sdk \
   && rm /opt/wasi-sdk-${WASI_SDK_VER}.0-x86_64-linux.tar.gz
 
 #
@@ -168,6 +168,9 @@ ENV PATH="/opt/codeql:${PATH}"
 
 # set path
 ENV PATH="/home/vscode/.opam/default/bin:/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
+
+ENV PYTHONPATH="/usr/lib/llvm-14/lib/python3.10/dist-packages/"
+
 # clean
 RUN apt-get autoremove -y \
   && apt-get clean -y \
