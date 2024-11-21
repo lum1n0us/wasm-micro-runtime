@@ -33,3 +33,7 @@ Normally there are some methods to tune the memory usage:
 - when using the Wasm C API in fast interpreter or AOT mode, set `clone_wasm_binary=false` in `LoadArgs` and free the wasm binary buffer (with `wasm_byte_vec_delete`) after module loading; `wasm_module_is_underlying_binary_freeable` can be queried to check if the wasm binary buffer can be safely freed (see [the example](../samples/basic/src/free_buffer_early.c)); after the buffer is freed, `wasm_runtime_get_custom_section` cannot be called anymore
 - when using the wasm/AOT loader in fast interpreter or AOT mode, set `wasm_binary_freeable=true` in `LoadArgs` and free the wasm binary buffer (with `wasm_byte_vec_delete`) after module loading; `wasm_runtime_is_underlying_binary_freeable` can be queried to check if the wasm binary buffer can be safely freed; after the buffer is freed, `wasm_runtime_get_custom_section` cannot be called anymore
 - `WAMR_BUILD_SHRUNK_MEMORY` can be used to reduce the memory usage of WAMR, but it might affect the standard expected behavior of WAMR.
+
+## With valgrind
+
+Valgrind doesn't function properly with some WAMR features, so you'll need to turn those off to make checkers work. `-DWAMR_DISABLE_HW_BOUND_CHECK=1 -DWAMR_DISABLE_WRITE_GS_BASE=1`.
