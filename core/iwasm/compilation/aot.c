@@ -48,7 +48,7 @@ aot_create_import_memories(const WASMModule *module, uint32 import_memory_count)
 
     import_memories = wasm_runtime_malloc((uint32)size);
     if (!import_memories) {
-        aot_set_last_error("allocate memory failed.");
+        aot_set_last_error("allocate import memories failed.");
         return NULL;
     }
 
@@ -174,6 +174,89 @@ fail:
     /* Clean up allocated memory in case of failure */
     aot_destroy_mem_init_data_list(data_list, module->data_seg_count);
     return NULL;
+}
+
+static AOTImportTable *
+aot_create_import_tables(const WASMModule *module)
+{
+    uint64 size = sizeof(AOTImportTable) * (uint64)module->import_table_count;
+    if (size >= UINT32_MAX) {
+        aot_set_last_error("too big allocate size");
+        return NULL;
+    }
+
+    AOTImportTable *import_tables = wasm_runtime_malloc((uint32)size);
+    if (!import_tables) {
+        aot_set_last_error("allocate import tables failed.");
+        return NULL;
+    }
+
+    memset(import_tables, 0, (uint32)size);
+
+    for (uint32 i = 0; i < module->import_table_count; i++) {
+        AOTImportTable *table_aot = import_tables + i;
+        WASMImport *table_wasm = module->import_tables + i;
+
+        table_aot->module_name = table_wasm->u.table.module_name;
+        table_aot->table_name = table_wasm->u.table.field_name;
+        table_aot->table_type.elem_type =
+            table_wasm->u.table.table_type.elem_type;
+        table_aot->table_type.flags = table_wasm->u.table.table_type.flags;
+        table_aot->table_type.init_size =
+            table_wasm->u.table.table_type.init_size;
+        table_aot->table_type.max_size =
+            table_wasm->u.table.table_type.max_size;
+#if WASM_ENABLE_GC != 0
+        table_aot->table_type.elem_ref_type =
+            table_wasm->u.table.table_type.elem_ref_type;
+#endif
+        table_aot->table_type.possible_grow =
+            table_wasm->u.table.table_type.possible_grow;
+    }
+
+    return import_tables;
+}
+
+static AOTTable *
+aot_create_tables(const WASMModule *module)
+{
+    uint64 size = sizeof(AOTTable) * (uint64)module->table_count;
+    if (size >= UINT32_MAX) {
+        aot_set_last_error("too big allocate size");
+        return NULL;
+    }
+
+    AOTTable *tables = wasm_runtime_malloc((uint32)size);
+    if (!tables) {
+        aot_set_last_error("allocate tables failed.");
+        return NULL;
+    }
+
+    memset(tables, 0, (uint32)size);
+
+    for (uint32 i = 0; i < module->table_count; i++) {
+        AOTTable *table_aot = tables + i;
+        WASMTable *table_wasm = module->tables + i;
+
+        table_aot->table_type.elem_type = table_wasm->table_type.elem_type;
+        table_aot->table_type.flags = table_wasm->table_type.flags;
+        table_aot->table_type.init_size = table_wasm->table_type.init_size;
+        table_aot->table_type.max_size = table_wasm->table_type.max_size;
+        table_aot->table_type.possible_grow =
+            table_wasm->table_type.possible_grow;
+#if WASM_ENABLE_GC != 0
+        table_aot->table_type.elem_ref_type =
+            table_wasm->table_type.elem_ref_type;
+        /* Note: if the init_expr contains extra data for struct/array
+         * initialization information (init_expr.u.data), the pointer is
+         * copied.
+         * The pointers should still belong to wasm module, so DO NOT
+         * free the pointers copied to comp_data */
+        table_aot->init_expr = table_wasm->init_expr;
+#endif
+    }
+
+    return tables;
 }
 
 static void
@@ -684,56 +767,21 @@ aot_init_tables(AOTCompData *comp_data, WASMModule *module)
     uint32 i, j;
     uint64 size;
 
-    comp_data->table_count = module->import_table_count + module->table_count;
-
-    if (comp_data->table_count > 0) {
-        size = sizeof(AOTTable) * (uint64)comp_data->table_count;
-        if (size >= UINT32_MAX
-            || !(comp_data->tables = wasm_runtime_malloc((uint32)size))) {
-            aot_set_last_error("create tables array failed.\n");
+    /* Create import tables */
+    comp_data->import_table_count = module->import_table_count;
+    if (comp_data->import_table_count > 0) {
+        comp_data->import_tables = aot_create_import_tables(module);
+        if (!comp_data->import_tables) {
             return false;
         }
-        memset(comp_data->tables, 0, size);
-        for (i = 0; i < comp_data->table_count; i++) {
-            if (i < module->import_table_count) {
-                comp_data->tables[i].table_type.elem_type =
-                    module->import_tables[i].u.table.table_type.elem_type;
-                comp_data->tables[i].table_type.flags =
-                    module->import_tables[i].u.table.table_type.flags;
-                comp_data->tables[i].table_type.init_size =
-                    module->import_tables[i].u.table.table_type.init_size;
-                comp_data->tables[i].table_type.max_size =
-                    module->import_tables[i].u.table.table_type.max_size;
-#if WASM_ENABLE_GC != 0
-                comp_data->tables[i].table_type.elem_ref_type =
-                    module->import_tables[i].u.table.table_type.elem_ref_type;
-#endif
-                comp_data->tables[i].table_type.possible_grow =
-                    module->import_tables[i].u.table.table_type.possible_grow;
-            }
-            else {
-                j = i - module->import_table_count;
-                comp_data->tables[i].table_type.elem_type =
-                    module->tables[j].table_type.elem_type;
-                comp_data->tables[i].table_type.flags =
-                    module->tables[j].table_type.flags;
-                comp_data->tables[i].table_type.init_size =
-                    module->tables[j].table_type.init_size;
-                comp_data->tables[i].table_type.max_size =
-                    module->tables[j].table_type.max_size;
-                comp_data->tables[i].table_type.possible_grow =
-                    module->tables[j].table_type.possible_grow;
-#if WASM_ENABLE_GC != 0
-                comp_data->tables[j].table_type.elem_ref_type =
-                    module->tables[j].table_type.elem_ref_type;
-                /* Note: if the init_expr contains extra data for struct/array
-                 * initialization information (init_expr.u.data), the pointer is
-                 * copied.
-                 * The pointers should still belong to wasm module, so DO NOT
-                 * free the pointers copied to comp_data */
-                comp_data->tables[j].init_expr = module->tables[j].init_expr;
-#endif
-            }
+    }
+
+    /* Create tables */
+    comp_data->table_count = module->table_count;
+    if (comp_data->table_count > 0) {
+        comp_data->tables = aot_create_tables(module);
+        if (!comp_data->tables) {
+            return false;
         }
     }
 

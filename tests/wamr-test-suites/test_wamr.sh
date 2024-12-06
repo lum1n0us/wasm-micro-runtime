@@ -822,13 +822,20 @@ function build_wamrc()
     fi
 
     echo "Build wamrc for spec test under aot compile type"
+
+    local EXTRA_COMPILE_FLAGS=""
+    EXTRA_COMPILE_FLAGS+=" -DCOLLECT_CODE_COVERAGE=${COLLECT_CODE_COVERAGE}"
+    EXTRA_COMPILE_FLAGS+=" -DWAMR_BUILD_SHRUNK_MEMORY=0"
+
+    if [[ ${ENABLE_DEBUG_VERSION} == 1 ]]; then
+        EXTRA_COMPILE_FLAGS+=" -DCMAKE_BUILD_TYPE=Debug"
+    fi
+
     cd ${WAMR_DIR}/wamr-compiler \
         && ./${BUILD_LLVM_SH} \
         && if [ -d build ]; then rm -r build/*; else mkdir build; fi \
         && cd build \
-        && cmake .. \
-             -DCOLLECT_CODE_COVERAGE=${COLLECT_CODE_COVERAGE} \
-             -DWAMR_BUILD_SHRUNK_MEMORY=0 \
+        && cmake ${EXTRA_COMPILE_FLAGS} ..  \
         && make -j 4
 }
 
