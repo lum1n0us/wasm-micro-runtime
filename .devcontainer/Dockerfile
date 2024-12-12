@@ -148,7 +148,7 @@ RUN apt update \
 #
 # Install extra clang tools and lldb
 RUN apt update \
-  && apt install -y clang-tools clang-tidy clang-format clangd \
+  && apt install -y clang-tools clang-tidy clang-format-12 clangd \
   && apt install -y lldb python3-lldb
 
 #
