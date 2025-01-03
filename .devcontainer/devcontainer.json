@@ -30,6 +30,7 @@
       // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
         "bierner.github-markdown-preview",
+        "dtsvet.vscode-wasm",
         "esbenp.prettier-vscode",
         "GitHub.vscode-codeql",
         "GitHub.vscode-pull-request-github",
@@ -45,7 +46,7 @@
         "ms-vscode.cpptools",
         "ms-vscode.cpptools-extension-pack",
         "streetsidesoftware.code-spell-checker",
-        "vadimcn.vscode-lldb"
+        "vadimcn.vscode-lldb",
       ]
     }
   },
