@@ -56,7 +56,7 @@
   "postCreateCommand": "bash -euvx .devcontainer/finalize.sh",
   // Comment out this line to run as root instead.
   "remoteUser": "vscode",
-  "mounts": [
-    "source=/mnt/workspace/SDF,target=/SDF,type=bind"
-  ]
+  // "mounts": [
+  //   "source=/mnt/workspace/SDF,target=/SDF,type=bind"
+  // ]
 }
