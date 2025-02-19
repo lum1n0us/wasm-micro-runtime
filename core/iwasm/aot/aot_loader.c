@@ -671,7 +671,7 @@ load_native_symbol_section(const uint8 *buf, const uint8 *buf_end,
             goto fail;
         }
 
-        for (i = cnt - 1; i >= 0; i--) {
+        for (i = (int32)cnt - 1; i >= 0; i--) {
             read_string(p, p_end, symbol);
             if (!strlen(symbol))
                 continue;
@@ -3904,7 +3904,7 @@ load_relocation_section(const uint8 *buf, const uint8 *buf_end,
         /* The layout is: literal size + literal + code (with plt table) */
         uint8 *mmap_addr = module->literal - sizeof(uint32);
         uint32 total_size =
-            sizeof(uint32) + module->literal_size + module->code_size;
+            (uint32)sizeof(uint32) + module->literal_size + module->code_size;
         os_mprotect(mmap_addr, total_size, map_prot);
     }
 
@@ -4600,7 +4600,7 @@ aot_unload(AOTModule *module)
         /* The layout is: literal size + literal + code (with plt table) */
         uint8 *mmap_addr = module->literal - sizeof(uint32);
         uint32 total_size =
-            sizeof(uint32) + module->literal_size + module->code_size;
+            (uint32)sizeof(uint32) + module->literal_size + module->code_size;
         os_munmap(mmap_addr, total_size);
     }
 
