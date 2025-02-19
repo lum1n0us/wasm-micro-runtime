@@ -720,9 +720,6 @@ arch_is_x86(const char *target_arch)
 static bool
 aot_init_memories(AOTCompData *comp_data, WASMModule *module)
 {
-    uint32 i, j;
-    uint64 size;
-
     /* Create import memories */
     comp_data->import_memory_count = module->import_memory_count;
     if (comp_data->import_memory_count) {
@@ -766,9 +763,6 @@ aot_init_memories(AOTCompData *comp_data, WASMModule *module)
 static bool
 aot_init_tables(AOTCompData *comp_data, WASMModule *module)
 {
-    uint32 i, j;
-    uint64 size;
-
     /* Create import tables */
     comp_data->import_table_count = module->import_table_count;
     if (comp_data->import_table_count > 0) {
