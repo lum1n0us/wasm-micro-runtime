@@ -11,7 +11,7 @@
     "args": {
       "BAZELISK_VER": "1.19.0",
       "BINARYEN_VER": "117",
-      "CMAKE_VER": "3.27.0",
+      "CMAKE_VER": "4.0.0",
       "EMSDK_VER": "3.1.43",
       "GH_CLI_VER": "2.50.0",
       "LLVM_VER": "15.0.6",
