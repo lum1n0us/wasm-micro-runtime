@@ -8,9 +8,9 @@ sudo chown -R vscode ${RUSTUP_HOME}
 # rustup update stable --no-self-update
 # rustup default stable
 #rustup target add wasm32-unknown-unknown
-rustup target add wasm32-wasi
-rustup component add clippy
-rustup component add rustfmt
+RUSTUP_DIST_SERVER=https://fastly-static.rust-lang.org rustup target add wasm32-wasip1
+#rustup component add clippy
+RUSTUP_DIST_SERVER=https://fastly-static.rust-lang.org rustup component add rustfmt
 
 printf "Installing Python Dependencies\n"
 pip install -r .devcontainer/requirements.txt
