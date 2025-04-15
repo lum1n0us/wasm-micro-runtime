@@ -123,12 +123,18 @@ typedef void *(*thread_start_routine_t)(void *);
 #ifndef __PRI64_PREFIX
 #if UINTPTR_MAX == UINT64_MAX
 #define __PRI64_PREFIX "l"
-#define __PRIPTR_PREFIX "l"
 #else
 #define __PRI64_PREFIX "ll"
+#endif
+#endif /* __PRI64_PREFIX */
+
+#ifndef __PRIPTR_PREFIX
+#if UINTPTR_MAX == UINT64_MAX
+#define __PRIPTR_PREFIX "l"
+#else
 #define __PRIPTR_PREFIX
 #endif
-#endif /* #ifndef __PRI64_PREFIX */
+#endif /* __PRIPTR_PREFIX */
 
 /* Macros for printing format specifiers */
 #ifndef PRId32
