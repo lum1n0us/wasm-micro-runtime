@@ -1,0 +1,15 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+paths:
+  - .github
+  - core
+  - product-mini/platforms
+  - samples
+  - test-tools
+  - wamr-compiler
+paths-ignore:
+  # always ignore build 
+  - "**/build/**"
+  # ignore 3rd party code
+  - src/deps
+  - samples/workload

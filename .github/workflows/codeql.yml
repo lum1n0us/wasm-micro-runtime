@@ -1,3 +1,6 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 # For most projects, this workflow file will not need changing; you simply need
 # to commit it to your repository.
 #
@@ -15,7 +18,7 @@ on:
   #   branches: [ "main" ]
   # midnight UTC
   schedule:
-    - cron: '0 0 * * *'
+    - cron: "0 0 * * *"
   # allow to be triggered manually
   workflow_dispatch:
 
@@ -37,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'cpp' ]
+        language: ["cpp"]
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby', 'swift' ]
 
     permissions:
@@ -46,76 +49,77 @@ jobs:
       security-events: write
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        submodules: recursive
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
-    # Initializes the CodeQL tools for scanning.
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3.28.15
-      with:
-        languages: ${{ matrix.language }}
+      # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3.28.15
+        with:
+          languages: ${{ matrix.language }}
 
-        # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
-        # queries: security-extended,security-and-quality
-        queries: security-and-quality
+          # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
+          # queries: security-extended,security-and-quality
+          queries: security-and-quality
+          config-file: ./.github/codeql/codeql-config.yml
 
-    # Command-line programs to run using the OS shell.
-    # See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
+      # Command-line programs to run using the OS shell.
+      # See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
 
-    #   If the Autobuild fails above, remove it and uncomment the following three lines.
-    #   modify them (or add more) to build your code if your project, please refer to the EXAMPLE below for guidance.
+      #   If the Autobuild fails above, remove it and uncomment the following three lines.
+      #   modify them (or add more) to build your code if your project, please refer to the EXAMPLE below for guidance.
 
-    - run: |
-        ./.github/scripts/codeql_buildscript.sh
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3.28.15
-      with:
-        category: "/language:${{matrix.language}}"
-        upload: false
-      id: step1
+      - run: |
+          ./.github/scripts/codeql_buildscript.sh
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3.28.15
+        with:
+          category: "/language:${{matrix.language}}"
+          upload: false
+        id: step1
 
-    # Filter out rules with low severity or high false positve rate
-    # Also filter out warnings in third-party code
-    - name: Filter out unwanted errors and warnings
-      uses: advanced-security/filter-sarif@v1
-      with:
-        patterns: |
-          -**:cpp/path-injection
-          -**:cpp/world-writable-file-creation
-          -**:cpp/poorly-documented-function
-          -**:cpp/potentially-dangerous-function
-          -**:cpp/use-of-goto
-          -**:cpp/integer-multiplication-cast-to-long
-          -**:cpp/comparison-with-wider-type
-          -**:cpp/leap-year/*
-          -**:cpp/ambiguously-signed-bit-field
-          -**:cpp/suspicious-pointer-scaling
-          -**:cpp/suspicious-pointer-scaling-void
-          -**:cpp/unsigned-comparison-zero
-          -**/cmake*/Modules/**
-        input: ${{ steps.step1.outputs.sarif-output }}/cpp.sarif
-        output: ${{ steps.step1.outputs.sarif-output }}/cpp.sarif
+      # Filter out rules with low severity or high false positve rate
+      # Also filter out warnings in third-party code
+      - name: Filter out unwanted errors and warnings
+        uses: advanced-security/filter-sarif@v1
+        with:
+          patterns: |
+            -**:cpp/path-injection
+            -**:cpp/world-writable-file-creation
+            -**:cpp/poorly-documented-function
+            -**:cpp/potentially-dangerous-function
+            -**:cpp/use-of-goto
+            -**:cpp/integer-multiplication-cast-to-long
+            -**:cpp/comparison-with-wider-type
+            -**:cpp/leap-year/*
+            -**:cpp/ambiguously-signed-bit-field
+            -**:cpp/suspicious-pointer-scaling
+            -**:cpp/suspicious-pointer-scaling-void
+            -**:cpp/unsigned-comparison-zero
+            -**/cmake*/Modules/**
+          input: ${{ steps.step1.outputs.sarif-output }}/cpp.sarif
+          output: ${{ steps.step1.outputs.sarif-output }}/cpp.sarif
 
-    - name: Upload CodeQL results to code scanning
-      uses: github/codeql-action/upload-sarif@v3.28.15
-      with:
-        sarif_file: ${{ steps.step1.outputs.sarif-output }}
-        category: "/language:${{matrix.language}}"
+      - name: Upload CodeQL results to code scanning
+        uses: github/codeql-action/upload-sarif@v3.28.15
+        with:
+          sarif_file: ${{ steps.step1.outputs.sarif-output }}
+          category: "/language:${{matrix.language}}"
 
-    - name: Upload CodeQL results as an artifact
-      if: success() || failure()
-      uses: actions/upload-artifact@v4.6.2
-      with:
-        name: codeql-results
-        path: ${{ steps.step1.outputs.sarif-output }}
-        retention-days: 10
+      - name: Upload CodeQL results as an artifact
+        if: success() || failure()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: codeql-results
+          path: ${{ steps.step1.outputs.sarif-output }}
+          retention-days: 10
 
-    - name: Fail if an error is found
-      run: |
-        ./.github/scripts/codeql_fail_on_error.py \
-          ${{ steps.step1.outputs.sarif-output }}/cpp.sarif
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
+      - name: Fail if an error is found
+        run: |
+          ./.github/scripts/codeql_fail_on_error.py \
+            ${{ steps.step1.outputs.sarif-output }}/cpp.sarif
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
