@@ -3,13 +3,34 @@
 paths:
   - .github
   - core
-  - product-mini/platforms
-  - samples
-  - test-tools
   - wamr-compiler
 paths-ignore:
   # always ignore build 
-  - "**/build/**"
+  - '**/build/**'
+  - '**/test*/**'
+  - '**/wasm-app*/**'
   # ignore 3rd party code
-  - src/deps
-  - samples/workload
+  - src/deps/
+  # TODO: add samples back after buildscript modification
+  - samples
+  - samples/wasm-c-api/
+  - samples/workload/
+  # TODO: add test-tools back after buildscript modification
+  - test-tools
+  - test-tools/wamr-ide/VSCode-Extension/resource/
+  # TODO: add platforms back if able to do cross-compilation
+  - product-mini/platforms
+  - core/shared/platform/alios
+  - core/shared/platform/android
+  - core/shared/platform/cosmopolitan
+  - core/shared/platform/darwin
+  - core/shared/platform/ego
+  - core/shared/platform/esp-idf
+  - core/shared/platform/freebsd
+  - core/shared/platform/linux-sgx
+  - core/shared/platform/nuttx
+  - core/shared/platform/riot
+  - core/shared/platform/rt-thread
+  - core/shared/platform/vxworks
+  - core/shared/platform/windows
+  - core/shared/platform/zephyr

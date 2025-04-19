@@ -1,32 +1,24 @@
 # Copyright (C) 2019 Intel Corporation.  All rights reserved.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# For most projects, this workflow file will not need changing; you simply need
-# to commit it to your repository.
-#
-# You may wish to alter this file to override the set of languages analyzed,
-# or to provide custom queries or build logic.
-#
 name: "CodeQL"
 
 on:
-  #pull_request:
-  #  types:
-  #    - opened
-  #  branches: '*'
-  #push:
-  #   branches: [ "main" ]
-  # midnight UTC
+  # run on every push to the feature-development branch
+  # the main branch is covered by below cron plan
+  push:
+    branches:
+      - dev/**
+  # midnight UTC on the latest commit on the main branch
   schedule:
     - cron: "0 0 * * *"
   # allow to be triggered manually
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
   analyze:
+    # only run this job if the repository is not a fork
+    # if want to run this job on a fork, please remove the if condition
     # if: github.repository == 'bytecodealliance/wasm-micro-runtime'
     name: Analyze
     # Runner size impacts CodeQL analysis time. To learn more, please see:
@@ -34,14 +26,14 @@ jobs:
     #   - https://gh.io/supported-runners-and-hardware-resources
     #   - https://gh.io/using-larger-runners
     # Consider using larger runners for possible analysis time improvements.
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-13') || 'ubuntu-22.04' }}
-    timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
 
     strategy:
       fail-fast: false
       matrix:
+        #TODO: add actions
         language: ["cpp"]
-        # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby', 'swift' ]
 
     permissions:
       contents: read
@@ -59,20 +51,14 @@ jobs:
         uses: github/codeql-action/init@v3.28.15
         with:
           languages: ${{ matrix.language }}
-
           # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
           # queries: security-extended,security-and-quality
           queries: security-and-quality
           config-file: ./.github/codeql/codeql-config.yml
 
-      # Command-line programs to run using the OS shell.
-      # See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
-
-      #   If the Autobuild fails above, remove it and uncomment the following three lines.
-      #   modify them (or add more) to build your code if your project, please refer to the EXAMPLE below for guidance.
-
       - run: |
           ./.github/scripts/codeql_buildscript.sh
+
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3.28.15
         with:
@@ -86,6 +72,9 @@ jobs:
         uses: advanced-security/filter-sarif@v1
         with:
           patterns: |
+            -**/build/*
+            -**/test*/*
+            -**/wasm-app*/*
             -**:cpp/path-injection
             -**:cpp/world-writable-file-creation
             -**:cpp/poorly-documented-function
@@ -98,6 +87,7 @@ jobs:
             -**:cpp/suspicious-pointer-scaling
             -**:cpp/suspicious-pointer-scaling-void
             -**:cpp/unsigned-comparison-zero
+            -**:cpp/unused-static-function
             -**/cmake*/Modules/**
           input: ${{ steps.step1.outputs.sarif-output }}/cpp.sarif
           output: ${{ steps.step1.outputs.sarif-output }}/cpp.sarif
