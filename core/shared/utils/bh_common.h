@@ -67,9 +67,9 @@ char *
 wa_strdup(const char *s);
 
 #if WASM_ENABLE_WAMR_COMPILER != 0 || WASM_ENABLE_JIT != 0
-/* Executes a system command in bash/cmd.exe */
+/* Executes a program referred to by cmd in bash/cmd.exe */
 int
-bh_system(const char *cmd);
+bh_system(const char *cmd, char *const argv[], int argc);
 
 /* Tests whether can create a temporary file with the given name */
 bool

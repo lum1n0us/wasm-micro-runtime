@@ -167,15 +167,33 @@ wa_strdup(const char *s)
 }
 
 #if WASM_ENABLE_WAMR_COMPILER != 0 || WASM_ENABLE_JIT != 0
+/* need to make sure that The `argv[]` must be terminated by a NULL pointer. */
 int
-bh_system(const char *cmd)
+bh_system(const char *cmd, char *const argv[], int argc)
 {
     int ret;
+    /* no environment variables */
+    char *const envp[] = { NULL };
+
+    if (cmd == NULL) {
+        return -1;
+    }
+
+    if (argc > 0) {
+        if (argv == NULL) {
+            return -1;
+        }
+
+        /* The `argv[]` must be terminated by a NULL pointer. */
+        if (argv[argc - 1] != NULL) {
+            return -1;
+        }
+    }
 
 #if !(defined(_WIN32) || defined(_WIN32_))
-    ret = system(cmd);
+    ret = execve(cmd, argv, envp);
 #else
-    ret = _spawnlp(_P_WAIT, "cmd.exe", "/c", cmd, NULL);
+    ret = _execve(cmd, argv, envp);
 #endif
 
     return ret;
