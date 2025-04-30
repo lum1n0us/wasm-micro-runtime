@@ -299,8 +299,10 @@ load_native_lib(const char *name)
     memset(lib, 0, sizeof(*lib));
 
     /* open the native library */
-    if (!(lib->handle = dlopen(name, RTLD_NOW | RTLD_GLOBAL))
-        && !(lib->handle = dlopen(name, RTLD_LAZY))) {
+    char lib_current_dir[128] = { 0 };
+    snprintf(lib_current_dir, sizeof(lib_current_dir), "./%s", name);
+    if (!(lib->handle = dlopen(lib_current_dir, RTLD_NOW | RTLD_GLOBAL))
+        && !(lib->handle = dlopen(lib_current_dir, RTLD_LAZY))) {
         LOG_WARNING("warning: failed to load native library %s. %s", name,
                     dlerror());
         goto fail;
