@@ -748,6 +748,13 @@ main(int argc, char *argv[])
                        (int)(sizeof(native_lib_list) / sizeof(char *)));
                 return 1;
             }
+
+            /* check if the native lib is in current directory */
+            if (!(argv[0][13] == '.' && argv[0][14] == '/')) {
+                printf("Only allow native lib in current directory\n");
+                return 1;
+            }
+
             native_lib_list[native_lib_count++] = argv[0] + 13;
         }
 #endif
