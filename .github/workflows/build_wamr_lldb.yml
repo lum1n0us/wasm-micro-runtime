@@ -101,9 +101,9 @@ jobs:
       - name: download llvm
         if: steps.lldb_build_cache.outputs.cache-hit != 'true'
         run: |
-          wget https://github.com/llvm/llvm-project/archive/1f27fe6128769f00197925c3b8f6abb9d0e5cd2e.zip
-          unzip -q 1f27fe6128769f00197925c3b8f6abb9d0e5cd2e.zip
-          mv llvm-project-1f27fe6128769f00197925c3b8f6abb9d0e5cd2e llvm-project
+          wget -O llvm-project.tar.xz --progress=dot:giga https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/llvm-project-18.1.8.src.tar.xz
+          tar -xzf llvm-project.tar.xz
+          mv llvm-project-18.1.8.src llvm-project
         working-directory: core/deps/
 
       - name: apply wamr patch
