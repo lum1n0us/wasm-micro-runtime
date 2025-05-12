@@ -106,14 +106,14 @@ jobs:
           mv llvm-project-18.1.8.src llvm-project
         working-directory: core/deps/
 
-      - name: apply wamr patch
-        if: steps.lldb_build_cache.outputs.cache-hit != 'true'
-        run: |
-          git init
-          git config user.email "action@github.com"
-          git config user.name "github action"
-          git apply ../../../build-scripts/lldb_wasm.patch
-        working-directory: core/deps/llvm-project
+      # - name: apply wamr patch
+      #   if: steps.lldb_build_cache.outputs.cache-hit != 'true'
+      #   run: |
+      #     git init
+      #     git config user.email "action@github.com"
+      #     git config user.name "github action"
+      #     git apply ../../../build-scripts/lldb_wasm.patch
+      #   working-directory: core/deps/llvm-project
 
       - name: get stand-alone python ubuntu
         if: steps.lldb_build_cache.outputs.cache-hit != 'true' && contains(inputs.runner, 'ubuntu')
