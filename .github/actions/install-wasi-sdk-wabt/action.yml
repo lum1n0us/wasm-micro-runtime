@@ -71,10 +71,47 @@ runs:
         echo "::notice::wasi-sdk-25 and wabt-1.0.37 installed on macos-14"
       working-directory: /opt
 
-    #TODO: Add support for Windows
+    # download https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-windows.tar.gz
+    # install in C:\wasi-sdk
+    # download https://github.com/WebAssembly/wabt/releases/download/1.0.37/wabt-1.0.37-windows.tar.gz
+    # install in C:\wabt
     - name: Set up wasi-sdk and wabt on Windows
       if: ${{ startsWith(inputs.os, 'windows') }}
       shell: powershell
       run: |
-        echo "::notice::Support for Windows is not implemented yet"
-        exit 1
+        # Create destination directories
+        New-Item -Path "C:\" -Name "wasi-sdk" -ItemType Directory -Force
+        New-Item -Path "C:\" -Name "wabt" -ItemType Directory -Force
+
+        # Download wasi-sdk
+        Write-Host "Downloading wasi-sdk for Windows..."
+        Invoke-WebRequest -Uri "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-windows.tar.gz" -OutFile "wasi-sdk.tar.gz"
+
+        # Extract wasi-sdk
+        Write-Host "Extracting wasi-sdk..."
+        tar -xf wasi-sdk.tar.gz -C "C:\"
+        Move-Item -Path "C:\wasi-sdk-*" -Destination "C:\wasi-sdk" -Force
+
+        # Download wabt
+        Write-Host "Downloading wabt for Windows..."
+        Invoke-WebRequest -Uri "https://github.com/WebAssembly/wabt/releases/download/1.0.37/wabt-1.0.37-windows.tar.gz" -OutFile "wabt.tar.gz"
+
+        # Extract wabt
+        Write-Host "Extracting wabt..."
+        tar -xf wabt.tar.gz -C "C:\"
+        Move-Item -Path "C:\wabt-*" -Destination "C:\wabt" -Force
+
+        # Verify installation
+        "C:\wasi-sdk\bin\clang.exe" --version
+        "C:\wabt\bin\wasm-interp.exe" --version
+
+        Write-Host "::notice::wasi-sdk-25 and wabt-1.0.37 installed on Windows"
+
+    # windows only. link to /opt/wasi-sdk and /opt/wabt in bash
+    - name: Link wasi-sdk and wabt in bash
+      if: ${{ startsWith(inputs.os, 'windows') }}
+      shell: bash
+      run: |
+        sudo ln -sf /c/wasi-sdk /opt/wasi-sdk
+        sudo ln -sf /c/wabt /opt/wabt
+        echo "::notice::Linked wasi-sdk and wabt to /opt for bash usage"

@@ -99,8 +99,8 @@ jobs:
       - name: Set-up Ocamlbuild
         if: matrix.test_option == '$GC_TEST_OPTIONS'
         run: |
-          eval $(opam env)
           opam install ocamlbuild dune menhir
+          eval $(opam env)
 
       - name: install x86_32 support
         if: matrix.arch == 'X86_32'
@@ -108,7 +108,7 @@ jobs:
           # Add another apt repository as some packages cannot
           # be downloaded with the github default repository
           sudo curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc &&
-          sudo apt-add-repository https://packages.microsoft.com/ubuntu/${{ matrix.ubuntu_version }}/prod &&
+          sudo apt-add-repository https://packages.microsoft.com/ubuntu/$(lsb_release -r | awk '{print $2}')/prod &&
           sudo apt-get update &&
           sudo apt install -y g++-multilib lib32gcc-9-dev
 
