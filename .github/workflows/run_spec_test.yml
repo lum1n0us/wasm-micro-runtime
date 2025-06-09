@@ -1,0 +1,120 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+name: A reusable workflow to run spec test
+
+on:
+  workflow_call:
+    inputs:
+      container_image:
+        required: false
+        type: string
+      llvm_cache_key:
+        required: true
+        type: string
+      os:
+        required: true
+        type: string
+
+env:
+  # keep alpha order for below variables
+  #
+  # variant proposals
+  # always using binaries of wabt and run in parallel to save time
+  DEFAULT_TEST_OPTIONS: "-s spec -b -P"
+  GC_TEST_OPTIONS: "-s spec -b -P -G"
+  MEMORY64_TEST_OPTIONS: "-s spec -b -P -W"
+  MULTI_MEMORY_TEST_OPTIONS: "-s spec -b -P -E"
+  MULTI_MODULES_TEST_OPTIONS: "-s spec -b -P -M"
+  SIMD_TEST_OPTIONS: "-s spec -b -P -S"
+  THREADS_TEST_OPTIONS: "-s spec -b -P -p"
+  # special test options
+  WAMR_COMPILER_TEST_OPTIONS: "-s wamr_compiler -S -b -P"
+  WASI_TEST_OPTIONS: "-s wasi_certification -w"
+
+permissions:
+  contents: read
+
+jobs:
+  run_spec_test:
+    continue-on-error: true
+    # Using given container image if it is specified.
+    # Otherwise, it will be ignored by the runner.
+    container:
+      image: ${{ inputs.container_image }}
+    runs-on: ${{ inputs.os }}
+    strategy:
+      matrix:
+        running_mode:
+          [
+            "aot",
+            "classic-interp",
+            "fast-interp",
+            "fast-jit",
+            "jit",
+            "multi-tier-jit",
+          ]
+        test_option:
+          [
+            $DEFAULT_TEST_OPTIONS,
+            $GC_TEST_OPTIONS,
+            $MEMORY64_TEST_OPTIONS,
+            $MULTI_MEMORY_TEST_OPTIONS,
+            $MULTI_MODULES_TEST_OPTIONS,
+            $SIMD_TEST_OPTIONS,
+            $THREADS_TEST_OPTIONS,
+          ]
+        arch: [X86_64, X86_32]
+        # exclude: test_wamr.sh should be able to filter out all incompatible
+        # tests(not all running modes support all targeted proposals)
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      # PREPARE ENVIRONMENT
+      - name: Get LLVM libraries
+        id: retrieve_llvm_libs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./core/deps/llvm/build/bin
+            ./core/deps/llvm/build/include
+            ./core/deps/llvm/build/lib
+            ./core/deps/llvm/build/libexec
+            ./core/deps/llvm/build/share
+          key: ${{ inputs.llvm_cache_key }}
+
+      - name: Quit if cache miss
+        if: steps.retrieve_llvm_libs.outputs.cache-hit != 'true'
+        run: echo "::error::can not get prebuilt llvm libraries" && exit 1
+
+      # remove below two steps(about ocml) after wabt supporting latest GC proposal
+      # use wat2wasm can generate expected wasm binaries
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        if: matrix.test_option == '$GC_TEST_OPTIONS'
+        with:
+          ocaml-compiler: 4.13
+
+      - name: Set-up Ocamlbuild
+        if: matrix.test_option == '$GC_TEST_OPTIONS'
+        run: |
+          eval $(opam env)
+          opam install ocamlbuild dune menhir
+
+      - name: install x86_32 support
+        if: matrix.arch == 'X86_32'
+        run: |
+          # Add another apt repository as some packages cannot
+          # be downloaded with the github default repository
+          sudo curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc &&
+          sudo apt-add-repository https://packages.microsoft.com/ubuntu/${{ matrix.ubuntu_version }}/prod &&
+          sudo apt-get update &&
+          sudo apt install -y g++-multilib lib32gcc-9-dev
+
+      # RUN TESTS
+      - name: run tests
+        timeout-minutes: 60
+        shell: bash
+        run: ./test_wamr.sh -m ${{ matrix.arch }} ${{ matrix.test_option }} -t ${{ matrix.running_mode }}
+        working-directory: ./tests/wamr-test-suites

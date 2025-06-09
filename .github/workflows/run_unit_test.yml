@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+name: A reusable workflow to run unit test
+
+on:
+  workflow_call:
+    inputs:
+      container_image:
+        required: false
+        type: string
+      llvm_cache_key:
+        required: true
+        type: string
+      os:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run_unit_test:
+    continue-on-error: true
+    # Using given container image if it is specified.
+    # Otherwise, it will be ignored by the runner.
+    container:
+      image: ${{ inputs.container_image }}
+    runs-on: ${{ inputs.os }}
+    strategy:
+      matrix:
+        arch: [X86_64, X86_32]
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      # PREPARE ENVIRONMENT
+      - name: Get LLVM libraries
+        id: retrieve_llvm_libs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./core/deps/llvm/build/bin
+            ./core/deps/llvm/build/include
+            ./core/deps/llvm/build/lib
+            ./core/deps/llvm/build/libexec
+            ./core/deps/llvm/build/share
+          key: ${{ inputs.llvm_cache_key }}
+
+      - name: Quit if cache miss
+        if: steps.retrieve_llvm_libs.outputs.cache-hit != 'true'
+        run: echo "::error::can not get prebuilt llvm libraries" && exit 1
+
+      - name: download and install wasi-sdk
+        uses: ./.github/actions/install-wasi-sdk-wabt
+        with:
+          os: ${{ inputs.os }}
+
+      - name: build wamrc from source code
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build --config Debug --parallel 4
+        working-directory: wamr-compiler
+
+      # RUN TESTS
+      - name: run_unit_test
+        run: |
+          cmake -S . -B build -DWAMR_BUILD_TARGET=${{ matrix.arch }}
+          cmake --build build --config Release --parallel 4
+          ctest
+        working-directory: tests/unit

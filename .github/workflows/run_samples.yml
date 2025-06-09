@@ -1,0 +1,196 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+name: A reusable workflow to run samples
+
+on:
+  workflow_call:
+    inputs:
+      container_image:
+        required: false
+        type: string
+      llvm_cache_key:
+        required: true
+        type: string
+      os:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run_samples:
+    continue-on-error: true
+    # Using given container image if it is specified.
+    # Otherwise, it will be ignored by the runner.
+    container:
+      image: ${{ inputs.container_image }}
+    runs-on: ${{ inputs.os }}
+    strategy:
+      matrix:
+        running_mode:
+          [
+            "aot",
+            "classic-interp",
+            "fast-interp",
+            "fast-jit",
+            "jit",
+            "multi-tier-jit",
+          ]
+        arch: [X86_64, X86_32]
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      # PREPARE ENVIRONMENT
+      - name: Get LLVM libraries
+        id: retrieve_llvm_libs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./core/deps/llvm/build/bin
+            ./core/deps/llvm/build/include
+            ./core/deps/llvm/build/lib
+            ./core/deps/llvm/build/libexec
+            ./core/deps/llvm/build/share
+          key: ${{ inputs.llvm_cache_key }}
+
+      - name: Quit if cache miss
+        if: steps.retrieve_llvm_libs.outputs.cache-hit != 'true'
+        run: echo "::error::can not get prebuilt llvm libraries" && exit 1
+
+      - name: download and install wasi-sdk
+        uses: ./.github/actions/install-wasi-sdk-wabt
+        with:
+          os: ${{ inputs.os }}
+
+      - name: build wamrc from source code
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build --config Debug --parallel 4
+        working-directory: wamr-compiler
+
+      # RUN TESTS
+      - name: run-samples
+        run: echo "Run samples"
+
+      - name: Build Sample [basic]
+        run: |
+          cd samples/basic
+          ./build.sh
+          ./run.sh
+
+      - name: Build Sample [debug-tools]
+        run: |
+          cd samples/debug-tools
+          mkdir build && cd build
+          cmake ..
+          cmake --build . --config Debug --parallel 4
+          ./iwasm wasm-apps/trap.wasm | grep "#" > call_stack.txt
+          ./iwasm wasm-apps/trap.aot | grep "#" > call_stack_aot.txt
+          bash -x ../symbolicate.sh
+
+      - name: Build Sample [file]
+        run: |
+          cd samples/file
+          mkdir build && cd build
+          cmake ..
+          cmake --build . --config Debug --parallel 4
+          ./src/iwasm -f wasm-app/file.wasm -d .
+
+      #TODO: inst-context
+      #TODO: inst-context-threads
+      #TODO: linux-perf
+      #TODO: mem-allocator
+
+      - name: Build Sample [multi-module]
+        run: |
+          cd samples/multi-module
+          mkdir build && cd build
+          cmake .. -DWAMR_BUILD_AOT=1
+          cmake --build . --config Debug --parallel 4
+          ./multi_module mC.wasm
+          ./multi_module mC.aot
+
+      - name: Build Sample [multi-thread]
+        run: |
+          cd samples/multi-thread
+          mkdir build && cd build
+          cmake ..
+          cmake --build . --config Debug --parallel 4
+          ./iwasm wasm-apps/test.wasm
+
+      #TODO: native-lib
+
+      - name: Build Sample [native-stack-overflow]
+        run: |
+          cd samples/native-stack-overflow
+          ./build.sh
+          ./run.sh test1
+          ./run.sh test2
+
+      - name: Build Sample [printversion]
+        run: |
+          ./test.sh
+        working-directory: samples/printversion
+
+      - name: Build Sample [ref-types]
+        run: |
+          cd samples/ref-types
+          mkdir build && cd build
+          cmake ..
+          cmake --build . --config Debug --parallel 4
+          ./hello
+
+      #TODO: sgx-ra
+
+      - name: Build Sample [shared-heap]
+        run: |
+          cd samples/shared-heap
+          mkdir build && cd build
+          cmake ..
+          cmake --build . --config Debug --parallel 4
+          ./shared_heap_test
+          ./shared_heap_test --aot
+
+      - name: Build Sample [shared-module]
+        run: |
+          cd samples/shared-module
+          ./build.sh
+          ./run.sh
+
+      #TODO: socket-api
+
+      - name: Build Sample [spawn-thread]
+        run: |
+          cd samples/spawn-thread
+          mkdir build && cd build
+          cmake ..
+          cmake --build . --config Debug --parallel 4
+          ./spawn_thread
+
+      - name: Build Sample [terminate]
+        run: |
+          cd samples/terminate
+          ./build.sh
+          ./run.sh
+
+      - name: Build Sample [wasi-threads]
+        run: |
+          cd samples/wasi-threads
+          mkdir build && cd build
+          cmake ..
+          cmake --build . --config Debug --parallel 4
+          ./iwasm wasm-apps/no_pthread.wasm
+
+      - name: Build Sample [wasm-c-api]
+        run: |
+          VERBOSE=1
+          cmake -S . -B build ${{ matrix.make_options }}
+          cmake --build build --config Debug --parallel 4
+          ctest --test-dir build --output-on-failure
+        working-directory: samples/wasm-c-api
+
+      #TODO: wasm-c-api-imports
