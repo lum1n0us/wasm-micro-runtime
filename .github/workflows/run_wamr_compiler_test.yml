@@ -1,0 +1,74 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+name: A reusable workflow to run wamr compiler test
+
+on:
+  workflow_call:
+    inputs:
+      container_image:
+        required: false
+        type: string
+      llvm_cache_key:
+        required: true
+        type: string
+      os:
+        required: true
+        type: string
+
+env:
+  WAMR_COMPILER_TEST_OPTIONS: "-s wamr_compiler -S -b -P"
+
+permissions:
+  contents: read
+
+jobs:
+  run_wamrc_test:
+    continue-on-error: true
+    # Using given container image if it is specified.
+    # Otherwise, it will be ignored by the runner.
+    container:
+      image: ${{ inputs.container_image }}
+    runs-on: ${{ inputs.os }}
+    strategy:
+      matrix:
+        running_mode: ["aot"]
+        arch: [X86_64, X86_32]
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      # PREPARE ENVIRONMENT
+      - name: Get LLVM libraries
+        id: retrieve_llvm_libs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./core/deps/llvm/build/bin
+            ./core/deps/llvm/build/include
+            ./core/deps/llvm/build/lib
+            ./core/deps/llvm/build/libexec
+            ./core/deps/llvm/build/share
+          key: ${{ inputs.llvm_cache_key }}
+
+      - name: Quit if cache miss
+        if: steps.retrieve_llvm_libs.outputs.cache-hit != 'true'
+        run: echo "::error::can not get prebuilt llvm libraries" && exit 1
+
+      - name: download and install wasi-sdk
+        uses: ./.github/actions/install-wasi-sdk-wabt
+        with:
+          os: ${{ inputs.os }}
+
+      - name: Build WASI thread tests
+        run: bash build.sh
+        working-directory: ./core/iwasm/libraries/lib-wasi-threads/test/
+
+      - name: build socket api tests
+        run: bash build.sh
+        working-directory: ./core/iwasm/libraries/lib-socket/test/
+
+      - name: run tests
+        timeout-minutes: 30
+        run: ./test_wamr.sh  -m ${{ matrix.arch }} $WASI_TEST_OPTIONS -t ${{ matrix.running_mode }}
+        working-directory: ./tests/wamr-test-suites

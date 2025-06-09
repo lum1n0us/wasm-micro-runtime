@@ -1,0 +1,160 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+name: run tests
+
+on:
+  # allow to be triggered manually
+  workflow_dispatch:
+
+# Cancel any in-flight jobs for the same PR/branch so there's only one active
+# at a time
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build_llvm_libraries_on_macos:
+    permissions:
+      contents: read
+      actions: write
+    uses: ./.github/workflows/build_llvm_libraries.yml
+    with:
+      os: "macos-13"
+      arch: "AArch64 ARM Mips RISCV X86"
+
+  build_llvm_libraries_on_ubuntu:
+    permissions:
+      contents: read
+      actions: write
+    uses: ./.github/workflows/build_llvm_libraries.yml
+    with:
+      os: "ubuntu-22.04"
+      arch: "AArch64 ARM Mips RISCV X86"
+
+  build_llvm_libraries_on_windows:
+    permissions:
+      contents: read
+      actions: write
+    uses: ./.github/workflows/build_llvm_libraries.yml
+    with:
+      os: "windows-2025"
+      arch: "AArch64 ARM Mips RISCV X86"
+
+  run_samples:
+    needs:
+      [
+        build_llvm_libraries_on_macos,
+        build_llvm_libraries_on_ubuntu,
+        build_llvm_libraries_on_windows,
+      ]
+    strategy:
+      matrix:
+        os: ["ubuntu-22.04", "macos-13", "windows-2025"]
+        include:
+          - os: macos-13
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_macos.outputs.cache_key }}
+          - os: ubuntu-22.04
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_ubuntu.outputs.cache_key }}
+          - os: windows-2025
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_windows.outputs.cache_key }}
+
+    uses: ./.github/workflows/run_samples.yml
+    with:
+      llvm_cache_key: ${{ matrix.llvm_cache_key }}
+      os: ${{ matrix.os }}
+
+  run_spec_tests:
+    needs:
+      [
+        build_llvm_libraries_on_macos,
+        build_llvm_libraries_on_ubuntu,
+        build_llvm_libraries_on_windows,
+      ]
+    strategy:
+      matrix:
+        os: ["ubuntu-22.04", "macos-13", "windows-2025"]
+        include:
+          - os: macos-13
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_macos.outputs.cache_key }}
+          - os: ubuntu-22.04
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_ubuntu.outputs.cache_key }}
+          - os: windows-2025
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_windows.outputs.cache_key }}
+
+    uses: ./.github/workflows/run_spec_test.yml
+    with:
+      llvm_cache_key: ${{ matrix.llvm_cache_key }}
+      os: ${{ matrix.os }}
+
+  run_wasi_tests:
+    needs:
+      [
+        build_llvm_libraries_on_macos,
+        build_llvm_libraries_on_ubuntu,
+        build_llvm_libraries_on_windows,
+      ]
+    strategy:
+      matrix:
+        os: ["ubuntu-22.04", "macos-13", "windows-2025"]
+        include:
+          - os: macos-13
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_macos.outputs.cache_key }}
+          - os: ubuntu-22.04
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_ubuntu.outputs.cache_key }}
+          - os: windows-2025
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_windows.outputs.cache_key }}
+
+    uses: ./.github/workflows/run_wasi_test.yml
+    with:
+      llvm_cache_key: ${{ matrix.llvm_cache_key }}
+      os: ${{ matrix.os }}
+
+  run_wamr_compiler_test:
+    needs:
+      [
+        build_llvm_libraries_on_macos,
+        build_llvm_libraries_on_ubuntu,
+        build_llvm_libraries_on_windows,
+      ]
+    strategy:
+      matrix:
+        os: ["ubuntu-22.04", "macos-13", "windows-2025"]
+        include:
+          - os: macos-13
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_macos.outputs.cache_key }}
+          - os: ubuntu-22.04
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_ubuntu.outputs.cache_key }}
+          - os: windows-2025
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_windows.outputs.cache_key }}
+
+    uses: ./.github/workflows/run_wamr_compiler_test.yml
+    with:
+      llvm_cache_key: ${{ matrix.llvm_cache_key }}
+      os: ${{ matrix.os }}
+
+  run_unit_test:
+    needs:
+      [
+        build_llvm_libraries_on_macos,
+        build_llvm_libraries_on_ubuntu,
+        build_llvm_libraries_on_windows,
+      ]
+    strategy:
+      matrix:
+        os: ["ubuntu-22.04", "macos-13", "windows-2025"]
+        include:
+          - os: macos-13
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_macos.outputs.cache_key }}
+          - os: ubuntu-22.04
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_ubuntu.outputs.cache_key }}
+          - os: windows-2025
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_windows.outputs.cache_key }}
+
+    uses: ./.github/workflows/run_unit_test.yml
+    with:
+      llvm_cache_key: ${{ matrix.llvm_cache_key }}
+      os: ${{ matrix.os }}
