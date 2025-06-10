@@ -100,7 +100,6 @@ jobs:
         if: matrix.test_option == '$GC_TEST_OPTIONS'
         run: |
           opam install ocamlbuild dune menhir
-          eval $(opam env)
 
       - name: install x86_32 support
         if: matrix.arch == 'X86_32'
@@ -116,5 +115,7 @@ jobs:
       - name: run tests
         timeout-minutes: 60
         shell: bash
-        run: ./test_wamr.sh -m ${{ matrix.arch }} ${{ matrix.test_option }} -t ${{ matrix.running_mode }}
+        run: |
+          which opam && eval $(opam env)
+          ./test_wamr.sh -m ${{ matrix.arch }} ${{ matrix.test_option }} -t ${{ matrix.running_mode }}
         working-directory: ./tests/wamr-test-suites
