@@ -1,0 +1,142 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+name: run tests v2
+
+on:
+  # allow to be triggered manually
+  workflow_dispatch:
+
+# Cancel any in-flight jobs for the same PR/branch so there's only one active
+# at a time
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build_llvm_libraries_on_macos:
+    permissions:
+      contents: read
+      actions: write
+    uses: ./.github/workflows/build_llvm_libraries.yml
+    with:
+      os: "macos-13"
+      arch: "AArch64 ARM Mips RISCV X86"
+
+  build_llvm_libraries_on_ubuntu:
+    permissions:
+      contents: read
+      actions: write
+    uses: ./.github/workflows/build_llvm_libraries.yml
+    with:
+      os: "ubuntu-22.04"
+      arch: "AArch64 ARM Mips RISCV X86"
+
+  build_llvm_libraries_on_windows:
+    permissions:
+      contents: read
+      actions: write
+    uses: ./.github/workflows/build_llvm_libraries.yml
+    with:
+      os: "windows-2025"
+      arch: "AArch64 ARM Mips RISCV X86"
+
+  run_tests:
+    needs:
+      [
+        build_llvm_libraries_on_macos,
+        build_llvm_libraries_on_ubuntu,
+        build_llvm_libraries_on_windows,
+      ]
+    continue-on-error: true
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-13, ubuntu-22.04, windows-2025]
+        include:
+          # append cache key for each OS
+          - os: macos-13
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_macos.outputs.cache_key }}
+          - os: ubuntu-22.04
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_ubuntu.outputs.cache_key }}
+          - os: windows-2025
+            llvm_cache_key: ${{ needs.build_llvm_libraries_on_windows.outputs.cache_key }}
+          # append architecture for each OS
+          #
+          # based on [32-bit app compatibility with macOS](https://support.apple.com/en-us/103076)
+          # Starting with macOS Catalina 10.15, 32-bit apps are no longer compatible with macOS.
+          - os: ubuntu-22.04
+            arch: X86_32
+          - os: ubuntu-22.04
+            arch: X86_64
+          - os: windows-2025
+            arch: X86_32
+          - os: windows-2025
+            arch: X86_64
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      # PREPARE ENVIRONMENT
+      - name: Get LLVM libraries
+        id: retrieve_llvm_libs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./core/deps/llvm/build/bin
+            ./core/deps/llvm/build/include
+            ./core/deps/llvm/build/lib
+            ./core/deps/llvm/build/libexec
+            ./core/deps/llvm/build/share
+          key: ${{ matrix.llvm_cache_key }}
+
+      - name: Quit if cache miss
+        if: steps.retrieve_llvm_libs.outputs.cache-hit != 'true'
+        run: echo "::error::can not get prebuilt llvm libraries for ${{ matrix.os }}" && exit 1
+
+      - name: download and install wasi-sdk
+        uses: ./.github/actions/install-wasi-sdk-wabt
+        with:
+          os: ${{ matrix.os }}
+
+      - name: install x86_32 support
+        if: matrix.arch == 'X86_32' && startsWith(matrix.os, 'ubuntu')
+        run: |
+          # Add another apt repository as some packages cannot
+          # be downloaded with the github default repository
+          sudo curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc
+          sudo apt-add-repository https://packages.microsoft.com/ubuntu/$(lsb_release -r | awk '{print $2}')/prod
+          sudo apt-get update
+          sudo apt-get install -y g++-multilib lib32gcc-9-dev
+
+      # GO!GO!!GO!!!
+      - name: run samples
+        uses: ./.github/actions/run-samples
+        with:
+          arch: ${{ matrix.arch }}
+          llvm_cache_key: ${{ matrix.llvm_cache_key }}
+          os: ${{ matrix.os }}
+
+      #  uses: ./.github/workflows/run_spec_test.yml
+      #  with:
+      #    llvm_cache_key: ${{ matrix.llvm_cache_key }}
+      #    os: ${{ matrix.os }}
+
+      #  uses: ./.github/workflows/run_wamr_compiler_test.yml
+      #  with:
+      #    llvm_cache_key: ${{ matrix.llvm_cache_key }}
+      #    os: ${{ matrix.os }}
+
+      #  uses: ./.github/workflows/run_wasi_test.yml
+      #  with:
+      #    llvm_cache_key: ${{ matrix.llvm_cache_key }}
+      #    os: ${{ matrix.os }}
+
+      #  uses: ./.github/workflows/run_unit_test.yml
+      #  with:
+      #    llvm_cache_key: ${{ matrix.llvm_cache_key }}
+      #    os: ${{ matrix.os }}
