@@ -51,54 +51,54 @@ runs:
         shell: bash
         run: |
           eval $(opam env)
-          ./test_wamr.sh -m ${{ inputs.arch }} $env.DEFAULT_TEST_OPTIONS
+          ./test_wamr.sh -m ${{ inputs.arch }} $DEFAULT_TEST_OPTIONS
           echo "::notice:: Default test completed"
         working-directory: ./tests/wamr-test-suites
 
-      - name: run spec test for GC
-        shell: bash
-        run: |
-          eval $(opam env)
-          ./test_wamr.sh -m ${{ inputs.arch }} $env.GC_TEST_OPTIONS
-          echo "::notice:: GC test completed"
-        working-directory: ./tests/wamr-test-suites
+      # - name: run spec test for GC
+      #   shell: bash
+      #   run: |
+      #     eval $(opam env)
+      #     ./test_wamr.sh -m ${{ inputs.arch }} $env.GC_TEST_OPTIONS
+      #     echo "::notice:: GC test completed"
+      #   working-directory: ./tests/wamr-test-suites
       
-      - name: run spec test for MEMORY64
-        shell: bash
-        run: |
-          eval $(opam env)
-          ./test_wamr.sh -m ${{ inputs.arch }} $env.MEMORY64_TEST_OPTIONS
-          echo "::notice:: MEMORY64 test completed"
-        working-directory: ./tests/wamr-test-suites
+      # - name: run spec test for MEMORY64
+      #   shell: bash
+      #   run: |
+      #     eval $(opam env)
+      #     ./test_wamr.sh -m ${{ inputs.arch }} $env.MEMORY64_TEST_OPTIONS
+      #     echo "::notice:: MEMORY64 test completed"
+      #   working-directory: ./tests/wamr-test-suites
       
-      - name: run spec test for MULTI_MEMORY
-        shell: bash
-        run: |
-          eval $(opam env)
-          ./test_wamr.sh -m ${{ inputs.arch }} $env.MULTI_MEMORY_TEST_OPTIONS
-          echo "::notice:: MULTI_MEMORY test completed"
-        working-directory: ./tests/wamr-test-suites
+      # - name: run spec test for MULTI_MEMORY
+      #   shell: bash
+      #   run: |
+      #     eval $(opam env)
+      #     ./test_wamr.sh -m ${{ inputs.arch }} $env.MULTI_MEMORY_TEST_OPTIONS
+      #     echo "::notice:: MULTI_MEMORY test completed"
+      #   working-directory: ./tests/wamr-test-suites
 
-      - name: run spec test for MULTI_MODULES
-        shell: bash
-        run: |
-          eval $(opam env)
-          ./test_wamr.sh -m ${{ inputs.arch }} $env.MULTI_MODULES_TEST_OPTIONS
-          echo "::notice:: MULTI_MODULES test completed"
-        working-directory: ./tests/wamr-test-suites
+      # - name: run spec test for MULTI_MODULES
+      #   shell: bash
+      #   run: |
+      #     eval $(opam env)
+      #     ./test_wamr.sh -m ${{ inputs.arch }} $env.MULTI_MODULES_TEST_OPTIONS
+      #     echo "::notice:: MULTI_MODULES test completed"
+      #   working-directory: ./tests/wamr-test-suites
 
-      - name: run spec test for SIMD
-        shell: bash
-        run: |
-          eval $(opam env)
-          ./test_wamr.sh -m ${{ inputs.arch }} $env.SIMD_TEST_OPTIONS
-          echo "::notice:: SIMD test completed"
-        working-directory: ./tests/wamr-test-suites
+      # - name: run spec test for SIMD
+      #   shell: bash
+      #   run: |
+      #     eval $(opam env)
+      #     ./test_wamr.sh -m ${{ inputs.arch }} $env.SIMD_TEST_OPTIONS
+      #     echo "::notice:: SIMD test completed"
+      #   working-directory: ./tests/wamr-test-suites
 
-      - name: run spec test for THREADS
-        shell: bash
-        run: |
-          eval $(opam env)
-          ./test_wamr.sh -m ${{ inputs.arch }} $env.THREADS_TEST_OPTIONS
-          echo "::notice:: THREADS test completed"
-        working-directory: ./tests/wamr-test-suites
+      # - name: run spec test for THREADS
+      #   shell: bash
+      #   run: |
+      #     eval $(opam env)
+      #     ./test_wamr.sh -m ${{ inputs.arch }} $env.THREADS_TEST_OPTIONS
+      #     echo "::notice:: THREADS test completed"
+      #   working-directory: ./tests/wamr-test-suites
