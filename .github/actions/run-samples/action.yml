@@ -25,6 +25,7 @@ runs:
         cmake -S . -B build \
           -DCMAKE_BUILD_TYPE=Debug
         cmake --build build --config Debug --parallel 4
+        echo "::notice:: Sample wamrc compiler completed"
       working-directory: wamr-compiler
 
     # RUN TESTS
@@ -34,6 +35,7 @@ runs:
         cd samples/basic
         ./build.sh
         ./run.sh
+        echo "::notice:: Sample basic completed"
 
     - name: Build Sample [debug-tools]
       shell: bash
@@ -45,6 +47,7 @@ runs:
         ./iwasm wasm-apps/trap.wasm | grep "#" > call_stack.txt || exit 0
         ./iwasm wasm-apps/trap.aot | grep "#" > call_stack_aot.txt || exit 0
         bash -x ../symbolicate.sh
+        echo "::notice:: Sample debug-tools completed"
 
     - name: Build Sample [file]
       shell: bash
@@ -54,6 +57,7 @@ runs:
         cmake ..
         cmake --build . --config Debug --parallel 4
         ./src/iwasm -f wasm-app/file.wasm -d .
+        echo "::notice:: Sample file completed"
 
     #TODO: inst-context
     #TODO: inst-context-threads
@@ -74,6 +78,7 @@ runs:
         cmake --build . --config Debug --parallel 4
         ./multi_module mC.wasm
         ./multi_module mC.aot
+        echo "::notice:: Sample multi-module completed"
 
     - name: Build Sample [multi-thread]
       shell: bash
@@ -83,6 +88,7 @@ runs:
         cmake ..
         cmake --build . --config Debug --parallel 4
         ./iwasm wasm-apps/test.wasm
+        echo "::notice:: Sample multi-thread completed"
 
     #TODO: native-lib
 
@@ -93,11 +99,13 @@ runs:
         ./build.sh
         ./run.sh test1
         ./run.sh test2
+        echo "::notice:: Sample native-stack-overflow completed"
 
     - name: Build Sample [printversion]
       shell: bash
       run: |
         ./test.sh
+        echo "::notice:: Sample printversion completed"
       working-directory: samples/printversion
 
     - name: Build Sample [ref-types]
@@ -108,6 +116,7 @@ runs:
         cmake ..
         cmake --build . --config Debug --parallel 4
         ./hello
+        echo "::notice:: Sample ref-types completed"
 
     #TODO: sgx-ra
 
@@ -120,6 +129,7 @@ runs:
         cmake --build . --config Debug --parallel 4
         ./shared_heap_test
         ./shared_heap_test --aot
+        echo "::notice:: Sample shared-heap completed"
 
     - name: Build Sample [shared-module]
       shell: bash
@@ -127,6 +137,7 @@ runs:
         cd samples/shared-module
         ./build.sh
         ./run.sh
+        echo "::notice:: Sample shared-module completed"
 
     #TODO: socket-api
 
@@ -138,6 +149,7 @@ runs:
         cmake ..
         cmake --build . --config Debug --parallel 4
         ./spawn_thread
+        echo "::notice:: Sample spawn-thread completed"
 
     - name: Build Sample [terminate]
       shell: bash
@@ -145,6 +157,7 @@ runs:
         cd samples/terminate
         ./build.sh
         ./run.sh
+        echo "::notice:: Sample terminate completed"
 
     - name: Build Sample [wasi-threads]
       shell: bash
@@ -154,6 +167,7 @@ runs:
         cmake ..
         cmake --build . --config Debug --parallel 4
         ./iwasm wasm-apps/no_pthread.wasm
+        echo "::notice:: Sample wasi-thread completed"
 
     - name: Build Sample [wasm-c-api]
       shell: bash
@@ -162,6 +176,7 @@ runs:
         cmake -S . -B build ${{ matrix.make_options }}
         cmake --build build --config Debug --parallel 4
         ctest --test-dir build --output-on-failure
+        echo "::notice:: Sample wasm-c-api completed"
       working-directory: samples/wasm-c-api
 
     #TODO: wasm-c-api-imports
