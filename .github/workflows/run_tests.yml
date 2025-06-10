@@ -121,15 +121,19 @@ jobs:
           llvm_cache_key: ${{ matrix.llvm_cache_key }}
           os: ${{ matrix.os }}
 
-      #  uses: ./.github/workflows/run_wamr_compiler_test.yml
-      #  with:
-      #    llvm_cache_key: ${{ matrix.llvm_cache_key }}
-      #    os: ${{ matrix.os }}
+      - name: run wamr compiler tests
+        uses: ./.github/actions/run-wamr-compiler-tests
+        with:
+          arch: ${{ matrix.arch }}
+          llvm_cache_key: ${{ matrix.llvm_cache_key }}
+          os: ${{ matrix.os }}
 
-      #  uses: ./.github/workflows/run_wasi_test.yml
-      #  with:
-      #    llvm_cache_key: ${{ matrix.llvm_cache_key }}
-      #    os: ${{ matrix.os }}
+      - name: run wasi tests
+        uses: ./.github/actions/run-wasi-tests
+        with:
+          arch: ${{ matrix.arch }}
+          llvm_cache_key: ${{ matrix.llvm_cache_key }}
+          os: ${{ matrix.os }}
 
       #  uses: ./.github/workflows/run_unit_test.yml
       #  with:

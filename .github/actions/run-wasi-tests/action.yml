@@ -1,0 +1,35 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+name: Run wasi tests
+
+inputs:
+  arch:
+    required: true
+    type: string
+  container_image:
+    required: false
+    type: string
+  llvm_cache_key:
+    required: true
+    type: string
+  os:
+    required: true
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build WASI thread tests
+      shell: bash
+      run: bash build.sh
+      working-directory: ./core/iwasm/libraries/lib-wasi-threads/test/
+
+    - name: build socket api tests
+      shell: bash
+      run: bash build.sh
+      working-directory: ./core/iwasm/libraries/lib-socket/test/
+
+    - name: run wasi test
+      shell: bash
+      run: ./test_wamr.sh  -m ${{ inputs.arch }} -s wasi_certification -w
+      working-directory: ./tests/wamr-test-suites

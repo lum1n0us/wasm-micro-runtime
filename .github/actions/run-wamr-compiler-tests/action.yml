@@ -1,0 +1,28 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+name: Run wamr compiler tests
+
+inputs:
+  arch:
+    required: true
+    type: string
+  container_image:
+    required: false
+    type: string
+  llvm_cache_key:
+    required: true
+    type: string
+  os:
+    required: true
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    #TODO: for X86_32
+    - name: run wamr compiler test
+      shell: bash
+      run: |
+        ./test_wamr.sh -s wamr_compiler -S -b -P
+        echo "::notice:: wamr compiler test completed"
+      working-directory: ./tests/wamr-test-suites

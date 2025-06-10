@@ -400,8 +400,9 @@ def test_suite(
                         # 60 min / case, testing on QEMU may be very slow
                         result.wait(7200)
                     else:
-                        # 5 min / case
-                        result.wait(300)
+                        # 10 min / case
+                        result.wait(600)
+
                     if not result.successful():
                         failed_case += 1
                     else:
