@@ -102,12 +102,3 @@ runs:
         & "C:\wabt\bin\wasm-interp.exe" --version
 
         Write-Host "::notice::wasi-sdk-25 and wabt-1.0.37 installed on Windows"
-
-    # windows only. link to /opt/wasi-sdk and /opt/wabt in bash
-    - name: Link wasi-sdk and wabt in bash
-      if: ${{ startsWith(inputs.os, 'windows') }}
-      shell: bash
-      run: |
-        sudo ln -sf /c/wasi-sdk /opt/wasi-sdk
-        sudo ln -sf /c/wabt /opt/wabt
-        echo "::notice::Linked wasi-sdk and wabt to /opt for bash usage"
