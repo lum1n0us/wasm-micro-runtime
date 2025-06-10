@@ -1,0 +1,167 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+name: Run samples
+
+inputs:
+  arch:
+    required: true
+    type: string
+  container_image:
+    required: false
+    type: string
+  llvm_cache_key:
+    required: true
+    type: string
+  os:
+    required: true
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    - name: build wamrc from source code
+      shell: bash
+      run: |
+        cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE=Debug
+        cmake --build build --config Debug --parallel 4
+      working-directory: wamr-compiler
+
+    # RUN TESTS
+    - name: Build Sample [basic]
+      shell: bash
+      run: |
+        cd samples/basic
+        ./build.sh
+        ./run.sh
+
+    - name: Build Sample [debug-tools]
+      shell: bash
+      run: |
+        cd samples/debug-tools
+        mkdir build && cd build
+        cmake ..
+        cmake --build . --config Debug --parallel 4
+        ./iwasm wasm-apps/trap.wasm | grep "#" > call_stack.txt || exit 0
+        ./iwasm wasm-apps/trap.aot | grep "#" > call_stack_aot.txt || exit 0
+        bash -x ../symbolicate.sh
+
+    - name: Build Sample [file]
+      shell: bash
+      run: |
+        cd samples/file
+        mkdir build && cd build
+        cmake ..
+        cmake --build . --config Debug --parallel 4
+        ./src/iwasm -f wasm-app/file.wasm -d .
+
+    #TODO: inst-context
+    #TODO: inst-context-threads
+    #TODO: linux-perf
+    #TODO: mem-allocator
+
+    # bypass running multi-module on macos
+    # AOT module load failed: relocation truncated to fit
+    # R_X86_64_32S failed.
+    # Try using wamrc with --size-level=1 or 0 option.
+    - name: Build Sample [multi-module]
+      shell: bash
+      if: ${{ ! startsWith(inputs.os, 'macos') }}
+      run: |
+        cd samples/multi-module
+        mkdir build && cd build
+        cmake .. -DWAMR_BUILD_AOT=1
+        cmake --build . --config Debug --parallel 4
+        ./multi_module mC.wasm
+        ./multi_module mC.aot
+
+    - name: Build Sample [multi-thread]
+      shell: bash
+      run: |
+        cd samples/multi-thread
+        mkdir build && cd build
+        cmake ..
+        cmake --build . --config Debug --parallel 4
+        ./iwasm wasm-apps/test.wasm
+
+    #TODO: native-lib
+
+    - name: Build Sample [native-stack-overflow]
+      shell: bash
+      run: |
+        cd samples/native-stack-overflow
+        ./build.sh
+        ./run.sh test1
+        ./run.sh test2
+
+    - name: Build Sample [printversion]
+      shell: bash
+      run: |
+        ./test.sh
+      working-directory: samples/printversion
+
+    - name: Build Sample [ref-types]
+      shell: bash
+      run: |
+        cd samples/ref-types
+        mkdir build && cd build
+        cmake ..
+        cmake --build . --config Debug --parallel 4
+        ./hello
+
+    #TODO: sgx-ra
+
+    - name: Build Sample [shared-heap]
+      shell: bash
+      run: |
+        cd samples/shared-heap
+        mkdir build && cd build
+        cmake ..
+        cmake --build . --config Debug --parallel 4
+        ./shared_heap_test
+        ./shared_heap_test --aot
+
+    - name: Build Sample [shared-module]
+      shell: bash
+      run: |
+        cd samples/shared-module
+        ./build.sh
+        ./run.sh
+
+    #TODO: socket-api
+
+    - name: Build Sample [spawn-thread]
+      shell: bash
+      run: |
+        cd samples/spawn-thread
+        mkdir build && cd build
+        cmake ..
+        cmake --build . --config Debug --parallel 4
+        ./spawn_thread
+
+    - name: Build Sample [terminate]
+      shell: bash
+      run: |
+        cd samples/terminate
+        ./build.sh
+        ./run.sh
+
+    - name: Build Sample [wasi-threads]
+      shell: bash
+      run: |
+        cd samples/wasi-threads
+        mkdir build && cd build
+        cmake ..
+        cmake --build . --config Debug --parallel 4
+        ./iwasm wasm-apps/no_pthread.wasm
+
+    - name: Build Sample [wasm-c-api]
+      shell: bash
+      run: |
+        VERBOSE=1
+        cmake -S . -B build ${{ matrix.make_options }}
+        cmake --build build --config Debug --parallel 4
+        ctest --test-dir build --output-on-failure
+      working-directory: samples/wasm-c-api
+
+    #TODO: wasm-c-api-imports
