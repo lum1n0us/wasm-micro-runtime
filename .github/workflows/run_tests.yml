@@ -55,27 +55,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-13, ubuntu-22.04, windows-2025]
+        # TODO: install wasi-sdk and wabt at /opt. either *cannot create directory ‘/opt’: Permission denied* or *sudo: command not found*
+        # windows-2025 is not supported yet
+        os: [macos-13, ubuntu-22.04]
+        arch: [X86_64, X86_32]
         include:
-          # append cache key for each OS
           - os: macos-13
             llvm_cache_key: ${{ needs.build_llvm_libraries_on_macos.outputs.cache_key }}
           - os: ubuntu-22.04
             llvm_cache_key: ${{ needs.build_llvm_libraries_on_ubuntu.outputs.cache_key }}
-          - os: windows-2025
-            llvm_cache_key: ${{ needs.build_llvm_libraries_on_windows.outputs.cache_key }}
-          # append architecture for each OS
-          #
+        exclude:
           # based on [32-bit app compatibility with macOS](https://support.apple.com/en-us/103076)
           # Starting with macOS Catalina 10.15, 32-bit apps are no longer compatible with macOS.
-          - os: ubuntu-22.04
-            arch: X86_32
-          - os: ubuntu-22.04
-            arch: X86_64
-          - os: windows-2025
-            arch: X86_32
-          - os: windows-2025
-            arch: X86_64
+          - os: macos-13
+            arch: X86_32 # macOS Catalina 10.15 and later do not support 32-bit apps
 
     steps:
       - name: checkout
@@ -121,10 +114,12 @@ jobs:
           llvm_cache_key: ${{ matrix.llvm_cache_key }}
           os: ${{ matrix.os }}
 
-      #  uses: ./.github/workflows/run_spec_test.yml
-      #  with:
-      #    llvm_cache_key: ${{ matrix.llvm_cache_key }}
-      #    os: ${{ matrix.os }}
+      - name: run spec tests
+        uses: ./.github/actions/run-spec-tests
+        with:
+          arch: ${{ matrix.arch }}
+          llvm_cache_key: ${{ matrix.llvm_cache_key }}
+          os: ${{ matrix.os }}
 
       #  uses: ./.github/workflows/run_wamr_compiler_test.yml
       #  with:

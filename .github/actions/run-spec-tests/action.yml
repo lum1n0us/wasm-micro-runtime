@@ -1,0 +1,104 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+name: Run spec tests
+
+inputs:
+  arch:
+    required: true
+    type: string
+  container_image:
+    required: false
+    type: string
+  llvm_cache_key:
+    required: true
+    type: string
+  os:
+    required: true
+    type: string
+
+env:
+  # keep alpha order for below variables
+  #
+  # variant proposals
+  # always using binaries of wabt and run in parallel to save time
+  DEFAULT_TEST_OPTIONS: "-s spec -b -P"
+  GC_TEST_OPTIONS: "-s spec -b -P -G"
+  MEMORY64_TEST_OPTIONS: "-s spec -b -P -W"
+  MULTI_MEMORY_TEST_OPTIONS: "-s spec -b -P -E"
+  MULTI_MODULES_TEST_OPTIONS: "-s spec -b -P -M"
+  SIMD_TEST_OPTIONS: "-s spec -b -P -S"
+  THREADS_TEST_OPTIONS: "-s spec -b -P -p"
+
+# RUN SPEC TESTS under combinations of running_mode and test_option
+# test_option includes: $DEFAULT_TEST_OPTIONS, $GC_TEST_OPTIONS,$MEMORY64_TEST_OPTIONS,$MULTI_MEMORY_TEST_OPTIONS,$MULTI_MODULES_TEST_OPTIONS,$SIMD_TEST_OPTIONS,$THREADS_TEST_OPTIONS,
+
+runs:
+  using: "composite"
+  steps:
+      # remove below two steps(about ocml) after wabt supporting latest GC proposal
+      # use wat2wasm can generate expected wasm binaries
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.13
+
+      - name: Set-up Ocamlbuild
+        shell: bash
+        run: opam install ocamlbuild dune menhir
+
+      # RUN TESTS
+      - name: run spec test for DEFAULT
+        shell: bash
+        run: |
+          eval $(opam env)
+          ./test_wamr.sh -m ${{ inputs.arch }} $env.DEFAULT_TEST_OPTIONS
+          echo "::notice:: Default test completed"
+        working-directory: ./tests/wamr-test-suites
+
+      - name: run spec test for GC
+        shell: bash
+        run: |
+          eval $(opam env)
+          ./test_wamr.sh -m ${{ inputs.arch }} $env.GC_TEST_OPTIONS
+          echo "::notice:: GC test completed"
+        working-directory: ./tests/wamr-test-suites
+      
+      - name: run spec test for MEMORY64
+        shell: bash
+        run: |
+          eval $(opam env)
+          ./test_wamr.sh -m ${{ inputs.arch }} $env.MEMORY64_TEST_OPTIONS
+          echo "::notice:: MEMORY64 test completed"
+        working-directory: ./tests/wamr-test-suites
+      
+      - name: run spec test for MULTI_MEMORY
+        shell: bash
+        run: |
+          eval $(opam env)
+          ./test_wamr.sh -m ${{ inputs.arch }} $env.MULTI_MEMORY_TEST_OPTIONS
+          echo "::notice:: MULTI_MEMORY test completed"
+        working-directory: ./tests/wamr-test-suites
+
+      - name: run spec test for MULTI_MODULES
+        shell: bash
+        run: |
+          eval $(opam env)
+          ./test_wamr.sh -m ${{ inputs.arch }} $env.MULTI_MODULES_TEST_OPTIONS
+          echo "::notice:: MULTI_MODULES test completed"
+        working-directory: ./tests/wamr-test-suites
+
+      - name: run spec test for SIMD
+        shell: bash
+        run: |
+          eval $(opam env)
+          ./test_wamr.sh -m ${{ inputs.arch }} $env.SIMD_TEST_OPTIONS
+          echo "::notice:: SIMD test completed"
+        working-directory: ./tests/wamr-test-suites
+
+      - name: run spec test for THREADS
+        shell: bash
+        run: |
+          eval $(opam env)
+          ./test_wamr.sh -m ${{ inputs.arch }} $env.THREADS_TEST_OPTIONS
+          echo "::notice:: THREADS test completed"
+        working-directory: ./tests/wamr-test-suites
