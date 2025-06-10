@@ -55,12 +55,26 @@ jobs:
       matrix:
         os: ["ubuntu-22.04", "macos-13", "windows-2025"]
         include:
+          # append cache key for each OS
           - os: macos-13
             llvm_cache_key: ${{ needs.build_llvm_libraries_on_macos.outputs.cache_key }}
           - os: ubuntu-22.04
             llvm_cache_key: ${{ needs.build_llvm_libraries_on_ubuntu.outputs.cache_key }}
           - os: windows-2025
             llvm_cache_key: ${{ needs.build_llvm_libraries_on_windows.outputs.cache_key }}
+          # append architecture for each OS
+          #
+          # based on [32-bit app compatibility with macOS](https://support.apple.com/en-us/103076)
+          # Starting with macOS Catalina 10.15, 32-bit apps are no longer compatible with macOS.
+          - os: ubuntu-22.04
+            arch: X86_32
+          - os: ubuntu-22.04
+            arch: X86_64
+          - os: windows-2025
+            arch: X86_32
+          - os: windows-2025
+            arch: X86_64
+
 
     uses: ./.github/workflows/run_samples.yml
     with:

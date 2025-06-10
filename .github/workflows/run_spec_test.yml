@@ -5,6 +5,9 @@ name: A reusable workflow to run spec test
 on:
   workflow_call:
     inputs:
+      arch:
+        required: true
+        type: string
       container_image:
         required: false
         type: string
@@ -41,11 +44,9 @@ jobs:
     # Otherwise, it will be ignored by the runner.
     container:
       image: ${{ inputs.container_image }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ inputs.os }}
     strategy:
       matrix:
-        arch: [X86_64, X86_32]
-        os: [ ${{ inputs.os }} ]
         running_mode:
           [
             "aot",
@@ -67,13 +68,6 @@ jobs:
           ]
         # test_wamr.sh should be able to filter out all incompatible
         # tests(not all running modes support all targeted proposals)
-        exclude:
-          # based on [32-bit app compatibility with macOS](https://support.apple.com/en-us/103076)
-          # Starting with macOS Catalina 10.15, 32-bit apps are no longer compatible with macOS.
-          - os: macos-13
-            arch: X86_32
-          - os: macos-14
-            arch: X86_32
 
     steps:
       - name: checkout
@@ -110,7 +104,7 @@ jobs:
           opam install ocamlbuild dune menhir
 
       - name: install x86_32 support
-        if: matrix.arch == 'X86_32'
+        if: inputs.arch == 'X86_32' && startsWith(inputs.os, 'ubuntu')
         run: |
           # Add another apt repository as some packages cannot
           # be downloaded with the github default repository
