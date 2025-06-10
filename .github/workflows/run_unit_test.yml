@@ -4,6 +4,9 @@ name: A reusable workflow to run unit test
 on:
   workflow_call:
     inputs:
+      arch:
+        required: true
+        type: string
       container_image:
         required: false
         type: string
@@ -24,18 +27,7 @@ jobs:
     # Otherwise, it will be ignored by the runner.
     container:
       image: ${{ inputs.container_image }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        arch: [X86_64, X86_32]
-        os: [ ${{ inputs.os }} ]
-        exclude:
-          # based on [32-bit app compatibility with macOS](https://support.apple.com/en-us/103076)
-          # Starting with macOS Catalina 10.15, 32-bit apps are no longer compatible with macOS.
-          - os: macos-13
-            arch: X86_32
-          - os: macos-14
-            arch: X86_32
+    runs-on: ${{ inputs.os }}
 
     steps:
       - name: checkout
@@ -73,7 +65,7 @@ jobs:
       # RUN TESTS
       - name: run_unit_test
         run: |
-          cmake -S . -B build -DWAMR_BUILD_TARGET=${{ matrix.arch }}
+          cmake -S . -B build -DWAMR_BUILD_TARGET=${{ inputs.arch }}
           cmake --build build --config Release --parallel 4
           ctest
         working-directory: tests/unit
