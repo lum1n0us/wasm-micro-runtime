@@ -622,8 +622,8 @@ function spec_test()
 function wamr_compiler_test()
 {
     if [[ $1 != "aot" ]]; then
-        echo "WAMR compiler tests only support AOT mode"
-        exit 1
+        echo "WAMR compiler tests only support AOT mode, skip $1"
+        return 0
     fi
 
     echo  "Now start WAMR compiler tests"
