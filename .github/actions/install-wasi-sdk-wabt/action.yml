@@ -71,10 +71,6 @@ runs:
         echo "::notice::wasi-sdk-25 and wabt-1.0.37 installed on macos-14"
       working-directory: /opt
 
-    # download https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-windows.tar.gz
-    # install in C:\wasi-sdk
-    # download https://github.com/WebAssembly/wabt/releases/download/1.0.37/wabt-1.0.37-windows.tar.gz
-    # install in C:\wabt
     - name: Set up wasi-sdk and wabt on Windows
       if: ${{ startsWith(inputs.os, 'windows') }}
       shell: powershell
@@ -89,7 +85,7 @@ runs:
 
         # Extract wasi-sdk
         Write-Host "Extracting wasi-sdk..."
-        tar -xf wasi-sdk.tar.gz -C "C:\"
+        tar --strip-components=1 -xf wasi-sdk.tar.gz -C "C:\wasi-sdk"
         Move-Item -Path "C:\wasi-sdk-*" -Destination "C:\wasi-sdk" -Force
 
         # Download wabt
@@ -98,12 +94,12 @@ runs:
 
         # Extract wabt
         Write-Host "Extracting wabt..."
-        tar -xf wabt.tar.gz -C "C:\"
+        tar --strip-components=1 -xf wabt.tar.gz -C "C:\wabt"
         Move-Item -Path "C:\wabt-*" -Destination "C:\wabt" -Force
 
         # Verify installation
-        "C:\wasi-sdk\bin\clang.exe" --version
-        "C:\wabt\bin\wasm-interp.exe" --version
+        & "C:\wasi-sdk\bin\clang.exe" --version
+        & "C:\wabt\bin\wasm-interp.exe" --version
 
         Write-Host "::notice::wasi-sdk-25 and wabt-1.0.37 installed on Windows"
 
