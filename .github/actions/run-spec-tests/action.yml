@@ -34,55 +34,50 @@ runs:
     - name: run spec test for DEFAULT
       shell: bash
       run: |
-        eval $(opam env)
-        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b -P
+        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b
         echo "::notice:: Default test completed"
       working-directory: ./tests/wamr-test-suites
 
+    # remove opam env after wabt supporting latest GC proposal
     - name: run spec test for GC
       shell: bash
       run: |
         eval $(opam env)
-        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b -P -G
+        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b -G
         echo "::notice:: GC test completed"
       working-directory: ./tests/wamr-test-suites
 
     - name: run spec test for MEMORY64
       shell: bash
       run: |
-        eval $(opam env)
-        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b -P -W
+        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b -W
         echo "::notice:: MEMORY64 test completed"
       working-directory: ./tests/wamr-test-suites
 
     - name: run spec test for MULTI_MEMORY
       shell: bash
       run: |
-        eval $(opam env)
-        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b -P -E
+        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b -E
         echo "::notice:: MULTI_MEMORY test completed"
       working-directory: ./tests/wamr-test-suites
 
     - name: run spec test for MULTI_MODULES
       shell: bash
       run: |
-        eval $(opam env)
-        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b -P -M
+        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b -M
         echo "::notice:: MULTI_MODULES test completed"
       working-directory: ./tests/wamr-test-suites
 
     - name: run spec test for SIMD
       shell: bash
       run: |
-        eval $(opam env)
-        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b -P -S
+        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b -S
         echo "::notice:: SIMD test completed"
       working-directory: ./tests/wamr-test-suites
 
     - name: run spec test for THREADS
       shell: bash
       run: |
-        eval $(opam env)
-        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b -P -p
+        ./test_wamr.sh -m ${{ inputs.arch }} -s spec -b -p
         echo "::notice:: THREADS test completed"
       working-directory: ./tests/wamr-test-suites

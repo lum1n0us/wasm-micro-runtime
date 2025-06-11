@@ -96,7 +96,7 @@ jobs:
         with:
           os: ${{ matrix.os }}
 
-      - name: install x86_32 support
+      - name: install x86_32 support on ubuntu
         if: matrix.arch == 'X86_32' && startsWith(matrix.os, 'ubuntu')
         run: |
           # Add another apt repository as some packages cannot
@@ -135,7 +135,9 @@ jobs:
           llvm_cache_key: ${{ matrix.llvm_cache_key }}
           os: ${{ matrix.os }}
 
-      #  uses: ./.github/workflows/run_unit_test.yml
-      #  with:
-      #    llvm_cache_key: ${{ matrix.llvm_cache_key }}
-      #    os: ${{ matrix.os }}
+      - name: run unit tests
+        uses: ./.github/actions/run-unit-tests
+        with:
+          arch: ${{ matrix.arch }}
+          llvm_cache_key: ${{ matrix.llvm_cache_key }}
+          os: ${{ matrix.os }}

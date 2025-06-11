@@ -1,0 +1,37 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+name: Run unit tests
+
+inputs:
+  arch:
+    required: true
+    type: string
+  container_image:
+    required: false
+    type: string
+  llvm_cache_key:
+    required: true
+    type: string
+  os:
+    required: true
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    - name: build wamrc from source code
+      shell: bash
+      run: |
+        cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE=Debug
+        cmake --build build --config Debug --parallel 4
+      working-directory: wamr-compiler
+
+    # RUN TESTS
+    - name: run_unit_test
+      shell: bash
+      run: |
+        cmake -S . -B build -DWAMR_BUILD_TARGET=${{ inputs.arch }}
+        cmake --build build --config Release --parallel 4
+        ctest
+      working-directory: tests/unit
