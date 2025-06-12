@@ -104,20 +104,21 @@ runs:
       run: |
         choco install -y wget
 
-        mkdir -p /opt/wasi-sdk
-        mkdir -p /opt/wabt
+        mkdir -p /opt/
 
         echo "Downloading wasi-sdk for Windows..."
-        wget -O wasi-sdk.tar.gz --progress=dot:giga https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-windows.tar.gz
+        wget -O /opt/wasi-sdk.tar.gz --progress=dot:giga https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-windows.tar.gz
 
         echo "Extracting wasi-sdk..."
-        tar --strip-components=1 -xf wasi-sdk.tar.gz -C /opt/wasi-sdk
+        tar -xf /opt/wasi-sdk.tar.gz -C /opt/
+        ln -sf /opt/wasi-sdk-25.0-x86_64-windows /opt/wasi-sdk
 
         echo "Downloading wabt for Windows..."
-        wget -O wabt.tar.gz --progress=dot:giga https://github.com/WebAssembly/wabt/releases/download/1.0.37/wabt-1.0.37-windows.tar.gz
+        wget -O /opt/wabt.tar.gz --progress=dot:giga https://github.com/WebAssembly/wabt/releases/download/1.0.37/wabt-1.0.37-windows.tar.gz
 
         echo "Extracting wabt..."
-        tar --strip-components=1 -xf wabt.tar.gz -C /opt/wabt
+        tar -xf /opt/wabt.tar.gz -C /opt/
+        ln -sf /opt/wabt-1.0.37 /opt/wabt
 
         /opt/wasi-sdk/bin/clang --version
         /opt/wabt/bin/wasm-interp --version
