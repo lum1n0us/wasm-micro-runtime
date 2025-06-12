@@ -24,7 +24,7 @@ runs:
       run: |
         cmake -S . -B build \
           -DCMAKE_BUILD_TYPE=Debug
-        cmake --build build --config Debug --parallel 4
+        cmake --build build --config Release --parallel 4
       working-directory: wamr-compiler
 
     # RUN TESTS

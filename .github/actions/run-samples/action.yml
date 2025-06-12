@@ -24,7 +24,7 @@ runs:
       run: |
         cmake -S . -B build \
           -DCMAKE_BUILD_TYPE=Debug
-        cmake --build build --config Debug --parallel 4
+        cmake --build build --config Release --parallel 4
         echo "::notice:: Sample wamrc compiler completed"
       working-directory: wamr-compiler
 
@@ -43,7 +43,7 @@ runs:
         cd samples/debug-tools
         mkdir build && cd build
         cmake ..
-        cmake --build . --config Debug --parallel 4
+        cmake --build . --config Release --parallel 4
         ./iwasm wasm-apps/trap.wasm | grep "#" > call_stack.txt || exit 0
         ./iwasm wasm-apps/trap.aot | grep "#" > call_stack_aot.txt || exit 0
         bash -x ../symbolicate.sh
@@ -55,7 +55,7 @@ runs:
         cd samples/file
         mkdir build && cd build
         cmake ..
-        cmake --build . --config Debug --parallel 4
+        cmake --build . --config Release --parallel 4
         ./src/iwasm -f wasm-app/file.wasm -d .
         echo "::notice:: Sample file completed"
 
@@ -75,7 +75,7 @@ runs:
         cd samples/multi-module
         mkdir build && cd build
         cmake .. -DWAMR_BUILD_AOT=1
-        cmake --build . --config Debug --parallel 4
+        cmake --build . --config Release --parallel 4
         ./multi_module mC.wasm
         ./multi_module mC.aot
         echo "::notice:: Sample multi-module completed"
@@ -86,7 +86,7 @@ runs:
         cd samples/multi-thread
         mkdir build && cd build
         cmake ..
-        cmake --build . --config Debug --parallel 4
+        cmake --build . --config Release --parallel 4
         ./iwasm wasm-apps/test.wasm
         echo "::notice:: Sample multi-thread completed"
 
@@ -114,7 +114,7 @@ runs:
         cd samples/ref-types
         mkdir build && cd build
         cmake ..
-        cmake --build . --config Debug --parallel 4
+        cmake --build . --config Release --parallel 4
         ./hello
         echo "::notice:: Sample ref-types completed"
 
@@ -126,7 +126,7 @@ runs:
         cd samples/shared-heap
         mkdir build && cd build
         cmake ..
-        cmake --build . --config Debug --parallel 4
+        cmake --build . --config Release --parallel 4
         ./shared_heap_test
         ./shared_heap_test --aot
         echo "::notice:: Sample shared-heap completed"
@@ -147,7 +147,7 @@ runs:
         cd samples/spawn-thread
         mkdir build && cd build
         cmake ..
-        cmake --build . --config Debug --parallel 4
+        cmake --build . --config Release --parallel 4
         ./spawn_thread
         echo "::notice:: Sample spawn-thread completed"
 
@@ -165,7 +165,7 @@ runs:
         cd samples/wasi-threads
         mkdir build && cd build
         cmake ..
-        cmake --build . --config Debug --parallel 4
+        cmake --build . --config Release --parallel 4
         ./iwasm wasm-apps/no_pthread.wasm
         echo "::notice:: Sample wasi-thread completed"
 
@@ -174,7 +174,7 @@ runs:
       run: |
         VERBOSE=1
         cmake -S . -B build ${{ matrix.make_options }}
-        cmake --build build --config Debug --parallel 4
+        cmake --build build --config Release --parallel 4
         ctest --test-dir build --output-on-failure
         echo "::notice:: Sample wasm-c-api completed"
       working-directory: samples/wasm-c-api
