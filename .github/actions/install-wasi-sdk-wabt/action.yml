@@ -73,32 +73,64 @@ runs:
 
     - name: Set up wasi-sdk and wabt on Windows
       if: ${{ startsWith(inputs.os, 'windows') }}
-      shell: powershell
+      shell: bash
       run: |
+        choco install -y wget
+
         # Create destination directories
-        New-Item -Path "C:\" -Name "wasi-sdk" -ItemType Directory -Force
-        New-Item -Path "C:\" -Name "wabt" -ItemType Directory -Force
+        mkdir -p /opt/wasi-sdk
+        mkdir -p /opt/wabt
 
         # Download wasi-sdk
-        Write-Host "Downloading wasi-sdk for Windows..."
-        Invoke-WebRequest -Uri "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-windows.tar.gz" -OutFile "wasi-sdk.tar.gz"
+        echo "Downloading wasi-sdk for Windows..."
+        wget -O wasi-sdk.tar.gz --progress=dot:giga https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-windows.tar.gz
 
         # Extract wasi-sdk
-        Write-Host "Extracting wasi-sdk..."
-        tar --strip-components=1 -xf wasi-sdk.tar.gz -C "C:\wasi-sdk"
-        Move-Item -Path "C:\wasi-sdk-*" -Destination "C:\wasi-sdk" -Force
+        echo "Extracting wasi-sdk..."
+        tar --strip-components=1 -xf wasi-sdk.tar.gz -C /opt/wasi-sdk
 
         # Download wabt
-        Write-Host "Downloading wabt for Windows..."
-        Invoke-WebRequest -Uri "https://github.com/WebAssembly/wabt/releases/download/1.0.37/wabt-1.0.37-windows.tar.gz" -OutFile "wabt.tar.gz"
+        echo "Downloading wabt for Windows..."
+        wget -O wabt.tar.gz --progress=dot:giga https://github.com/WebAssembly/wabt/releases/download/1.0.37/wabt-1.0.37-windows.tar.gz
 
         # Extract wabt
-        Write-Host "Extracting wabt..."
-        tar --strip-components=1 -xf wabt.tar.gz -C "C:\wabt"
-        Move-Item -Path "C:\wabt-*" -Destination "C:\wabt" -Force
+        echo "Extracting wabt..."
+        tar --strip-components=1 -xf wabt.tar.gz -C /opt/wabt
 
         # Verify installation
-        & "C:\wasi-sdk\bin\clang.exe" --version
-        & "C:\wabt\bin\wasm-interp.exe" --version
+        /opt/wasi-sdk/bin/clang --version
+        /opt/wabt/bin/wasm-interp --version
 
-        Write-Host "::notice::wasi-sdk-25 and wabt-1.0.37 installed on Windows"
+        echo "::notice::wasi-sdk-25 and wabt-1.0.37 installed on Windows"
+
+    # - name: Set up wasi-sdk and wabt on Windows
+    #   if: ${{ startsWith(inputs.os, 'windows') }}
+    #   shell: powershell
+    #   run: |
+    #     # Create destination directories
+    #     New-Item -Path "C:\" -Name "wasi-sdk" -ItemType Directory -Force
+    #     New-Item -Path "C:\" -Name "wabt" -ItemType Directory -Force
+
+    #     # Download wasi-sdk
+    #     Write-Host "Downloading wasi-sdk for Windows..."
+    #     Invoke-WebRequest -Uri "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-windows.tar.gz" -OutFile "wasi-sdk.tar.gz"
+
+    #     # Extract wasi-sdk
+    #     Write-Host "Extracting wasi-sdk..."
+    #     tar --strip-components=1 -xf wasi-sdk.tar.gz -C "C:\wasi-sdk"
+    #     Move-Item -Path "C:\wasi-sdk-*" -Destination "C:\wasi-sdk" -Force
+
+    #     # Download wabt
+    #     Write-Host "Downloading wabt for Windows..."
+    #     Invoke-WebRequest -Uri "https://github.com/WebAssembly/wabt/releases/download/1.0.37/wabt-1.0.37-windows.tar.gz" -OutFile "wabt.tar.gz"
+
+    #     # Extract wabt
+    #     Write-Host "Extracting wabt..."
+    #     tar --strip-components=1 -xf wabt.tar.gz -C "C:\wabt"
+    #     Move-Item -Path "C:\wabt-*" -Destination "C:\wabt" -Force
+
+    #     # Verify installation
+    #     & "C:\wasi-sdk\bin\clang.exe" --version
+    #     & "C:\wabt\bin\wasm-interp.exe" --version
+
+    #     Write-Host "::notice::wasi-sdk-25 and wabt-1.0.37 installed on Windows"
