@@ -28,7 +28,7 @@ if [ $? != 0 ];then
     exit 2
 fi
 
-cp -a inst-context ${OUT_DIR}
+cp -a $(find . -type f \( -name "inst-context" -or -name "inst-context.exe" \)) ${OUT_DIR}
 
 echo -e "\n"
 

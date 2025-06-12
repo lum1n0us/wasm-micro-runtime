@@ -28,7 +28,7 @@ if [ $? != 0 ];then
     exit 2
 fi
 
-cp -a terminate ${OUT_DIR}
+cp -a $(find . -type f \( -name "terminate" -or -name "terminate.exe" \)) ${OUT_DIR}
 
 printf "\n"
 

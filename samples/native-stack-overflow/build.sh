@@ -27,7 +27,7 @@ if [ $? != 0 ];then
     echo "BUILD_FAIL native-stack-overflow exit as $?\n"
     exit 2
 fi
-cp -a native-stack-overflow ${OUT_DIR}
+cp -a $(find . -type f \( -name "native-stack-overflow" -or -name "native-stack-overflow.exe" \)) ${OUT_DIR}
 
 echo "##################### build (WAMR_DISABLE_HW_BOUND_CHECK=1)"
 cd ${CURR_DIR}
@@ -39,7 +39,7 @@ if [ $? != 0 ];then
     echo "BUILD_FAIL native-stack-overflow exit as $?\n"
     exit 2
 fi
-cp -a native-stack-overflow ${OUT_DIR}/native-stack-overflow.WAMR_DISABLE_HW_BOUND_CHECK
+cp -a $(find . -type f \( -name "native-stack-overflow" -or -name "native-stack-overflow.exe" \)) ${OUT_DIR}/native-stack-overflow.WAMR_DISABLE_HW_BOUND_CHECK
 
 echo "##################### signature shared lib"
 cd ${CURR_DIR}

@@ -28,7 +28,7 @@ if [ $? != 0 ];then
     exit 2
 fi
 
-cp -a basic ${OUT_DIR}
+cp -a $(find . -type f \( -name "basic" -or -name "basic.exe" \)) ${OUT_DIR}
 
 echo -e "\n"
 
