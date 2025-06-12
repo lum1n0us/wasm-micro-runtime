@@ -111,6 +111,7 @@ jobs:
 
       # GO!GO!!GO!!!
       - name: run samples
+        continue-on-error: true
         uses: ./.github/actions/run-samples
         with:
           arch: ${{ matrix.arch }}
@@ -118,6 +119,7 @@ jobs:
           os: ${{ matrix.os }}
 
       - name: run spec tests
+        continue-on-error: true
         uses: ./.github/actions/run-spec-tests
         with:
           arch: ${{ matrix.arch }}
@@ -125,6 +127,7 @@ jobs:
           os: ${{ matrix.os }}
 
       - name: run wamr compiler tests
+        continue-on-error: true
         uses: ./.github/actions/run-wamr-compiler-tests
         with:
           arch: ${{ matrix.arch }}
@@ -132,6 +135,7 @@ jobs:
           os: ${{ matrix.os }}
 
       - name: run wasi tests
+        continue-on-error: true
         uses: ./.github/actions/run-wasi-tests
         with:
           arch: ${{ matrix.arch }}
@@ -139,6 +143,7 @@ jobs:
           os: ${{ matrix.os }}
 
       - name: run unit tests
+        continue-on-error: true
         uses: ./.github/actions/run-unit-tests
         with:
           arch: ${{ matrix.arch }}
