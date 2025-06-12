@@ -53,6 +53,8 @@ set (WAMR_BUILD_LIBC_BUILTIN 1)
 
 if (NOT MSVC)
   set (WAMR_BUILD_LIBC_WASI 1)
+else ()
+  set (WAMR_BUILD_LIBC_UVWASI 1)
 endif ()
 
 if (NOT MSVC)
@@ -85,6 +87,8 @@ set_target_properties (inst-context PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 if (APPLE)
   target_link_libraries (inst-context vmlib -lm -ldl -lpthread)
+elseif (MSVC)
+  target_link_libraries (inst-context vmlib -lm -ldl -lpthread -lrt ${UV_A_LIBS})
 else ()
   target_link_libraries (inst-context vmlib -lm -ldl -lpthread -lrt)
 endif ()
