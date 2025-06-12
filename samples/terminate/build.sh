@@ -22,7 +22,7 @@ cd ${CURR_DIR}
 mkdir -p cmake_build
 cd cmake_build
 cmake .. -DCMAKE_BUILD_TYPE=Debug
-make -j ${nproc}
+cmake --build . -j ${nproc}
 if [ $? != 0 ];then
     echo "BUILD_FAIL terminate exit as $?\n"
     exit 2

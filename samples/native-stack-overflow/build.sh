@@ -22,7 +22,7 @@ cd ${CURR_DIR}
 mkdir -p cmake_build
 cd cmake_build
 cmake ..
-make -j 4
+cmake --build . -j 4
 if [ $? != 0 ];then
     echo "BUILD_FAIL native-stack-overflow exit as $?\n"
     exit 2
@@ -34,7 +34,7 @@ cd ${CURR_DIR}
 mkdir -p cmake_build_disable_hw_bound
 cd cmake_build_disable_hw_bound
 cmake -D WAMR_DISABLE_HW_BOUND_CHECK=1 ..
-make -j 4
+cmake --build . -j 4
 if [ $? != 0 ];then
     echo "BUILD_FAIL native-stack-overflow exit as $?\n"
     exit 2
