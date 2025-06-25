@@ -19,7 +19,7 @@ jobs:
   analyze:
     # only run this job if the repository is not a fork
     # if want to run this job on a fork, please remove the if condition
-    if: github.repository == 'bytecodealliance/wasm-micro-runtime'
+    # if: github.repository == 'bytecodealliance/wasm-micro-runtime'
     name: Analyze
     # Runner size impacts CodeQL analysis time. To learn more, please see:
     #   - https://gh.io/recommended-hardware-resources-for-running-codeql
@@ -69,11 +69,18 @@ jobs:
       # TODO: need to reconsider whether to filter out
       # those rules after cpp/use-of-goto
       #
-      # cpp/uncontrolled-process-operation is about dlopen() which is used by
-      # native libraries registrations.
+      # - cpp/alloca-in-loop is about touch_pages() which is intended to
+      # - cpp/command-line-injection is about bh_system() which is used to
+      # - cpp/uncontrolled-process-operation is about dlopen() which is used by
+      #   native libraries registrations.
+      # - cpp/world-writable-file-creation is about fopen() a temporary file
+      #   for perf-PID.map or .aot(wamrc). The permission isn't sensitive.
+      # - cpp/path-injection is used in bh_read_file_to_buffer() to load a .wasm.
+      #   or operate a stack usage file which is not sensitive or generate a .aot
+      #   file.
+      # - TODO:
       #
-      # cpp/alloca-in-loop is about touch_pages() which is intended to
-      #
+      # execute customized compiler
       - name: Filter out unwanted errors and warnings
         uses: advanced-security/filter-sarif@v1
         with:
@@ -94,20 +101,13 @@ jobs:
             -**:cpp/unused-local-variable
             -**:cpp/unused-static-function
             -**:cpp/unused-static-variable
-            -**:cpp/use-of-goto
-            -product-mini/platforms/posix/main.c:cpp/uncontrolled-process-operation
-            -wamr-compiler/main.c:cpp/uncontrolled-process-operation
-            -core/shared/platform/common/posix/posix_thread.c:cpp/alloca-in-loop
+            -**:cpp/use-of-goto # ALL above rules are clear. ALL belows are not.
+            -**:cpp/alloca-in-loop
+            -**:cpp/command-line-injection
             -**:cpp/path-injection
+            -**:cpp/uncontrolled-process-operation
             -**:cpp/world-writable-file-creation
-            -**:cpp/potentially-dangerous-function
-            -**:cpp/integer-multiplication-cast-to-long
-            -**:cpp/comparison-with-wider-type
-            -**:cpp/leap-year/*
-            -**:cpp/ambiguously-signed-bit-field
-            -**:cpp/suspicious-pointer-scaling
-            -**:cpp/suspicious-pointer-scaling-void
-            -**:cpp/unsigne-comparison-zero
+
           input: ${{ steps.step1.outputs.sarif-output }}/cpp.sarif
           output: ${{ steps.step1.outputs.sarif-output }}/cpp.sarif
 
