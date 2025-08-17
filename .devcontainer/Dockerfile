@@ -109,17 +109,17 @@ RUN wget -q https://github.com/cli/cli/releases/download/v${GH_CLI_VER}/gh_${GH_
 # SGX setup
 RUN mkdir -p /opt/intel
 
-WORKDIR /opt/intel
-RUN wget -q -O sgx_linux_x64_sdk.bin https://download.01.org/intel-sgx/latest/linux-latest/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.25.100.3.bin \
-  && chmod +x sgx_linux_x64_sdk.bin
-RUN echo 'yes' | ./sgx_linux_x64_sdk.bin
-RUN source /opt/intel/sgxsdk/environment
-
-RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list \
-   && wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
-
-RUN apt update \
-   && apt install -y libsgx-launch libsgx-urts
+# WORKDIR /opt/intel
+# RUN wget -q -O sgx_linux_x64_sdk.bin https://download.01.org/intel-sgx/latest/linux-latest/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.25.100.3.bin \
+#   && chmod +x sgx_linux_x64_sdk.bin
+# RUN echo 'yes' | ./sgx_linux_x64_sdk.bin
+# RUN source /opt/intel/sgxsdk/environment
+# 
+# RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list \
+#    && wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
+# 
+# RUN apt update \
+#    && apt install -y libsgx-launch libsgx-urts
 
 #
 # Install wasm-tools from binary releasing
