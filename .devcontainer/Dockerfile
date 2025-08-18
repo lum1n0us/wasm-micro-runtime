@@ -16,7 +16,7 @@ RUN apt-get update \
   ca-certificates ccache clang curl g++-multilib git gnupg \
   libgcc-12-dev lib32gcc-12-dev libstdc++-12-dev lsb-release llvm \
   ninja-build opam ocaml ocamlbuild \
-  software-properties-common tree tzdata \
+  software-properties-common libtinfo5 tree tzdata \
   unzip valgrind vim wget zip --no-install-recommends
 
 #
@@ -41,17 +41,17 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-
   && rm /tmp/cmake-install.sh \
   && ln -s /opt/cmake-${CMAKE_VER}/bin/* /usr/local/bin
 
+# #
+# # install emsdk
+# WORKDIR /opt
+# RUN git clone https://github.com/emscripten-core/emsdk.git
 #
-# install emsdk
-WORKDIR /opt
-RUN git clone https://github.com/emscripten-core/emsdk.git
-
-ARG EMSDK_VER=3.1.43
-WORKDIR /opt/emsdk
-RUN  git pull \
-  && ./emsdk install ${EMSDK_VER} \
-  && ./emsdk activate ${EMSDK_VER} \
-  && echo "source /opt/emsdk/emsdk_env.sh" >> /root/.bashrc
+# ARG EMSDK_VER=3.1.43
+# WORKDIR /opt/emsdk
+# RUN  git pull \
+#   && ./emsdk install ${EMSDK_VER} \
+#   && ./emsdk activate ${EMSDK_VER} \
+#   && echo "source /opt/emsdk/emsdk_env.sh" >> /root/.bashrc
 
 #
 # install wasi-sdk
@@ -69,13 +69,13 @@ RUN wget -c --progress=dot:giga https://github.com/WebAssembly/wabt/releases/dow
   && ln -sf /opt/wabt-${WABT_VER} /opt/wabt \
   && rm /opt/wabt-${WABT_VER}-ubuntu-20.04.tar.gz
 
-#
-# install bazelisk
-ARG BAZELISK_VER=1.17.0
-RUN mkdir /opt/bazelisk \
-  && wget -c --progress=dot:giga https://github.com/bazelbuild/bazelisk/releases/download/v${BAZELISK_VER}/bazelisk-linux-amd64 -P /opt/bazelisk \
-  && chmod a+x /opt/bazelisk/bazelisk-linux-amd64 \
-  && ln -fs /opt/bazelisk/bazelisk-linux-amd64 /opt/bazelisk/bazel
+# #
+# # install bazelisk
+# ARG BAZELISK_VER=1.17.0
+# RUN mkdir /opt/bazelisk \
+#   && wget -c --progress=dot:giga https://github.com/bazelbuild/bazelisk/releases/download/v${BAZELISK_VER}/bazelisk-linux-amd64 -P /opt/bazelisk \
+#   && chmod a+x /opt/bazelisk/bazelisk-linux-amd64 \
+#   && ln -fs /opt/bazelisk/bazelisk-linux-amd64 /opt/bazelisk/bazel
 
 #
 # install clang+llvm
@@ -114,10 +114,10 @@ RUN mkdir -p /opt/intel
 #   && chmod +x sgx_linux_x64_sdk.bin
 # RUN echo 'yes' | ./sgx_linux_x64_sdk.bin
 # RUN source /opt/intel/sgxsdk/environment
-# 
+#
 # RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list \
 #    && wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
-# 
+#
 # RUN apt update \
 #    && apt install -y libsgx-launch libsgx-urts
 
@@ -151,20 +151,20 @@ RUN apt update \
   && apt install -y clang-tools clang-tidy clang-format clangd \
   && apt install -y lldb python3-lldb
 
-#
-# Install Rust
-ENV CARGO_HOME=/home/vscode/.cargo
-ENV RUSTUP_HOME=/home/vscode/.rustup
-RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="${CARGO_HOME}/bin:${PATH}"
+# #
+# # Install Rust
+# ENV CARGO_HOME=/home/vscode/.cargo
+# ENV RUSTUP_HOME=/home/vscode/.rustup
+# RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
+# ENV PATH="${CARGO_HOME}/bin:${PATH}"
 
-#
-# Install CodeQL CLI
-RUN cd /opt \
-  && wget https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.19.2/codeql-bundle-linux64.tar.gz \
-  && tar xf codeql-bundle-linux64.tar.gz \
-  && rm codeql-bundle-linux64.tar.gz
-ENV PATH="/opt/codeql:${PATH}"
+# #
+# # Install CodeQL CLI
+# RUN cd /opt \
+#   && wget https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.19.2/codeql-bundle-linux64.tar.gz \
+#   && tar xf codeql-bundle-linux64.tar.gz \
+#   && rm codeql-bundle-linux64.tar.gz
+# ENV PATH="/opt/codeql:${PATH}"
 
 # set path
 ENV PATH="/home/vscode/.opam/default/bin:/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
