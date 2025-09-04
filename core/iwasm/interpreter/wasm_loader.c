@@ -1799,6 +1799,11 @@ resolve_func_type(const uint8 **p_buf, const uint8 *buf_end, WASMModule *module,
         return false;
     }
     if (ref_type_map_count > 0) {
+        if (ref_type_map_count > UINT16_MAX) {
+            set_error_buf(error_buf, error_buf_size,
+                          "ref type count too large");
+            return false;
+        }
         total_size = sizeof(WASMRefTypeMap) * (uint64)ref_type_map_count;
         if (!(type->ref_type_maps =
                   loader_malloc(total_size, error_buf, error_buf_size))) {
@@ -1938,6 +1943,11 @@ resolve_struct_type(const uint8 **p_buf, const uint8 *buf_end,
         return false;
     }
     if (ref_type_map_count > 0) {
+        if (ref_type_map_count > UINT16_MAX) {
+            set_error_buf(error_buf, error_buf_size,
+                          "ref type count too large");
+            return false;
+        }
         total_size = sizeof(WASMRefTypeMap) * (uint64)ref_type_map_count;
         if (!(type->ref_type_maps =
                   loader_malloc(total_size, error_buf, error_buf_size))) {
@@ -1959,6 +1969,10 @@ resolve_struct_type(const uint8 **p_buf, const uint8 *buf_end,
         if (!resolve_value_type(&p, p_end, module, type_count,
                                 &need_ref_type_map, &ref_type, true, error_buf,
                                 error_buf_size)) {
+            goto fail;
+        }
+        if (!is_valid_field_type(ref_type.ref_type)) {
+            set_error_buf(error_buf, error_buf_size, "invalid field type");
             goto fail;
         }
         type->fields[i].field_type = ref_type.ref_type;
@@ -3953,6 +3967,11 @@ load_function_section(const uint8 *buf, const uint8 *buf_end,
             }
 #if WASM_ENABLE_GC != 0
             if (ref_type_map_count > 0) {
+                if (ref_type_map_count > UINT16_MAX) {
+                    set_error_buf(error_buf, error_buf_size,
+                                  "ref type count too large");
+                    return false;
+                }
                 total_size =
                     sizeof(WASMRefTypeMap) * (uint64)ref_type_map_count;
                 if (!(func->local_ref_type_maps = loader_malloc(
@@ -6693,15 +6712,7 @@ create_module(char *name, char *error_buf, uint32 error_buf_size)
 #endif
 
 #if WASM_ENABLE_LIBC_WASI != 0
-#if WASM_ENABLE_UVWASI == 0
-    module->wasi_args.stdio[0] = os_invalid_raw_handle();
-    module->wasi_args.stdio[1] = os_invalid_raw_handle();
-    module->wasi_args.stdio[2] = os_invalid_raw_handle();
-#else
-    module->wasi_args.stdio[0] = os_get_invalid_handle();
-    module->wasi_args.stdio[1] = os_get_invalid_handle();
-    module->wasi_args.stdio[2] = os_get_invalid_handle();
-#endif /* WASM_ENABLE_UVWASI == 0 */
+    wasi_args_set_defaults(&module->wasi_args);
 #endif /* WASM_ENABLE_LIBC_WASI != 0 */
 
     (void)ret;
