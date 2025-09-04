@@ -41,17 +41,17 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-
   && rm /tmp/cmake-install.sh \
   && ln -s /opt/cmake-${CMAKE_VER}/bin/* /usr/local/bin
 
-#
-# install emsdk
-WORKDIR /opt
-RUN git clone https://github.com/emscripten-core/emsdk.git
+# #
+# # install emsdk
+# WORKDIR /opt
+# RUN git clone https://github.com/emscripten-core/emsdk.git
 
-ARG EMSDK_VER=3.1.43
-WORKDIR /opt/emsdk
-RUN  git pull \
-  && ./emsdk install ${EMSDK_VER} \
-  && ./emsdk activate ${EMSDK_VER} \
-  && echo "source /opt/emsdk/emsdk_env.sh" >> /root/.bashrc
+# ARG EMSDK_VER=3.1.43
+# WORKDIR /opt/emsdk
+# RUN  git pull \
+#   && ./emsdk install ${EMSDK_VER} \
+#   && ./emsdk activate ${EMSDK_VER} \
+#   && echo "source /opt/emsdk/emsdk_env.sh" >> /root/.bashrc
 
 #
 # install wasi-sdk
@@ -69,13 +69,13 @@ RUN wget -c --progress=dot:giga https://github.com/WebAssembly/wabt/releases/dow
   && ln -sf /opt/wabt-${WABT_VER} /opt/wabt \
   && rm /opt/wabt-${WABT_VER}-ubuntu-20.04.tar.gz
 
-#
-# install bazelisk
-ARG BAZELISK_VER=1.17.0
-RUN mkdir /opt/bazelisk \
-  && wget -c --progress=dot:giga https://github.com/bazelbuild/bazelisk/releases/download/v${BAZELISK_VER}/bazelisk-linux-amd64 -P /opt/bazelisk \
-  && chmod a+x /opt/bazelisk/bazelisk-linux-amd64 \
-  && ln -fs /opt/bazelisk/bazelisk-linux-amd64 /opt/bazelisk/bazel
+# #
+# # install bazelisk
+# ARG BAZELISK_VER=1.17.0
+# RUN mkdir /opt/bazelisk \
+#   && wget -c --progress=dot:giga https://github.com/bazelbuild/bazelisk/releases/download/v${BAZELISK_VER}/bazelisk-linux-amd64 -P /opt/bazelisk \
+#   && chmod a+x /opt/bazelisk/bazelisk-linux-amd64 \
+#   && ln -fs /opt/bazelisk/bazelisk-linux-amd64 /opt/bazelisk/bazel
 
 #
 # install clang+llvm
@@ -88,9 +88,10 @@ RUN tar -xvf clang+llvm-${LLVM_VER}-x86_64-linux-gnu-ubuntu-18.04.tar.xz \
 #
 # Install pip
 # hadolint ignore=DL3008
-RUN apt-get update \
-  && apt-get install -y --reinstall python3-venv python3-pip --no-install-recommends \
-  && pip install --no-cache-dir --upgrade pip
+# RUN apt-get update \
+#   && apt-get install -y --reinstall python3-venv python3-pip --no-install-recommends \
+#   && pip install --no-cache-dir --upgrade pip
+RUN apt-get install -y python3-pip
 
 #
 # Install github-cli. It doens't work as a feature of devcontainer.json
@@ -105,21 +106,21 @@ RUN wget -q https://github.com/cli/cli/releases/download/v${GH_CLI_VER}/gh_${GH_
 # # hadolint ignore=DL3008
 # RUN apt-get install -y nodejs --no-install-recommends
 
-#
-# SGX setup
-RUN mkdir -p /opt/intel
-
-WORKDIR /opt/intel
-RUN wget -q -O sgx_linux_x64_sdk.bin https://download.01.org/intel-sgx/latest/linux-latest/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.25.100.3.bin \
-  && chmod +x sgx_linux_x64_sdk.bin
-RUN echo 'yes' | ./sgx_linux_x64_sdk.bin
-RUN source /opt/intel/sgxsdk/environment
-
-RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list \
-   && wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
-
-RUN apt update \
-   && apt install -y libsgx-launch libsgx-urts
+# #
+# # SGX setup
+# RUN mkdir -p /opt/intel
+# 
+# WORKDIR /opt/intel
+# RUN wget -q -O sgx_linux_x64_sdk.bin https://download.01.org/intel-sgx/latest/linux-latest/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.25.100.3.bin \
+#   && chmod +x sgx_linux_x64_sdk.bin
+# RUN echo 'yes' | ./sgx_linux_x64_sdk.bin
+# RUN source /opt/intel/sgxsdk/environment
+# 
+# RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list \
+#    && wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
+# 
+# RUN apt update \
+#    && apt install -y libsgx-launch libsgx-urts
 
 #
 # Install wasm-tools from binary releasing
@@ -138,12 +139,12 @@ RUN wget -c --progress=dot:giga https://github.com/bytecodealliance/wit-bindgen/
 RUN tar xzf wit-bindgen-${WIT_BINDGEN_VER}-x86_64-linux.tar.gz \
   && rm wit-bindgen-${WIT_BINDGEN_VER}-x86_64-linux.tar.gz
 
-#
-# Install perf
-ARG KERNEL_VER=5.15.0-97
-RUN apt update \
-      && apt-get install -y linux-tools-generic linux-tools-${KERNEL_VER}-generic \
-      && apt-get install -y linux-headers-${KERNEL_VER}
+# #
+# # Install perf
+# ARG KERNEL_VER=5.15.0-97
+# RUN apt update \
+#       && apt-get install -y linux-tools-generic linux-tools-${KERNEL_VER}-generic \
+#       && apt-get install -y linux-headers-${KERNEL_VER}
 
 #
 # Install extra clang tools and lldb
@@ -151,20 +152,20 @@ RUN apt update \
   && apt install -y clang-tools clang-tidy clang-format clangd \
   && apt install -y lldb python3-lldb
 
-#
-# Install Rust
-ENV CARGO_HOME=/home/vscode/.cargo
-ENV RUSTUP_HOME=/home/vscode/.rustup
-RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="${CARGO_HOME}/bin:${PATH}"
-
-#
-# Install CodeQL CLI
-RUN cd /opt \
-  && wget https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.19.2/codeql-bundle-linux64.tar.gz \
-  && tar xf codeql-bundle-linux64.tar.gz \
-  && rm codeql-bundle-linux64.tar.gz
-ENV PATH="/opt/codeql:${PATH}"
+# #
+# # Install Rust
+# ENV CARGO_HOME=/home/vscode/.cargo
+# ENV RUSTUP_HOME=/home/vscode/.rustup
+# RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
+# ENV PATH="${CARGO_HOME}/bin:${PATH}"
+# 
+# #
+# # Install CodeQL CLI
+# RUN cd /opt \
+#   && wget https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.19.2/codeql-bundle-linux64.tar.gz \
+#   && tar xf codeql-bundle-linux64.tar.gz \
+#   && rm codeql-bundle-linux64.tar.gz
+# ENV PATH="/opt/codeql:${PATH}"
 
 # set path
 ENV PATH="/home/vscode/.opam/default/bin:/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
