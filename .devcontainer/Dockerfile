@@ -167,10 +167,12 @@ RUN apt update \
 #   && rm codeql-bundle-linux64.tar.gz
 # ENV PATH="/opt/codeql:${PATH}"
 
+RUN apt update && apt install -y lcov libzstd-dev llvm llvm-dev libclang-dev
+
 # set path
 ENV PATH="/home/vscode/.opam/default/bin:/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
 
-ENV PYTHONPATH="/usr/lib/llvm-14/lib/python3.10/dist-packages/"
+ENV PYTHONPATH="/usr/lib/llvm-18/lib/python3.10/dist-packages/"
 
 # clean
 RUN apt-get autoremove -y \
