@@ -166,6 +166,12 @@ RUN apt update \
 #   && rm codeql-bundle-linux64.tar.gz
 # ENV PATH="/opt/codeql:${PATH}"
 
+#
+# libzstd-dev for llvm
+# lcov
+RUN apt update \
+  && apt install -y libzstd-dev lcov
+
 # set path
 ENV PATH="/home/vscode/.opam/default/bin:/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
 
