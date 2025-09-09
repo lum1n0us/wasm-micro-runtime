@@ -19,7 +19,8 @@
       "WASI_SDK_VER": "25",
       "WASM_TOOLS_VER": "1.216.0",
       "WIT_BINDGEN_VER": "0.39.0",
-      "VARIANT": "noble",
+      "VARIANT": "jammy",
+      // "VARIANT": "noble",
     }
   },
   "privileged": true,
