@@ -13,8 +13,8 @@ printf "Running 'postCreateCommand' Script ...\n"
 # RUSTUP_DIST_SERVER=https://fastly-static.rust-lang.org rustup component add rustfmt
 
 printf "Installing Python Dependencies\n"
-pip install --break-system-packages --user --upgrade pip
-pip install --break-system-packages --user -r .devcontainer/requirements.txt
+pip install --user --upgrade pip
+pip install --user -r .devcontainer/requirements.txt
 
 #printf "Installing NPM Dependencies\n"
 
