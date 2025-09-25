@@ -173,8 +173,16 @@ RUN dpkg --add-architecture i386 \
   && apt-get update \
   && apt-get install -y g++-multilib libzstd-dev:i386 zlib1g-dev:i386
 
+# install coverity tools
+COPY cov-analysis-linux64-2024.12.1.tar.gz /tmp
+RUN tar -xvf /tmp/cov-analysis-linux64-2024.12.1.tar.gz -C /opt \
+  && rm /tmp/cov-analysis-linux64-2024.12.1.tar.gz \
+  && ln -sf /opt/cov-analysis-linux64-2024.12.1 /opt/coverity
+
+RUN apt install -y file
+
 # set path
-ENV PATH="/home/vscode/.opam/default/bin:/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
+ENV PATH="/home/vscode/.opam/default/bin:/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:/opt/coverity/bin:${PATH}"
 
 ENV PYTHONPATH="/usr/lib/llvm-18/lib/python3.10/dist-packages/"
 
