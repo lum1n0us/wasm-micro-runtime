@@ -15,6 +15,9 @@ on:
   # allow to be triggered manually
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   analyze:
     # only run this job if the repository is not a fork
@@ -42,14 +45,19 @@ jobs:
       security-events: write
 
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
         with:
           submodules: recursive
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.31.2
+        uses: github/codeql-action/init@0499de31b99561a6d14a36a5f662c2a54f91beee # v4.31.2
         with:
           languages: ${{ matrix.language }}
           # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
@@ -61,7 +69,7 @@ jobs:
           ./.github/scripts/codeql_buildscript.sh
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3.29.1
+        uses: github/codeql-action/analyze@39edc492dbe16b1465b0cafca41432d857bdb31a # v3.29.1
         with:
           category: "/language:${{matrix.language}}"
           upload: false
@@ -81,7 +89,7 @@ jobs:
       #
       # execute customized compiler
       - name: Filter out unwanted errors and warnings
-        uses: advanced-security/filter-sarif@v1
+        uses: advanced-security/filter-sarif@f3b8118a9349d88f7b1c0c488476411145b6270d # v1.0.1
         with:
           patterns: |
             ## Exclude files and directories
@@ -114,14 +122,14 @@ jobs:
           output: ${{ steps.step1.outputs.sarif-output }}/cpp.sarif
 
       - name: Upload CodeQL results to code scanning
-        uses: github/codeql-action/upload-sarif@v4.31.2
+        uses: github/codeql-action/upload-sarif@0499de31b99561a6d14a36a5f662c2a54f91beee # v4.31.2
         with:
           sarif_file: ${{ steps.step1.outputs.sarif-output }}
           category: "/language:${{matrix.language}}"
 
       - name: Upload CodeQL results as an artifact
         if: success() || failure()
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: codeql-results
           path: ${{ steps.step1.outputs.sarif-output }}

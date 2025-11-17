@@ -19,7 +19,7 @@
 
 # If you modify this file, you may need to sync the modifications to the
 # .github/actions/setup-zephyr/action.yml
-FROM ghcr.io/zephyrproject-rtos/ci-base:v0.26-branch
+FROM ghcr.io/zephyrproject-rtos/ci-base:v0.26-branch@sha256:12f44f069809167ed9d3f1160ca0dbb5a5e9118df37f78092f790b29fb06d962
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asian/Shanghai

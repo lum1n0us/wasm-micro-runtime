@@ -33,3 +33,58 @@ updates:
   directory: "/language-bindings/python/wamr-api"
   schedule:
     interval: "weekly"
+
+- package-ecosystem: pip
+  directory: /core/iwasm/libraries/wasi-nn/test
+  schedule:
+    interval: daily
+
+- package-ecosystem: gomod
+  directory: /language-bindings/go
+  schedule:
+    interval: daily
+
+- package-ecosystem: docker
+  directory: /product-mini/platforms/zephyr/simple
+  schedule:
+    interval: daily
+
+- package-ecosystem: nuget
+  directory: /samples/sgx-ra/non-sgx-verify/csharp
+  schedule:
+    interval: daily
+
+- package-ecosystem: npm
+  directory: /test-tools/wamr-ide/VSCode-Extension
+  schedule:
+    interval: daily
+
+- package-ecosystem: docker
+  directory: /test-tools/wamr-ide/WASM-Debug-Server/Docker
+  schedule:
+    interval: daily
+
+- package-ecosystem: docker
+  directory: /test-tools/wamr-ide/WASM-Toolchain/Docker
+  schedule:
+    interval: daily
+
+- package-ecosystem: docker
+  directory: /tests/fuzz/wasm-mutator-fuzz/portal
+  schedule:
+    interval: daily
+
+- package-ecosystem: npm
+  directory: /tests/fuzz/wasm-mutator-fuzz/portal
+  schedule:
+    interval: daily
+
+- package-ecosystem: docker
+  directory: /tests/fuzz/wasm-mutator-fuzz/server
+  schedule:
+    interval: daily
+
+- package-ecosystem: pip
+  directory: /tests/fuzz/wasm-mutator-fuzz/server
+  schedule:
+    interval: daily
