@@ -84,22 +84,27 @@ jobs:
           - "CONFIG_INTERPRETERS_WAMR_AOT CONFIG_INTERPRETERS_WAMR_CLASSIC CONFIG_INTERPRETERS_WAMR_LIBC_WASI"
 
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
       - name: Checkout NuttX
-        uses: actions/checkout@v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           repository: apache/nuttx
           ref: releases/12.9
           path: nuttx
 
       - name: Checkout NuttX Apps
-        uses: actions/checkout@v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           repository: apache/nuttx-apps
           ref: releases/12.9
           path: apps
 
       - name: Checkout WAMR
-        uses: actions/checkout@v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           repository: ${{ github.repository }}
           path: apps/interpreters/wamr/wamr
@@ -122,7 +127,7 @@ jobs:
         run: make -j$(nproc) EXTRAFLAGS=-Werror
 
       - name: Checkout Bloaty
-        uses: actions/checkout@v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           repository: google/bloaty
           submodules: recursive

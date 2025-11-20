@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 ##  Build docker image that consists of gcc, cmake, wasi-sdk & zephyr sdk
-FROM gcc:12.2.0 AS BASE
+FROM gcc:12.2.0@sha256:a3e091325c0af43bc9c1c576ddd155351d5b16438124421188bb4b4fcacc1452 AS BASE
 
 ## set work directory
 WORKDIR /root/
@@ -48,7 +48,7 @@ RUN cmake .. \
     && rm -fr /root/wasm-micro-runtime
 
 # ## STAGE 2
-FROM ubuntu:22.04
+FROM ubuntu:22.04@sha256:104ae83764a5119017b8e8d6218fa0832b09df65aae7d5a6de29a85d813da2fb
 ENV HOME_DIR=/home/wasm-toolchain
 
 RUN mkdir -p /opt/wasi-sdk \
