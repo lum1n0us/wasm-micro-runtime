@@ -2,6 +2,8 @@
 
 printf "Running 'postCreateCommand' Script ...\n"
 
+/tmp/uv-install/install.sh
+
 # printf "Installing Rust Targets\n"
 # sudo chown -R vscode ${CARGO_HOME}
 # sudo chown -R vscode ${RUSTUP_HOME}

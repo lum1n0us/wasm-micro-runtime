@@ -109,16 +109,16 @@ RUN wget -q https://github.com/cli/cli/releases/download/v${GH_CLI_VER}/gh_${GH_
 # #
 # # SGX setup
 # RUN mkdir -p /opt/intel
-# 
+#
 # WORKDIR /opt/intel
 # RUN wget -q -O sgx_linux_x64_sdk.bin https://download.01.org/intel-sgx/latest/linux-latest/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.25.100.3.bin \
 #   && chmod +x sgx_linux_x64_sdk.bin
 # RUN echo 'yes' | ./sgx_linux_x64_sdk.bin
 # RUN source /opt/intel/sgxsdk/environment
-# 
+#
 # RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list \
 #    && wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
-# 
+#
 # RUN apt update \
 #    && apt install -y libsgx-launch libsgx-urts
 
@@ -158,7 +158,7 @@ RUN apt update \
 # ENV RUSTUP_HOME=/home/vscode/.rustup
 # RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
 # ENV PATH="${CARGO_HOME}/bin:${PATH}"
-# 
+#
 # #
 # # Install CodeQL CLI
 # RUN cd /opt \
@@ -173,16 +173,22 @@ RUN dpkg --add-architecture i386 \
   && apt-get update \
   && apt-get install -y g++-multilib libzstd-dev:i386 zlib1g-dev:i386
 
-# install coverity tools
-COPY cov-analysis-linux64-2024.12.1.tar.gz /tmp
-RUN tar -xvf /tmp/cov-analysis-linux64-2024.12.1.tar.gz -C /opt \
-  && rm /tmp/cov-analysis-linux64-2024.12.1.tar.gz \
-  && ln -sf /opt/cov-analysis-linux64-2024.12.1 /opt/coverity
+# # install coverity tools
+# COPY cov-analysis-linux64-2024.12.1.tar.gz /tmp
+# RUN tar -xvf /tmp/cov-analysis-linux64-2024.12.1.tar.gz -C /opt \
+#   && rm /tmp/cov-analysis-linux64-2024.12.1.tar.gz \
+#   && ln -sf /opt/cov-analysis-linux64-2024.12.1 /opt/coverity
 
 RUN apt install -y file
 
+# install uv
+RUN  mkdir /tmp/uv-install \
+  && cd /tmp/uv-install \
+  && wget https://astral.sh/uv/install.sh \
+  && chmod +x install.sh
+
 # set path
-ENV PATH="/home/vscode/.opam/default/bin:/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:/opt/coverity/bin:${PATH}"
+ENV PATH="/home/vscode/.opam/default/bin:/opt/bazelisk:/usr/lib/llvm-${LLVM_VER}/bin:${PATH}"
 
 ENV PYTHONPATH="/usr/lib/llvm-18/lib/python3.10/dist-packages/"
 
