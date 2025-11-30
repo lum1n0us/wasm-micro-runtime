@@ -48,7 +48,24 @@
         "ms-vscode.cpptools-extension-pack",
         "streetsidesoftware.code-spell-checker",
         "vadimcn.vscode-lldb",
-      ]
+      ],
+      "mcp": {
+        "servers": {
+          "serena": {
+            "command": "uvx",
+            "args": [
+              "--from",
+              "git+https://github.com/oraios/serena",
+              "serena",
+              "start-mcp-server",
+              "--context",
+              "ide-assistant",
+              "--project",
+              "$(pwd)"
+            ]
+          }
+        }
+      }
     }
   },
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
