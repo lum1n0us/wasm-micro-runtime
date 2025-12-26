@@ -1,0 +1,51 @@
+{
+  "name": "🌟 WAMR Dev(LOCAL) ☀️✨",
+  "build": {
+    "dockerfile": "Dockerfile_local",
+    "args": {
+      "VARIANT": "debian-12",
+      "WABT_VER": "1.0.37",
+      "WASI_SDK_VER": "25",
+      "WASM_TOOLS_VER": "1.243.0"
+    }
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE",
+    "--security-opt",
+    "seccomp=unconfined"
+  ],
+  "customizations": {
+    "vscode": {
+      "settings": {},
+      "extensions": [
+        "bierner.github-markdown-preview",
+        "dtsvet.vscode-wasm",
+        "eamodio.gitlens",
+        "esbenp.prettier-vscode",
+        "GitHub.vscode-pull-request-github",
+        "ms-python.debugpy",
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter",
+        "ms-toolsai.jupyter-keymap",
+        "ms-toolsai.jupyter-renderers",
+        "ms-toolsai.vscode-jupyter-cell-tags",
+        "ms-toolsai.vscode-jupyter-slideshow",
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "streetsidesoftware.code-spell-checker",
+        "vadimcn.vscode-lldb"
+      ]
+    }
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder}/../../SDF,target=${containerWorkspaceFolder}/../SDF,type=bind"
+  ],
+  "postCreateCommand": [
+    "bash",
+    "-c",
+    "bash .devcontainer/finalize.sh && bash .devcontainer/local/finalize.sh"
+  ],
+  "remoteUser": "vscode"
+}
