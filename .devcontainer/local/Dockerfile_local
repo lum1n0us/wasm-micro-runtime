@@ -19,6 +19,9 @@ RUN mkdir -p -m 755 /etc/apt/keyrings \
   && apt update \
   && apt install gh -y
 
+# set proxy variables for sudoer
+RUN echo 'Defaults env_keep += "http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY"' | sudo tee /etc/sudoers.d/proxy
+
 # set path
 
 # clean up
