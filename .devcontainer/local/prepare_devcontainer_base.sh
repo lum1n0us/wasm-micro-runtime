@@ -6,7 +6,7 @@ if [[ .devcontainer/Dockerfile -nt .devcontainer/local/devcontainer-base-image-b
     # if .devcontainer/Dockerfile changes, rebuild the image
     echo "Building devcontainer-base image..."
 
-    docker build -f .devcontainer/Dockerfile -t devcontainer-base --build-arg VARIANT=debian-12 --build-arg WASI_SDK_VER=25 --build-arg WABT_VER=1.0.37 .devcontainer
+    docker build -f .devcontainer/Dockerfile -t devcontainer-base .devcontainer
     if [ $? -ne 0 ]; then
         echo "Failed to build devcontainer-base image."
         exit 1
