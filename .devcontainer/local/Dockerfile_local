@@ -4,12 +4,13 @@ FROM devcontainer-base
 
 WORKDIR /opt
 
-ARG WASM_TOOLS_VER=1.201.0
+# Install wasm-tools
+ARG WASM_TOOLS_VER=1.243.0
 RUN wget -c --progress=dot:giga https://github.com/bytecodealliance/wasm-tools/releases/download/v${WASM_TOOLS_VER}/wasm-tools-${WASM_TOOLS_VER}-x86_64-linux.tar.gz -P /tmp
 RUN tar xzf /tmp/wasm-tools-${WASM_TOOLS_VER}-x86_64-linux.tar.gz -C /opt\
   && ln -sf /opt/wasm-tools-${WASM_TOOLS_VER}-x86_64-linux/wasm-tools /usr/local/bin/wasm-tools
 
-
+# Install GitHub CLI
 RUN mkdir -p -m 755 /etc/apt/keyrings \
   && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
   && cat $out | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
@@ -21,6 +22,13 @@ RUN mkdir -p -m 755 /etc/apt/keyrings \
 
 # set proxy variables for sudoer
 RUN echo 'Defaults env_keep += "http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY"' | sudo tee /etc/sudoers.d/proxy
+
+# Install clangd and clang-tidy
+RUN apt update \
+  && apt install -y clangd clang-tidy
+
+# Install opencode
+RUN curl -fsSL https://opencode.ai/install | bash
 
 # set path
 
