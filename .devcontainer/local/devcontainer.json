@@ -3,9 +3,6 @@
   "build": {
     "dockerfile": "Dockerfile_local",
     "args": {
-      "VARIANT": "debian-12",
-      "WABT_VER": "1.0.37",
-      "WASI_SDK_VER": "25",
       "WASM_TOOLS_VER": "1.243.0"
     }
   },
@@ -23,6 +20,7 @@
         "eamodio.gitlens",
         "esbenp.prettier-vscode",
         "GitHub.vscode-pull-request-github",
+        "llvm-vs-code-extensions.vscode-clangd",
         "ms-python.debugpy",
         "ms-python.python",
         "ms-python.black-formatter",
