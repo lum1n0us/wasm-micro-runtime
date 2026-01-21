@@ -11,6 +11,7 @@ python3 -m pip install --no-cache-dir --break-system-packages --upgrade pip
 pip3 install --no-cache-dir --break-system-packages -r .devcontainer/requirements.txt
 
 echo "--- Installing Ocaml stuff\n"
+
 opam init --yes --shell-setup
 eval $(opam env --switch=default)
 opam install --yes dune menhir
