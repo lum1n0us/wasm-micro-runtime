@@ -40,3 +40,6 @@ samples/workload/include/**
 !samples/workload/include/.gitkeep
 
 # core/iwasm/libraries/wasi-threads
+
+# tags generation
+**/gtags-indexes/**
