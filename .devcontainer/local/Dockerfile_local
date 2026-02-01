@@ -1,6 +1,6 @@
 # Copyright (C) 2019 Intel Corporation.  All rights reserved.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-FROM devcontainer-base
+FROM devcontainer-base:latest
 
 WORKDIR /opt
 
@@ -25,12 +25,10 @@ RUN echo 'Defaults env_keep += "http_proxy https_proxy no_proxy HTTP_PROXY HTTPS
 
 # Install utilities for C/C++ development
 RUN apt update \
-  && apt install -y clangd clang-tidy universal-ctags
-
-# Install opencode
-RUN curl -fsSL https://opencode.ai/install | bash
+  && apt install -y bear ccache clangd clang-tidy fd-find ripgrep
 
 # set path
+RUN ln -sf /usr/bin/clang-format-14 /usr/bin/clang-format
 
 # clean up
 RUN apt-get autoremove -y \

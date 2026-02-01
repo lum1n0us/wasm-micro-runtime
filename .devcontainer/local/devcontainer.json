@@ -38,7 +38,8 @@
     }
   },
   "mounts": [
-    "source=${localWorkspaceFolder}/../../SDF,target=${containerWorkspaceFolder}/../SDF,type=bind"
+    "source=${localWorkspaceFolder}/../../SDF,target=${containerWorkspaceFolder}/../SDF,type=bind",
+    "source=/home/liam/.config/opencode,target=/home/vscode/.config/opencode,type=bind"
   ],
   "postCreateCommand": [
     "bash",
