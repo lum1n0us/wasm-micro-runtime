@@ -23,9 +23,28 @@ class BuildTarget:
 
 
 def parse_args() -> argparse.Namespace:
+    class DefaultsRawFormatter(
+        argparse.ArgumentDefaultsHelpFormatter,
+        argparse.RawDescriptionHelpFormatter,
+    ):
+        pass
+
+    epilog = """
+Examples:
+  # Normal mode with clang toolchain
+  ./ci/build_runtime_comprehensive.py --output-dir /tmp/wamr-build --compiler clang
+
+  # Normal mode with gcc toolchain and explicit project root
+  ./ci/build_runtime_comprehensive.py --output-dir /tmp/wamr-build --compiler gcc --project-root /path/to/wasm-micro-runtime
+
+  # Coverity mode (forces gcc, ignores --compiler toolchain selection)
+  ./ci/build_runtime_comprehensive.py --output-dir /tmp/wamr-coverity --mode coverity --compiler clang
+"""
+
     parser = argparse.ArgumentParser(
         description="Build multiple WAMR configurations with clean, logged steps.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        formatter_class=DefaultsRawFormatter,
+        epilog=epilog,
     )
     parser.add_argument(
         "--output-dir",
@@ -36,8 +55,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--project-root",
         type=Path,
-        required=True,
-        help="Repository root containing product-mini/ and wamr-compiler/.",
+        default=Path.cwd(),
+        help="Repository root containing product-mini/ and wamr-compiler/ (defaults to current working directory).",
     )
     parser.add_argument(
         "--compiler",
@@ -111,10 +130,39 @@ def toolchain_flag(project_root: Path, compiler: str, use_coverage_toolchain: bo
         toolchain = project_root / "tests" / "fuzz" / "wasm-mutator-fuzz" / "clang_toolchain.cmake"
     else:
         toolchain_name = "gcc_toolchain.cmake" if compiler == "gcc" else "clang_toolchain.cmake"
-        toolchain = project_root / "build-scripts" / toolchain_name
+        toolchain = project_root / "ci" / toolchain_name
     if not toolchain.exists():
         raise FileNotFoundError(f"toolchain file not found: {toolchain}")
     return f"-DCMAKE_TOOLCHAIN_FILE={toolchain}"
+
+
+def verify_coverity_capture(step_name: str, cov_int: Path, log_path: Path) -> None:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    cov_log = cov_int / "build-log.txt"
+    print(f"[step] {step_name}")
+    with log_path.open("w", encoding="utf-8") as log_file:
+        write_log_header(log_file, ["verify-coverity"], None)
+        if not cov_log.exists():
+            log_file.write(f"Coverity log not found: {cov_log}\n")
+            log_file.flush()
+            log_contents = log_path.read_text(encoding="utf-8", errors="replace")
+            print(f"[error] {step_name} failed: coverity log missing")
+            print("[error] Full log:")
+            print(log_contents)
+            sys.exit(1)
+
+        cov_contents = cov_log.read_text(encoding="utf-8", errors="replace")
+        log_file.write("Coverity build-log.txt contents:\n")
+        log_file.write(cov_contents)
+        log_file.flush()
+
+        success_pattern = "compilation units (100%) successfully"
+        if success_pattern not in cov_contents:
+            log_contents = log_path.read_text(encoding="utf-8", errors="replace")
+            print(f"[error] {step_name} failed: coverity capture incomplete")
+            print("[error] Full log:")
+            print(log_contents)
+            sys.exit(1)
 
 
 def build_targets(
@@ -331,7 +379,15 @@ def build_targets(
         build_dir = build_root / target.name
         clean_dir(build_dir)
 
-        toolchain = toolchain_flag(project_root, compiler, target.use_coverage_toolchain)
+        toolchain_flags: List[str]
+        if mode == "coverity":
+            toolchain_flags = [
+                "-DCMAKE_C_COMPILER=gcc",
+                "-DCMAKE_CXX_COMPILER=g++",
+            ]
+        else:
+            toolchain = toolchain_flag(project_root, compiler, target.use_coverage_toolchain)
+            toolchain_flags = [toolchain]
         cmake_config_cmd = [
             "cmake",
             "-S",
@@ -339,7 +395,7 @@ def build_targets(
             "-B",
             str(build_dir),
             *universal_flags,
-            toolchain,
+            *toolchain_flags,
             *target.cmake_flags,
         ]
 
@@ -359,6 +415,10 @@ def build_targets(
 
         build_log = output_dir / f"{target.name}_build_{timestamp()}.log"
         run_step(f"{target.name}: build", build_cmd, build_log)
+
+        if mode == "coverity":
+            verify_log = output_dir / f"{target.name}_coverity_verify_{timestamp()}.log"
+            verify_coverity_capture(f"{target.name}: coverity verify", cov_int, verify_log)
 
 
 def main() -> None:
