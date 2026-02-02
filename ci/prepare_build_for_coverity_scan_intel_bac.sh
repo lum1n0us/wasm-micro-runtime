@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# How to use this script:
+#   0. use .devcontainer/coverity/ to setup the Coverity tools environment. This is an enterprise version provided by Intel
+#   1. assume you have the right permission to commit to the Coverity server ${COVERITY_SERVER_URL}
+#   2. after login to the server, you have created/seen a project named ${PROJECT_NAME}
+#   3. you have the auth key file at ${AUTH_KEY}
+#   4. Run `python3 ci/build_runtime_comprehensive.py --mode coverity --output-dir <build-for-coverity-scan>` to generate the cov-build output directory
+#   5. If everything is ready, run this script:
+#        $ ci/prepare_build_for_coverity_scan_intel_bac.sh <build-for-coverity-scan>/cov-int
+
+
 set -o pipefail
 set -o errexit
 set -o nounset
@@ -10,6 +20,8 @@ if [ -n "${DEBUG:-}" ]; then
 fi
 
 AUTH_KEY=./.devcontainer/coverity/auth-key.txt
+COVERITY_SERVER_URL="https://coverity.devtools.intel.com/prod21"
+PROJECT_NAME="Wamr-v2"
 
 usage() {
   echo "Usage: $0 [--repo-root <path>] <cov-build-output-directory-path>"
@@ -160,7 +172,7 @@ cov-analyze --dir "${OUTPUT_COV_EMIT}" \
 echo "Committing Coverity analysis results..."
 
 # C for COMMIT
-cov-commit-defects --dir "${OUTPUT_COV_EMIT}" --stream "Wamr-v2" --url https://coverity.devtools.intel.com/prod21 --auth-key-file "${AUTH_KEY}" --strip-path "${REPO_ROOT}" --noxrefs
+cov-commit-defects --dir "${OUTPUT_COV_EMIT}" --stream "${PROJECT_NAME}" --url "${COVERITY_SERVER_URL}" --auth-key-file "${AUTH_KEY}" --strip-path "${REPO_ROOT}" --noxrefs
 
 # https://wiki.ith.intel.com/spaces/SecTools/pages/2260108142/Enterprise+Coverity+Help+Topics#EnterpriseCoverityHelpTopics-Excludeunwantedheaderfilesgettingcommitted tells us the best way to avoid unwanted header files getting committed is from WebUI
 
