@@ -37,8 +37,8 @@ Examples:
   # Normal mode with gcc toolchain and explicit project root
   ./ci/build_runtime_comprehensive.py --output-dir /tmp/wamr-build --compiler gcc --project-root /path/to/wasm-micro-runtime
 
-  # Coverity mode (forces gcc, ignores --compiler toolchain selection)
-  ./ci/build_runtime_comprehensive.py --output-dir /tmp/wamr-coverity --mode coverity --compiler clang
+  # Coverity mode (forces gcc, --compiler is optional and ignored if provided)
+  ./ci/build_runtime_comprehensive.py --output-dir /tmp/wamr-coverity --mode coverity
 """
 
     parser = argparse.ArgumentParser(
@@ -61,8 +61,7 @@ Examples:
     parser.add_argument(
         "--compiler",
         choices=["gcc", "clang"],
-        required=True,
-        help="Compiler toolchain selection.",
+        help="Compiler toolchain selection (ignored in coverity mode).",
     )
     parser.add_argument(
         "--mode",
@@ -81,6 +80,12 @@ Examples:
         parser.error("project root is missing product-mini/platforms/linux")
     if not (args.project_root / "wamr-compiler").exists():
         parser.error("project root is missing wamr-compiler")
+
+    if args.mode == "normal" and not args.compiler:
+        parser.error("--compiler is required when --mode=normal")
+
+    if args.mode == "coverity" and args.compiler:
+        print("[warn] --compiler is ignored in coverity mode; using GCC", file=sys.stderr)
 
     return args
 
@@ -425,6 +430,8 @@ def main() -> None:
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
     try:
+        if args.mode == "coverity":
+            print("[info] Using GCC (forced by coverity mode)")
         build_targets(args.project_root, args.compiler, args.mode, args.output_dir)
     except (RuntimeError, FileNotFoundError) as exc:
         print(f"[error] {exc}")
