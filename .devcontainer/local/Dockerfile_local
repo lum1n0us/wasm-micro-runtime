@@ -23,6 +23,9 @@ RUN mkdir -p -m 755 /etc/apt/keyrings \
 # set proxy variables for sudoer
 RUN echo 'Defaults env_keep += "http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY"' | sudo tee /etc/sudoers.d/proxy
 
+# Install uv for virtual environment management
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Install utilities for C/C++ development
 RUN apt update \
   && apt install -y bear ccache clangd clang-tidy fd-find ripgrep
