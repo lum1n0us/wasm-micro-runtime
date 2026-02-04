@@ -28,7 +28,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install utilities for C/C++ development
 RUN apt update \
-  && apt install -y bear ccache clangd clang-tidy fd-find ripgrep
+  && apt install -y bear ccache clangd clang-tidy fd-find ripgrep shellcheck
 
 # set path
 RUN ln -sf /usr/bin/clang-format-14 /usr/bin/clang-format
