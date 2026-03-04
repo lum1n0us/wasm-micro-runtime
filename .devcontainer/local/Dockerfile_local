@@ -32,8 +32,3 @@ RUN apt update \
 
 # set path
 RUN ln -sf /usr/bin/clang-format-14 /usr/bin/clang-format
-
-# clean up
-RUN apt-get autoremove -y \
-  && apt-get clean -y \
-  && rm -rf /tmp/*

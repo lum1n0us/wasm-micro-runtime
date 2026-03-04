@@ -39,7 +39,9 @@
   },
   "mounts": [
     "source=${localWorkspaceFolder}/../../SDF,target=${containerWorkspaceFolder}/../SDF,type=bind",
-    "source=/home/liam/.config/opencode,target=/home/vscode/.config/opencode,type=bind"
+    "source=${localEnv:HOME}/.config/opencode,target=/home/vscode/.config/opencode,type=bind"
+    // will raise permission errors
+    // "source=${localEnv:HOME}/.local/share/opencode/auth.json,target=/home/vscode/.local/share/opencode/auth.json,type=bind"
   ],
   "postCreateCommand": [
     "bash",
