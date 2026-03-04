@@ -1,20 +1,22 @@
-
 .cache
 .clangd
 .vs
 .vscode
 .venv
 /.idea
+
 **/cmake-build-*/
 **/*build*/
 !/build-scripts
 *.obj
 *.a
 *.so
-.clangd
-.DS_Store
-*.o
-.aider*
+*.code-workspace
+
+# all hidden files and folders except .devcontainer and .github
+.*
+!.devcontainer
+!.github
 
 core/deps/**
 core/shared/mem-alloc/tlsf
