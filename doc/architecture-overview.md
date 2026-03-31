@@ -197,3 +197,147 @@ Module Instance Memory:
 - Mechanism: Profile hot functions in Fast JIT, compile with LLVM JIT
 - Configuration: `WAMR_BUILD_FAST_JIT=1` and `WAMR_BUILD_JIT=1`
 - Benefit: Fast startup + high peak performance
+
+## Critical Code Paths
+
+Understanding these workflows is essential for debugging and feature development.
+
+### Module Load & Execute Flow
+
+**1. Load Wasm Module**
+
+```c
+wasm_module_t module = wasm_runtime_load(
+    wasm_file_buf,    // Wasm bytecode buffer
+    wasm_file_size,   // Buffer size
+    error_buf,        // Error message buffer
+    error_buf_size    // Error buffer size
+);
+```
+
+Flow:
+- Parse Wasm binary format
+- Validate function signatures, types, imports/exports
+- Build internal module structure
+- Return module handle (or NULL on error)
+
+Location: `core/iwasm/common/wasm_runtime_common.c`
+
+**2. Instantiate Module**
+
+```c
+wasm_module_inst_t module_inst = wasm_runtime_instantiate(
+    module,           // Module handle from load
+    stack_size,       // Wasm stack size (e.g., 8092)
+    heap_size,        // Wasm heap size (e.g., 8092)
+    error_buf,        // Error message buffer
+    error_buf_size    // Error buffer size
+);
+```
+
+Flow:
+- Allocate module instance structure
+- Allocate linear memory (heap + stack)
+- Initialize data segments (copy data into memory)
+- Initialize tables and globals
+- Call start function if present
+- Return instance handle (or NULL on error)
+
+Location: `core/iwasm/common/wasm_runtime_common.c`
+
+**3. Lookup Function**
+
+```c
+wasm_function_inst_t func = wasm_runtime_lookup_function(
+    module_inst,      // Module instance
+    "main",           // Function name
+    NULL              // Optional signature
+);
+```
+
+Flow:
+- Search exports for function name
+- Return function instance (or NULL if not found)
+
+Location: `core/iwasm/common/wasm_runtime_common.c`
+
+**4. Call Function**
+
+```c
+bool success = wasm_runtime_call_wasm(
+    exec_env,         // Execution environment
+    func,             // Function to call
+    argc,             // Argument count
+    argv              // Arguments array
+);
+```
+
+Flow:
+- Validate function signature
+- Check stack space available
+- Dispatch to execution engine:
+  - Interpreter: Enter dispatch loop
+  - AOT: Call native function pointer
+  - JIT: Call JIT-compiled function (or trigger compilation)
+- Handle return values
+- Return success/failure
+
+Location: `core/iwasm/common/wasm_runtime_common.c`
+
+### Memory Allocation Path
+
+**Entry Points:**
+
+```c
+// Standard allocation
+void* ptr = gc_alloc_vo(heap, size);
+
+// Aligned allocation (e.g., for SIMD)
+void* ptr = gc_alloc_vo_aligned(heap, size, alignment);
+```
+
+**Allocation Flow:**
+
+1. Check available heap space
+2. Find suitable free block (first-fit or best-fit strategy)
+3. For aligned allocations:
+   - Calculate alignment padding
+   - Store alignment metadata before allocated block
+4. Update free list
+5. Return pointer (or NULL if out of memory)
+
+**Deallocation Flow:**
+
+```c
+gc_free_vo(heap, ptr);
+```
+
+1. For aligned allocations: Read metadata to find actual block start
+2. Mark block as free
+3. Coalesce with adjacent free blocks
+4. Update free list
+
+Location: `core/shared/mem-alloc/ems/ems_gc.c`
+
+### Native Function Call Path
+
+When Wasm code calls a host-registered native function:
+
+1. Wasm module calls imported function
+2. Runtime looks up native function pointer in import table
+3. Runtime marshals Wasm arguments to native calling convention
+4. Native function executes
+5. Runtime marshals return value back to Wasm
+6. Execution continues in Wasm
+
+Registration example:
+
+```c
+static NativeSymbol native_symbols[] = {
+    {"print_string", print_string, "(i)i", NULL}
+};
+
+wasm_runtime_register_natives("env", native_symbols, 1);
+```
+
+Location: `core/iwasm/common/wasm_native.c`
