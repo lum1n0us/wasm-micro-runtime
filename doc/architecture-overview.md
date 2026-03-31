@@ -167,7 +167,7 @@ Module Instance Memory:
 - Function: `gc_alloc_vo_aligned()` - Allocate with alignment requirement
 - Metadata: Alignment metadata tracked for proper deallocation
 - Use case: SIMD data, hardware-specific alignment requirements
-- Location: `core/shared/mem-alloc/ems/ems_gc.c`
+- Location: `core/shared/mem-alloc/ems/ems_alloc.c`
 
 ### Execution Modes
 
@@ -228,8 +228,8 @@ Location: `core/iwasm/common/wasm_runtime_common.c`
 ```c
 wasm_module_inst_t module_inst = wasm_runtime_instantiate(
     module,           // Module handle from load
-    stack_size,       // Wasm stack size (e.g., 8092)
-    heap_size,        // Wasm heap size (e.g., 8092)
+    stack_size,       // Wasm stack size (e.g., 8192)
+    heap_size,        // Wasm heap size (e.g., 8192)
     error_buf,        // Error message buffer
     error_buf_size    // Error buffer size
 );
@@ -317,7 +317,7 @@ gc_free_vo(heap, ptr);
 3. Coalesce with adjacent free blocks
 4. Update free list
 
-Location: `core/shared/mem-alloc/ems/ems_gc.c`
+Location: `core/shared/mem-alloc/ems/ems_alloc.c`
 
 ### Native Function Call Path
 
@@ -341,3 +341,112 @@ wasm_runtime_register_natives("env", native_symbols, 1);
 ```
 
 Location: `core/iwasm/common/wasm_native.c`
+
+## Platform Abstraction Layer
+
+**Location:** `core/shared/platform/`
+
+**Purpose:** Provide OS abstraction for portability across different platforms.
+
+**Key abstractions:**
+- Memory management: `os_malloc()`, `os_free()`, `os_mmap()`, `os_munmap()`
+- Threading: `os_mutex_init()`, `os_thread_create()`, `os_cond_wait()`
+- Time: `os_time_get_boot_us()`, `os_time_delay()`
+- File I/O: Platform-specific file operations
+- Socket: Platform-specific network operations
+
+**Supported platforms:**
+- Linux, macOS, Windows
+- Android, iOS
+- Zephyr, VxWorks, NuttX, RT-Thread
+- ESP-IDF (FreeRTOS)
+- SGX (Intel Software Guard Extensions)
+
+**Porting guide:** See [doc/port_wamr.md](./port_wamr.md) for adding new platform support.
+
+**Platform-specific directories:**
+- `core/shared/platform/linux/` - Linux implementation
+- `core/shared/platform/windows/` - Windows implementation
+- `core/shared/platform/darwin/` - macOS implementation
+- etc.
+
+## Build System Architecture
+
+**Primary build system:** CMake
+
+**Entry point:** `build-scripts/runtime_lib.cmake`
+
+This script is included by host applications to pull WAMR runtime into their build. It exposes `WAMR_BUILD_*` variables to configure features.
+
+### Key Build Configuration Variables
+
+**Execution modes:**
+- `WAMR_BUILD_INTERP=1` - Enable interpreter
+- `WAMR_BUILD_FAST_INTERP=1` - Enable fast interpreter (recommended over classic)
+- `WAMR_BUILD_AOT=1` - Enable AOT runtime
+- `WAMR_BUILD_JIT=1` - Enable LLVM JIT
+- `WAMR_BUILD_FAST_JIT=1` - Enable Fast JIT
+
+**Libc support:**
+- `WAMR_BUILD_LIBC_BUILTIN=1` - Minimal builtin libc (smaller footprint)
+- `WAMR_BUILD_LIBC_WASI=1` - Full WASI libc (larger footprint, more features)
+
+**Platform:**
+- `WAMR_BUILD_PLATFORM` - Target platform (e.g., "linux", "darwin", "windows")
+- `WAMR_BUILD_TARGET` - Target architecture (e.g., "X86_64", "AARCH64", "ARM")
+
+**Memory and performance:**
+- `WAMR_BUILD_BULK_MEMORY=1` - Bulk memory operations
+- `WAMR_BUILD_SHARED_MEMORY=1` - Shared memory between threads
+- `WAMR_BUILD_MEMORY_PROFILING=1` - Memory usage profiling
+
+**Example configuration:**
+
+```cmake
+set(WAMR_BUILD_PLATFORM "linux")
+set(WAMR_BUILD_TARGET "X86_64")
+set(WAMR_BUILD_INTERP 1)
+set(WAMR_BUILD_FAST_INTERP 1)
+set(WAMR_BUILD_AOT 1)
+set(WAMR_BUILD_LIBC_BUILTIN 1)
+set(WAMR_BUILD_LIBC_WASI 1)
+
+include(${WAMR_ROOT_DIR}/build-scripts/runtime_lib.cmake)
+add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
+```
+
+**Reference:** See [doc/build_wamr.md](./build_wamr.md) for comprehensive build configuration details.
+
+## Design Patterns & Conventions
+
+**Error Handling:**
+- Most APIs return `bool` (true=success, false=failure) or pointer (NULL=failure)
+- Error messages written to caller-provided `error_buf`
+- Check return values and inspect error buffer on failure
+
+**Memory Management:**
+- Explicit allocation/deallocation - no garbage collection at runtime level
+- Always pair `wasm_runtime_load()` with `wasm_runtime_unload()`
+- Always pair `wasm_runtime_instantiate()` with `wasm_runtime_deinstantiate()`
+
+**Thread Safety:**
+- Module (`wasm_module_t`) is read-only and can be shared across threads
+- Module instances (`wasm_module_inst_t`) must not be shared - create per-thread
+- Execution environments (`wasm_exec_env_t`) are thread-local
+
+**Naming Conventions:**
+- Public API: `wasm_runtime_*` prefix
+- Internal functions: `wasm_*` or component-specific prefix
+- OS abstraction: `os_*` prefix
+- Memory allocator: `mem_allocator_*`, `gc_*` prefix
+
+**Build-time Configuration:**
+- Use `WAMR_BUILD_*` variables for major features
+- Conditional compilation with `#if WASM_ENABLE_*` macros
+- Keep runtime configurable - avoid hard-coding limits
+
+---
+
+**Last updated:** 2026-03-31 (Phase 1 - Foundation)
+
+**Next steps:** After implementing Phase 1, observe AI agent usage patterns to identify gaps for Phase 3 (dev-workflows.md) and Phase 4 (testing-guide.md).
