@@ -39,3 +39,16 @@ After validation:
 - Document any confusion or missing information
 - Update docs based on findings
 - Proceed to Phase 2 (learning period)
+
+---
+
+## Validation Execution Notes
+
+**Execution Date:** Not yet executed
+
+**Instructions:**
+1. Test 1 (Navigation): Open AGENTS.md, follow "For Bug Fixes" navigation, verify links exist
+2. Test 2 (Architecture): Read architecture-overview.md, answer the three questions
+3. Test 3 (Bug Fix): Use docs to locate memory allocation subsystem
+
+**Results will be updated after manual validation.**
