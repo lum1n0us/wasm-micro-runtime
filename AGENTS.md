@@ -71,3 +71,31 @@ When refactoring code:
 2. **[doc/dev-workflows.md](./doc/dev-workflows.md)** *(Phase 3)* - Follow coding conventions
 3. **[doc/perf_tune.md](./doc/perf_tune.md)** - Understand performance implications
 4. **[doc/memory_tune.md](./doc/memory_tune.md)** - Understand memory usage implications
+
+## Quick Reference
+
+Frequently accessed documentation:
+
+**Core Documentation:**
+- [README.md](./README.md) - Project overview, features, getting started
+- [doc/build_wamr.md](./doc/build_wamr.md) - Build instructions and configuration flags
+- [doc/embed_wamr.md](./doc/embed_wamr.md) - Embedding WAMR into applications
+- [doc/export_native_api.md](./doc/export_native_api.md) - Registering native functions
+- [doc/architecture-overview.md](./doc/architecture-overview.md) - Component structure and design
+
+**Development Workflows:**
+- [doc/source_debugging.md](./doc/source_debugging.md) - Debugging WAMR applications
+- [doc/build_wasm_app.md](./doc/build_wasm_app.md) - Building Wasm applications
+- [doc/port_wamr.md](./doc/port_wamr.md) - Porting to new platforms
+
+**Performance & Memory:**
+- [doc/perf_tune.md](./doc/perf_tune.md) - Performance tuning guide
+- [doc/memory_tune.md](./doc/memory_tune.md) - Memory usage optimization
+
+**Testing & Examples:**
+- [tests/unit/](./tests/unit/) - Unit test suite
+- [tests/benchmarks/](./tests/benchmarks/) - Performance benchmarks
+- [samples/](./samples/) - Example applications and use cases
+
+**All Documentation:**
+Browse the [doc/](./doc/) directory for comprehensive documentation.
