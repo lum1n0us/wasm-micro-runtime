@@ -43,3 +43,53 @@ The Ahead-of-Time (AOT) compiler that converts Wasm bytecode to native machine c
 - Compiles `.wasm` files to `.aot` files
 - Uses LLVM backend for optimization
 - Platform-specific code generation
+
+### Component Relationships
+
+**Build Dependencies:**
+
+```
+wamrc (AOT compiler)
+  └─> Uses LLVM to compile Wasm → native code
+  └─> Generates .aot files
+
+VMcore (runtime libraries)
+  ├─> Interpreter: Executes .wasm files directly
+  ├─> AOT Runtime: Loads and executes .aot files
+  └─> JIT: Compiles .wasm to native code at runtime
+
+iwasm (executable)
+  └─> Links against VMcore
+  └─> Provides CLI and WASI support
+```
+
+**Runtime Interactions:**
+
+1. **Module Loading Path:**
+   - Application calls `wasm_runtime_load()` with bytecode
+   - VMcore parses and validates the Wasm module
+   - Returns `wasm_module_t` handle
+
+2. **Instantiation Path:**
+   - Application calls `wasm_runtime_instantiate()`
+   - VMcore allocates linear memory and initializes tables
+   - Returns `wasm_module_inst_t` instance handle
+
+3. **Execution Path:**
+   - Application looks up function: `wasm_runtime_lookup_function()`
+   - Application calls function: `wasm_runtime_call_wasm()`
+   - VMcore dispatches to appropriate execution engine (interpreter/AOT/JIT)
+
+**Data Flow:**
+
+```
+Host Application
+  ↕ (API calls & native functions)
+VMcore
+  ↕ (loads & executes)
+Wasm Module (bytecode or AOT)
+  ↕ (system calls)
+Platform Abstraction Layer
+  ↕ (OS primitives)
+Operating System
+```
