@@ -3,20 +3,21 @@
 ## Deliverables
 
 - [x] AGENTS.md created with:
-  - [x] Project introduction
+  - [x] Project introduction with accurate component paths (core/iwasm/, core/shared, product-mini/platforms)
   - [x] What AI agents can help with
   - [x] Getting started section
   - [x] Task-oriented navigation (bug fixes, features, PR reviews, tests, refactoring)
-  - [x] Quick reference links
+  - [x] Quick reference links including tests/wamr-test-suites/
 
 - [x] doc/architecture-overview.md created with:
-  - [x] Component hierarchy (VMcore, iwasm, wamrc)
-  - [x] Component relationships and data flow
+  - [x] Component hierarchy with detailed VMcore structure (core/iwasm/ subdirs, core/shared)
+  - [x] Component relationships with ASCII diagram and dependency rules
+  - [x] Design principles (minimal core, macro-based design, error handling, etc.)
   - [x] Key abstractions (module types, memory model, execution modes)
-  - [x] Critical code paths (load, instantiate, execute, memory allocation)
-  - [x] Platform abstraction layer
-  - [x] Build system architecture
-  - [x] Design patterns and conventions
+  - [x] Critical code paths with code examples (load, instantiate, execute, memory allocation)
+  - [x] Platform abstraction layer details
+  - [x] Build system architecture with example configuration
+  - [x] Design patterns and conventions (error handling, memory management, thread safety, naming)
 
 - [x] Validation framework created
   - [x] .superpowers/validation/phase1-test-results.md

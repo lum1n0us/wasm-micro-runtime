@@ -3,6 +3,7 @@
 This document provides AI agents and developers with a mental model of WAMR's structure, component relationships, key abstractions, and design patterns. Understanding this architecture is essential for effective bug fixing, feature development, and code review.
 
 **Related documentation:**
+
 - [README.md](../README.md) - Project overview and features
 - [doc/build_wamr.md](./build_wamr.md) - Build system details
 - [doc/embed_wamr.md](./embed_wamr.md) - Embedding API guide
@@ -15,34 +16,38 @@ WAMR consists of three main components that work together to load, compile, and 
 
 ### Core Components
 
-#### 1. VMcore (core/iwasm/)
+#### 1. VMcore (core/iwasm/, core/shared)
 
-The runtime library set that loads and runs Wasm modules. VMcore provides multiple execution modes:
+The runtime library set that loads and runs Wasm modules.
 
-- **Interpreter** - Direct bytecode execution
-  - Classic interpreter - Straightforward bytecode interpretation
-  - Fast interpreter - Optimized interpreter with register-based execution
-- **AOT Runtime** - Executes pre-compiled native code
-- **JIT Engines** - Runtime compilation
-  - Fast JIT - Quick compilation with basic optimizations
-  - LLVM JIT - Advanced optimizations, slower compilation
-  - Tier-up - Automatic transition from Fast JIT to LLVM JIT for hot code
+- core/iwasm/aot/ - AOT runtime implementation
+- core/iwasm/common/ - Common code can be shared between AOT runtime and Wasm runtime
+- core/iwasm/compilation/ - Compilation engine using LLVM, shared between AOT compiler(wamr-compiler) and JIT
+- core/iwasm/fast-jit/ - Fast JIT implementation
+- core/iwasm/interpreter/ - Interpreter implementation and Wasm loader and Wasm runtime
+- core/iwasm/include/ - Public API headers for embedding
+  - core/iwasm/include/wasm_c_api.h - C API definitions for embedding. Another Set of public APIs for embedding.
+  - core/iwasm/include/wasm_export.h - Main public API for loading and executing Wasm modules.with C API style and more features than wasm_c_api.h
+- core/iwasm/libraries/ - Native libraries(call by Wasm) for both runtimes to support WASI and builtin libc, socket, threading, etc.
 
-#### 2. iwasm (product-mini/)
+And platform abstraction for portability across different operating systems and environments.
+
+- **Memory management** - core/shared/mem-alloc/
+- **Platform abstraction** - core/shared/platform/
+- **Utilities** - core/shared/utils/. Based on platform abstraction layer for cross-platform support.
+
+#### 2. iwasm (product-mini/platforms)
 
 The standalone executable binary built with WAMR VMcore. Provides:
 
 - Command-line interface for running Wasm modules
-- WASI (WebAssembly System Interface) support
-- Environment for testing and running Wasm applications
 
 #### 3. wamrc (wamr-compiler/)
 
 The Ahead-of-Time (AOT) compiler that converts Wasm bytecode to native machine code:
 
 - Compiles `.wasm` files to `.aot` files
-- Uses LLVM backend for optimization
-- Platform-specific code generation
+- Uses LLVM backend for optimization and code generation. Share code with JIT compilation in VMcore.
 
 ### Component Relationships
 
@@ -60,39 +65,32 @@ VMcore (runtime libraries)
 
 iwasm (executable)
   └─> Links against VMcore
-  └─> Provides CLI and WASI support
+  └─> Provides CLI
 ```
+
+**About Dependency**
+
+- Always use platform abstraction layer for OS interactions in VMcore
+- Avoid direct dependencies between iwasm and wamrc - they should only interact through VMcore
+- VMcore should be designed to be reusable in other host applications beyond iwasm
+
+**Design Principles:**
+
+- Maintain a minimal and efficient core runtime (VMcore) that can be embedded in various applications
+- Always use Marco-based design for modularity and configurability
+- Ensure clear separation of concerns between loading, instantiation, execution, and platform abstraction layers
+- Always handle errors gracefully and provide informative error messages to aid debugging and development
+- Release resources properly to avoid memory leaks and ensure stability in long-running applications
 
 **Runtime Interactions:**
 
-1. **Module Loading Path:**
-   - Application calls `wasm_runtime_load()` with bytecode
-   - VMcore parses and validates the Wasm module
-   - Returns `wasm_module_t` handle
+For every .wasm and .aot file, the runtime goes through these stages:
 
-2. **Instantiation Path:**
-   - Application calls `wasm_runtime_instantiate()`
-   - VMcore allocates linear memory and initializes tables
-   - Returns `wasm_module_inst_t` instance handle
+1. Loading
 
-3. **Execution Path:**
-   - Application looks up function: `wasm_runtime_lookup_function()`
-   - Application calls function: `wasm_runtime_call_wasm()`
-   - VMcore dispatches to appropriate execution engine (interpreter/AOT/JIT)
+2. Instantiation
 
-**Data Flow:**
-
-```
-Host Application
-  ↕ (API calls & native functions)
-VMcore
-  ↕ (loads & executes)
-Wasm Module (bytecode or AOT)
-  ↕ (system calls)
-Platform Abstraction Layer
-  ↕ (OS primitives)
-Operating System
-```
+3. Execution
 
 ## Key Abstractions & Data Structures
 
@@ -101,24 +99,28 @@ Understanding these core types is essential for navigating the WAMR codebase.
 ### Module Loading & Execution
 
 **`wasm_module_t`** - Loaded module (parsed and validated)
+
 - Created by: `wasm_runtime_load()`
 - Contains: Parsed bytecode, function signatures, imports/exports, data sections
 - Memory: Read-only, shared across instances
 - Location: `core/iwasm/common/wasm_runtime_common.h`
 
 **`wasm_module_inst_t`** - Instantiated module (with allocated memory)
+
 - Created by: `wasm_runtime_instantiate()`
 - Contains: Linear memory, tables, globals, function instances
 - Memory: Per-instance state, isolated between instances
 - Location: `core/iwasm/common/wasm_runtime_common.h`
 
 **`wasm_exec_env_t`** - Execution context
+
 - Created during: Function calls
 - Contains: Stack frames, native stack, calling context
 - Purpose: Thread-safe execution environment
 - Location: `core/iwasm/common/wasm_exec_env.h`
 
 **`wasm_function_inst_t`** - Function instance
+
 - Retrieved by: `wasm_runtime_lookup_function()`
 - Contains: Function pointer/bytecode offset, signature
 - Usage: Pass to `wasm_runtime_call_wasm()` to execute
@@ -131,6 +133,7 @@ Understanding these core types is essential for navigating the WAMR codebase.
 Location: `core/shared/mem-alloc/`
 
 Key functions:
+
 - `mem_allocator_create()` - Initialize memory allocator
 - `mem_allocator_malloc()` - Allocate memory block
 - `mem_allocator_free()` - Free memory block
@@ -144,26 +147,29 @@ Module Instance Memory:
 ├─────────────────────────┤
 │ Global data             │
 ├─────────────────────────┤
-│ Wasm linear memory      │
-│   ├─ Data segments      │
-│   ├─ Heap (grows up →) │
-│   └─ Stack (grows ← down)│
+│Wasm linear memory       │
+│  ├─ Data segments       │
+│  ├─ Heap (grows up →)   │
+│  └─ Stack (grows ← down)│
 ├─────────────────────────┤
 │ Function instances      │
 └─────────────────────────┘
 ```
 
 **Stack vs Heap Boundaries:**
+
 - Wasm stack size: Configured at instantiation via `stack_size` parameter
 - Heap size: Configured at instantiation via `heap_size` parameter
 - Stack overflow detection: Checked by runtime before function calls
 
 **WASI vs Builtin Libc:**
+
 - **WASI** (`WAMR_BUILD_LIBC_WASI=1`): Full libc with system calls, larger footprint
 - **Builtin libc** (`WAMR_BUILD_LIBC_BUILTIN=1`): Minimal libc subset, smaller footprint
 - Memory implications: WASI requires more heap for stdio buffers
 
 **Aligned Allocation Support:**
+
 - Function: `gc_alloc_vo_aligned()` - Allocate with alignment requirement
 - Metadata: Alignment metadata tracked for proper deallocation
 - Use case: SIMD data, hardware-specific alignment requirements
@@ -172,12 +178,14 @@ Module Instance Memory:
 ### Execution Modes
 
 **Interpreter** - Direct bytecode execution
+
 - Entry: `wasm_runtime_call_wasm()` → interpreter dispatch loop
 - Location: `core/iwasm/interpreter/`
 - Performance: Slower, but smallest binary size
 - Use case: Embedded systems, low memory
 
 **AOT (Ahead-of-Time)** - Pre-compiled native code
+
 - Compilation: `wamrc` compiles `.wasm` → `.aot`
 - Loading: `wasm_runtime_load()` loads `.aot` file
 - Execution: Direct native function calls
@@ -185,6 +193,7 @@ Module Instance Memory:
 - Use case: Production deployments, performance-critical
 
 **JIT (Just-in-Time)** - Runtime compilation
+
 - Fast JIT: Quick compilation, basic optimizations
   - Location: `core/iwasm/fast-jit/`
   - Compilation time: Milliseconds
@@ -194,6 +203,7 @@ Module Instance Memory:
 - Use case: Dynamic workloads, long-running applications
 
 **Tier-up** - Fast JIT → LLVM JIT transitions
+
 - Mechanism: Profile hot functions in Fast JIT, compile with LLVM JIT
 - Configuration: `WAMR_BUILD_FAST_JIT=1` and `WAMR_BUILD_JIT=1`
 - Benefit: Fast startup + high peak performance
@@ -216,6 +226,7 @@ wasm_module_t module = wasm_runtime_load(
 ```
 
 Flow:
+
 - Parse Wasm binary format
 - Validate function signatures, types, imports/exports
 - Build internal module structure
@@ -236,6 +247,7 @@ wasm_module_inst_t module_inst = wasm_runtime_instantiate(
 ```
 
 Flow:
+
 - Allocate module instance structure
 - Allocate linear memory (heap + stack)
 - Initialize data segments (copy data into memory)
@@ -256,6 +268,7 @@ wasm_function_inst_t func = wasm_runtime_lookup_function(
 ```
 
 Flow:
+
 - Search exports for function name
 - Return function instance (or NULL if not found)
 
@@ -273,6 +286,7 @@ bool success = wasm_runtime_call_wasm(
 ```
 
 Flow:
+
 - Validate function signature
 - Check stack space available
 - Dispatch to execution engine:
@@ -349,6 +363,7 @@ Location: `core/iwasm/common/wasm_native.c`
 **Purpose:** Provide OS abstraction for portability across different platforms.
 
 **Key abstractions:**
+
 - Memory management: `os_malloc()`, `os_free()`, `os_mmap()`, `os_munmap()`
 - Threading: `os_mutex_init()`, `os_thread_create()`, `os_cond_wait()`
 - Time: `os_time_get_boot_us()`, `os_time_delay()`
@@ -356,6 +371,7 @@ Location: `core/iwasm/common/wasm_native.c`
 - Socket: Platform-specific network operations
 
 **Supported platforms:**
+
 - Linux, macOS, Windows
 - Android, iOS
 - Zephyr, VxWorks, NuttX, RT-Thread
@@ -365,6 +381,7 @@ Location: `core/iwasm/common/wasm_native.c`
 **Porting guide:** See [doc/port_wamr.md](./port_wamr.md) for adding new platform support.
 
 **Platform-specific directories:**
+
 - `core/shared/platform/linux/` - Linux implementation
 - `core/shared/platform/windows/` - Windows implementation
 - `core/shared/platform/darwin/` - macOS implementation
@@ -381,6 +398,7 @@ This script is included by host applications to pull WAMR runtime into their bui
 ### Key Build Configuration Variables
 
 **Execution modes:**
+
 - `WAMR_BUILD_INTERP=1` - Enable interpreter
 - `WAMR_BUILD_FAST_INTERP=1` - Enable fast interpreter (recommended over classic)
 - `WAMR_BUILD_AOT=1` - Enable AOT runtime
@@ -388,14 +406,17 @@ This script is included by host applications to pull WAMR runtime into their bui
 - `WAMR_BUILD_FAST_JIT=1` - Enable Fast JIT
 
 **Libc support:**
+
 - `WAMR_BUILD_LIBC_BUILTIN=1` - Minimal builtin libc (smaller footprint)
 - `WAMR_BUILD_LIBC_WASI=1` - Full WASI libc (larger footprint, more features)
 
 **Platform:**
+
 - `WAMR_BUILD_PLATFORM` - Target platform (e.g., "linux", "darwin", "windows")
 - `WAMR_BUILD_TARGET` - Target architecture (e.g., "X86_64", "AARCH64", "ARM")
 
 **Memory and performance:**
+
 - `WAMR_BUILD_BULK_MEMORY=1` - Bulk memory operations
 - `WAMR_BUILD_SHARED_MEMORY=1` - Shared memory between threads
 - `WAMR_BUILD_MEMORY_PROFILING=1` - Memory usage profiling
@@ -420,27 +441,32 @@ add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
 ## Design Patterns & Conventions
 
 **Error Handling:**
+
 - Most APIs return `bool` (true=success, false=failure) or pointer (NULL=failure)
 - Error messages written to caller-provided `error_buf`
 - Check return values and inspect error buffer on failure
 
 **Memory Management:**
+
 - Explicit allocation/deallocation - no garbage collection at runtime level
 - Always pair `wasm_runtime_load()` with `wasm_runtime_unload()`
 - Always pair `wasm_runtime_instantiate()` with `wasm_runtime_deinstantiate()`
 
 **Thread Safety:**
+
 - Module (`wasm_module_t`) is read-only and can be shared across threads
 - Module instances (`wasm_module_inst_t`) must not be shared - create per-thread
 - Execution environments (`wasm_exec_env_t`) are thread-local
 
 **Naming Conventions:**
+
 - Public API: `wasm_runtime_*` prefix
 - Internal functions: `wasm_*` or component-specific prefix
 - OS abstraction: `os_*` prefix
 - Memory allocator: `mem_allocator_*`, `gc_*` prefix
 
 **Build-time Configuration:**
+
 - Use `WAMR_BUILD_*` variables for major features
 - Conditional compilation with `#if WASM_ENABLE_*` macros
 - Keep runtime configurable - avoid hard-coding limits
