@@ -8,6 +8,50 @@
 
 For full project details, see [README.md](./README.md).
 
+## ⚠️ Development Environment Requirement
+
+**CRITICAL: All build, test, debug, and code quality checks MUST be performed inside the devcontainer.**
+
+### For AI Agents
+
+You MUST use the provided wrapper script for all development commands:
+
+```bash
+./scripts/in-container.sh "<command>"
+```
+
+The script automatically handles container detection and startup.
+
+**Examples:**
+```bash
+# Building
+./scripts/in-container.sh "cmake -B build"
+
+# Testing  
+./scripts/in-container.sh "ctest --test-dir build"
+
+# Debugging
+./scripts/in-container.sh "gdb ./build/iwasm"
+
+# Code formatting
+./scripts/in-container.sh "clang-format-14 --version"
+```
+
+**Detailed guides:**
+- **Container environment:** [doc/dev-in-container.md](./doc/dev-in-container.md) ⚠️ **READ THIS FIRST**
+- **Building:** [doc/building.md](./doc/building.md)
+- **Testing:** [doc/testing.md](./doc/testing.md)
+- **Debugging:** [doc/debugging.md](./doc/debugging.md)
+- **Code quality:** [doc/code-quality.md](./doc/code-quality.md)
+
+### For Human Developers
+
+1. Open this project in VS Code
+2. Click "Reopen in Container" when prompted
+3. All commands run directly inside container
+
+See [doc/dev-in-container.md](./doc/dev-in-container.md) for details.
+
 ## What AI Agents Can Help With
 
 AI agents can effectively assist with these WAMR development activities:
@@ -33,20 +77,23 @@ This section tells you which documentation to read based on your task. Follow th
 
 When fixing a bug, read in this order:
 
-1. **[doc/architecture-overview.md](./doc/architecture-overview.md)** - Understand component relationships and critical code paths
-2. **[doc/build_wamr.md](./doc/build_wamr.md)** - Build the runtime with necessary features enabled
-3. **[doc/source_debugging.md](./doc/source_debugging.md)** - Set up debugging tools
-4. **[doc/testing-guide.md](./doc/testing-guide.md)** _(Phase 4)_ - Write tests to verify the fix
+0. **[doc/dev-in-container.md](./doc/dev-in-container.md)** - ⚠️ Container environment setup
+1. **[doc/architecture-overview.md](./doc/architecture-overview.md)** - Understand component relationships
+2. **[doc/building.md](./doc/building.md)** - Build with necessary features
+3. **[doc/debugging.md](./doc/debugging.md)** - Debug the issue
+4. **[doc/testing.md](./doc/testing.md)** - Write tests to verify the fix
 
 ### For Adding Features
 
 When implementing new functionality:
 
-1. **[doc/architecture-overview.md](./doc/architecture-overview.md)** - Understand where your feature fits in the architecture
-2. **[doc/build_wamr.md](./doc/build_wamr.md)** - Configure build flags for your feature
+0. **[doc/dev-in-container.md](./doc/dev-in-container.md)** - ⚠️ Container environment setup
+1. **[doc/architecture-overview.md](./doc/architecture-overview.md)** - Understand where feature fits
+2. **[doc/building.md](./doc/building.md)** - Configure build for your feature
 3. **[doc/embed_wamr.md](./doc/embed_wamr.md)** - If adding API, understand embedding patterns
-4. **[doc/export_native_api.md](./doc/export_native_api.md)** - If exposing native functions to Wasm
-5. **[doc/testing-guide.md](./doc/testing-guide.md)** _(Phase 4)_ - Write comprehensive tests
+4. **[doc/export_native_api.md](./doc/export_native_api.md)** - If exposing native functions
+5. **[doc/testing.md](./doc/testing.md)** - Write comprehensive tests
+6. **[doc/code-quality.md](./doc/code-quality.md)** - Check code formatting
 
 ### For PR Reviews
 
@@ -60,9 +107,11 @@ When reviewing pull requests:
 
 When writing tests:
 
-1. **[doc/testing-guide.md](./doc/testing-guide.md)** _(Phase 4)_ - Comprehensive testing strategy
-2. **[tests/unit/README.md](./tests/unit/README.md)** - Unit test patterns and examples
-3. **[samples/README.md](./samples/README.md)** - Integration test examples
+0. **[doc/dev-in-container.md](./doc/dev-in-container.md)** - ⚠️ Container environment setup
+1. **[doc/testing.md](./doc/testing.md)** - Comprehensive testing strategy
+2. **[tests/unit/README.md](./tests/unit/README.md)** - Unit test patterns
+3. **[tests/wamr-test-suites/](./tests/wamr-test-suites/)** - Wasm spec tests
+4. **[samples/README.md](./samples/README.md)** - Integration examples
 
 ### For Refactoring
 
