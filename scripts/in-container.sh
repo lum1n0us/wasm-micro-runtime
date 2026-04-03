@@ -58,4 +58,68 @@ detect_container() {
     return 1
 }
 
+# Start devcontainer
+# Returns: 0 on success, 1 on failure
+start_container() {
+    info "Starting devcontainer..."
+
+    # Check if devcontainer CLI is available
+    if command -v devcontainer &> /dev/null; then
+        info "Using devcontainer CLI..."
+        if devcontainer up --workspace-folder "${PROJECT_ROOT}"; then
+            sleep 3  # Wait for container to be ready
+            return 0
+        else
+            error "Failed to start container with devcontainer CLI"
+            return 1
+        fi
+    fi
+
+    # Fallback: Check for docker-compose
+    if [ -f "${PROJECT_ROOT}/.devcontainer/docker-compose.yml" ]; then
+        info "Using docker-compose..."
+        if docker-compose -f "${PROJECT_ROOT}/.devcontainer/docker-compose.yml" up -d; then
+            sleep 3
+            return 0
+        else
+            error "Failed to start container with docker-compose"
+            return 1
+        fi
+    fi
+
+    # No method available
+    error "Cannot start container: devcontainer CLI not found and no docker-compose.yml"
+    error "Please install devcontainer CLI: npm install -g @devcontainers/cli"
+    error "Or open the project in VS Code and 'Reopen in Container'"
+    return 1
+}
+
+# Ensure container is running
+# Returns: container name on success, empty on failure
+ensure_container() {
+    local container_name=$(detect_container)
+
+    # If no container found, try to start one
+    if [ -z "${container_name}" ]; then
+        if start_container; then
+            container_name=$(detect_container)
+        else
+            return 1
+        fi
+    fi
+
+    # Check if container is running
+    if ! docker ps --format '{{.Names}}' | grep -q "^${container_name}$"; then
+        info "Container '${container_name}' exists but not running. Starting..."
+        if docker start "${container_name}"; then
+            sleep 2
+        else
+            error "Failed to start container '${container_name}'"
+            return 1
+        fi
+    fi
+
+    echo "${container_name}"
+}
+
 # TODO: Add main logic
