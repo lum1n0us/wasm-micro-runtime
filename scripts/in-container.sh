@@ -97,7 +97,8 @@ start_container() {
 # Ensure container is running
 # Returns: container name on success, empty on failure
 ensure_container() {
-    local container_name=$(detect_container)
+    local container_name
+    container_name=$(detect_container)
 
     # If no container found, try to start one
     if [ -z "${container_name}" ]; then
@@ -113,6 +114,11 @@ ensure_container() {
         info "Container '${container_name}' exists but not running. Starting..."
         if docker start "${container_name}"; then
             sleep 2
+            # Verify container is actually running
+            if ! docker ps --format '{{.Names}}' | grep -q "^${container_name}$"; then
+                error "Container '${container_name}' started but not running"
+                return 1
+            fi
         else
             error "Failed to start container '${container_name}'"
             return 1
