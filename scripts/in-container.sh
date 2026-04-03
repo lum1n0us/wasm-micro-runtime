@@ -10,10 +10,10 @@ set -e
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTAINER_NAME_FILE="${PROJECT_ROOT}/.devcontainer/.container-name"
 
-# Color output helpers
-info() { echo -e "\033[0;36m[INFO]\033[0m $*"; }
+# Color output helpers (all output to stderr to avoid interfering with function return values)
+info() { echo -e "\033[0;36m[INFO]\033[0m $*" >&2; }
 error() { echo -e "\033[0;31m[ERROR]\033[0m $*" >&2; }
-success() { echo -e "\033[0;32m[SUCCESS]\033[0m $*"; }
+success() { echo -e "\033[0;32m[SUCCESS]\033[0m $*" >&2; }
 
 # Detect running or existing container
 # Returns: container name if found, empty string otherwise
@@ -69,7 +69,7 @@ start_container() {
     # Check if devcontainer CLI is available
     if command -v devcontainer &> /dev/null; then
         info "Using devcontainer CLI..."
-        if devcontainer up --workspace-folder "${PROJECT_ROOT}"; then
+        if devcontainer up --workspace-folder "${PROJECT_ROOT}" >&2; then
             sleep 3  # Wait for container to be ready
             return 0
         else
@@ -81,7 +81,7 @@ start_container() {
     # Fallback: Check for docker-compose
     if [ -f "${PROJECT_ROOT}/.devcontainer/docker-compose.yml" ]; then
         info "Using docker-compose..."
-        if docker-compose -f "${PROJECT_ROOT}/.devcontainer/docker-compose.yml" up -d; then
+        if docker-compose -f "${PROJECT_ROOT}/.devcontainer/docker-compose.yml" up -d >&2; then
             sleep 3
             return 0
         else
@@ -115,7 +115,7 @@ ensure_container() {
     # Check if container is running
     if ! docker ps --format '{{.Names}}' | grep -q "^${container_name}$"; then
         info "Container '${container_name}' exists but not running. Starting..."
-        if docker start "${container_name}"; then
+        if docker start "${container_name}" > /dev/null; then
             sleep 2
             # Verify container is actually running
             if ! docker ps --format '{{.Names}}' | grep -q "^${container_name}$"; then
