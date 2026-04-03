@@ -40,7 +40,7 @@ detect_container() {
 
     # Method 3: Find container with project path mounted
     local project_basename=$(basename "${PROJECT_ROOT}")
-    container_name=$(docker ps -a --format '{{.Names}}' --filter "volume=/workspaces/${project_basename}" | head -n1)
+    local container_name=$(docker ps -a --format '{{.Names}}' --filter "volume=/workspaces/${project_basename}" | head -n1)
     if [ -n "${container_name}" ]; then
         echo "${container_name}" > "${CONTAINER_NAME_FILE}"
         echo "${container_name}"
