@@ -161,17 +161,85 @@ exec_in_container() {
         bash -c "$*"
 }
 
+# Show help message
+show_help() {
+    cat << 'EOF'
+Usage: scripts/in-container.sh <command>
+
+Execute commands inside WAMR's devcontainer from your host machine.
+
+DESCRIPTION
+    This script automatically detects, starts, and manages the WAMR
+    devcontainer, then executes your command inside it. You don't need
+    to manually start VS Code or manage container lifecycle.
+
+    The container provides a consistent build environment with all
+    required toolchains: CMake, GCC, Clang, WASI-SDK, WABT, etc.
+
+CONTAINER DETECTION
+    The script uses three methods to find your devcontainer:
+    1. Cached name from .devcontainer/.container-name
+    2. Docker container name pattern matching (wamr.*dev)
+    3. Mount path inspection (/workspaces/ai-thoughts)
+
+    If no container is found, it will automatically start one using:
+    - devcontainer CLI (if available), or
+    - docker-compose (fallback)
+
+EXAMPLES
+    # Build WAMR with CMake
+    scripts/in-container.sh "cmake -B build && cmake --build build"
+
+    # Run tests
+    scripts/in-container.sh "cd build && ctest --output-on-failure"
+
+    # Check available tools
+    scripts/in-container.sh "which cmake gcc clang wasm-opt"
+
+    # Interactive shell (when run from terminal)
+    scripts/in-container.sh "bash"
+
+    # Format code
+    scripts/in-container.sh "clang-format-14 -i core/iwasm/**/*.c"
+
+    # Run a Python test script
+    scripts/in-container.sh "python3 tests/wamr-test-suites/test_wamr.py"
+
+ENVIRONMENT
+    - Working directory: /workspaces/ai-thoughts
+    - User: vscode (non-root)
+    - Shell: bash
+
+NOTES
+    - Commands are executed via 'bash -c', so shell features work (pipes, &&, etc.)
+    - Exit codes are properly propagated to the host
+    - Works in both interactive terminals and CI/CD pipelines
+    - Container state is automatically managed (start/stop/restart)
+
+OPTIONS
+    --help, -h, help    Show this help message
+
+EXIT CODES
+    0    Command succeeded
+    1    Container failed to start or command failed
+
+SEE ALSO
+    - .devcontainer/devcontainer.json (container configuration)
+    - .devcontainer/Dockerfile (container image definition)
+    - AGENTS.md (development guide for AI agents)
+EOF
+}
+
 # Main entry point
 main() {
-    # Check arguments
-    if [ $# -eq 0 ]; then
-        error "Usage: $0 <command>"
-        echo ""
-        echo "Examples:"
-        echo "  $0 'cmake -B build'"
-        echo "  $0 'make -C build -j\$(nproc)'"
-        echo "  $0 'ctest --test-dir build'"
-        exit 1
+    # Check for help flag
+    if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ "$1" = "help" ]; then
+        if [ $# -eq 0 ]; then
+            error "No command provided"
+            echo "" >&2
+        fi
+        show_help
+        exit $([ $# -eq 0 ] && echo 1 || echo 0)
     fi
 
     # Ensure container is running
