@@ -147,9 +147,14 @@ exec_in_container() {
     local workspace_path="/workspaces/${project_basename}"
 
     # Execute command
+    # Detect if we need TTY flags (only when stdin is a TTY)
+    local tty_flags=""
+    if [ -t 0 ]; then
+        tty_flags="--interactive --tty"
+    fi
+
     docker exec \
-        --interactive \
-        --tty \
+        ${tty_flags} \
         --workdir "${workspace_path}" \
         --user vscode \
         "${container_name}" \
