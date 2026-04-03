@@ -33,6 +33,7 @@ detect_container() {
     # Method 2: Find container by name pattern (WAMR-Dev or wamr-dev)
     local container_name=$(docker ps -a --format '{{.Names}}' | grep -i "wamr.*dev" | head -n1)
     if [ -n "${container_name}" ]; then
+        mkdir -p "$(dirname "${CONTAINER_NAME_FILE}")"
         echo "${container_name}" > "${CONTAINER_NAME_FILE}"
         echo "${container_name}"
         return 0
@@ -40,8 +41,14 @@ detect_container() {
 
     # Method 3: Find container with project path mounted
     local project_basename=$(basename "${PROJECT_ROOT}")
-    local container_name=$(docker ps -a --format '{{.Names}}' --filter "volume=/workspaces/${project_basename}" | head -n1)
+    local container_name=$(docker ps -a --format '{{.Names}}' | while read name; do
+        if docker inspect "$name" 2>/dev/null | grep -q "/workspaces/${project_basename}"; then
+            echo "$name"
+            break
+        fi
+    done | head -n1)
     if [ -n "${container_name}" ]; then
+        mkdir -p "$(dirname "${CONTAINER_NAME_FILE}")"
         echo "${container_name}" > "${CONTAINER_NAME_FILE}"
         echo "${container_name}"
         return 0
