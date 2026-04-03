@@ -20,7 +20,8 @@ success() { echo -e "\033[0;32m[SUCCESS]\033[0m $*"; }
 detect_container() {
     # Method 1: Read from saved file
     if [ -f "${CONTAINER_NAME_FILE}" ]; then
-        local saved_name=$(cat "${CONTAINER_NAME_FILE}")
+        local saved_name
+        saved_name=$(cat "${CONTAINER_NAME_FILE}")
         # Verify container still exists
         if docker ps -a --format '{{.Names}}' | grep -q "^${saved_name}$"; then
             echo "${saved_name}"
@@ -31,7 +32,8 @@ detect_container() {
     fi
 
     # Method 2: Find container by name pattern (WAMR-Dev or wamr-dev)
-    local container_name=$(docker ps -a --format '{{.Names}}' | grep -i "wamr.*dev" | head -n1)
+    local container_name
+    container_name=$(docker ps -a --format '{{.Names}}' | grep -i "wamr.*dev" | head -n1)
     if [ -n "${container_name}" ]; then
         mkdir -p "$(dirname "${CONTAINER_NAME_FILE}")"
         echo "${container_name}" > "${CONTAINER_NAME_FILE}"
@@ -40,8 +42,9 @@ detect_container() {
     fi
 
     # Method 3: Find container with project path mounted
-    local project_basename=$(basename "${PROJECT_ROOT}")
-    local container_name=$(docker ps -a --format '{{.Names}}' | while read name; do
+    local project_basename
+    project_basename=$(basename "${PROJECT_ROOT}")
+    container_name=$(docker ps -a --format '{{.Names}}' | while read -r name; do
         if docker inspect "$name" 2>/dev/null | grep -q "/workspaces/${project_basename}"; then
             echo "$name"
             break
@@ -130,6 +133,8 @@ ensure_container() {
 
 # Execute command in container
 # Args: $1 = container name, $2+ = command to execute
+# Note: Commands are executed via bash -c to support shell features (pipes, redirection, etc.)
+#       This means shell metacharacters will be interpreted - only pass trusted input
 exec_in_container() {
     local container_name="$1"
     shift
@@ -137,7 +142,8 @@ exec_in_container() {
     info "Executing in container '${container_name}': $*"
 
     # Determine workspace path
-    local project_basename=$(basename "${PROJECT_ROOT}")
+    local project_basename
+    project_basename=$(basename "${PROJECT_ROOT}")
     local workspace_path="/workspaces/${project_basename}"
 
     # Execute command
@@ -164,7 +170,8 @@ main() {
     fi
 
     # Ensure container is running
-    local container_name=$(ensure_container)
+    local container_name
+    container_name=$(ensure_container)
 
     if [ -z "${container_name}" ]; then
         error "Failed to start or detect devcontainer"
@@ -173,8 +180,9 @@ main() {
 
     success "Using container: ${container_name}"
 
-    # Execute command
+    # Execute command and propagate exit code
     exec_in_container "${container_name}" "$@"
+    exit $?
 }
 
 # Run main
