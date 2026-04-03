@@ -128,4 +128,54 @@ ensure_container() {
     echo "${container_name}"
 }
 
-# TODO: Add main logic
+# Execute command in container
+# Args: $1 = container name, $2+ = command to execute
+exec_in_container() {
+    local container_name="$1"
+    shift
+
+    info "Executing in container '${container_name}': $*"
+
+    # Determine workspace path
+    local project_basename=$(basename "${PROJECT_ROOT}")
+    local workspace_path="/workspaces/${project_basename}"
+
+    # Execute command
+    docker exec \
+        --interactive \
+        --tty \
+        --workdir "${workspace_path}" \
+        --user vscode \
+        "${container_name}" \
+        bash -c "$*"
+}
+
+# Main entry point
+main() {
+    # Check arguments
+    if [ $# -eq 0 ]; then
+        error "Usage: $0 <command>"
+        echo ""
+        echo "Examples:"
+        echo "  $0 'cmake -B build'"
+        echo "  $0 'make -C build -j\$(nproc)'"
+        echo "  $0 'ctest --test-dir build'"
+        exit 1
+    fi
+
+    # Ensure container is running
+    local container_name=$(ensure_container)
+
+    if [ -z "${container_name}" ]; then
+        error "Failed to start or detect devcontainer"
+        exit 1
+    fi
+
+    success "Using container: ${container_name}"
+
+    # Execute command
+    exec_in_container "${container_name}" "$@"
+}
+
+# Run main
+main "$@"
