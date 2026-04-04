@@ -3,6 +3,7 @@
 
 .cache
 .clangd
+.devcontainer/.container-name
 .vs
 .vscode
 .venv
