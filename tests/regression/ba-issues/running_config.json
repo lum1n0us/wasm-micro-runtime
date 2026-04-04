@@ -576,6 +576,22 @@
         {
             "deprecated": false,
             "ids": [
+                980004
+            ],
+            "runtime": "iwasm-default-gc-enabled",
+            "file": "poc.wasm",
+            "mode": "fast-interp",
+            "options": "--heap-size=0",
+            "argument": "",
+            "expected return": {
+                "ret code": 255,
+                "stdout content": "WASM module load failed: allocate memory failed",
+                "description": "Security fix: reject array.new with negative length"
+            }
+        },
+        {
+            "deprecated": false,
+            "ids": [
                 3137
             ],
             "runtime": "iwasm-default-wasi-disabled",
