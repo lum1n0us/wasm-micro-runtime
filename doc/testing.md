@@ -56,6 +56,9 @@ scripts/in-container.sh "cd tests/unit && mkdir -p build && cd build && cmake ..
 
 # Run a simple WASM spec test
 scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -b"
+
+# Run regression tests (verify bug fixes)
+scripts/in-container.sh "cd tests/regression/ba-issues && ./build_wamr.sh && ./run.py"
 ```
 
 ---
@@ -305,6 +308,234 @@ Test output shows:
 
 **Pass**: All assertions in the test passed.
 **Fail**: One or more assertions failed. The output shows expected vs actual values.
+
+---
+
+## Regression Tests
+
+Regression tests verify that previously fixed bugs do not reappear when code changes are made. These tests capture specific bugs that were found and fixed, ensuring the fixes continue to work correctly in future versions.
+
+### What Are Regression Tests
+
+**Purpose**: Prevent fixed bugs from returning when code changes are made. Each regression test represents a specific bug that was discovered, fixed, and now continuously validated.
+
+**When to Add Regression Tests**: Create a regression test whenever you:
+- Fix a bug reported in an issue tracker (GitHub, Bytecode Alliance)
+- Discover and fix a security vulnerability
+- Resolve a crash, hang, or incorrect behavior
+- Fix a bug found by fuzzing or other automated testing
+
+**Types of Regression Tests in WAMR**:
+- **BA Issues** (`tests/regression/ba-issues/`) - Tests for bugs from Bytecode Alliance issue tracker
+- **Future suites** - Security vulnerabilities (CVEs), performance regressions, spec compliance issues
+
+**Best Practice**: Every bug fix should include a regression test to prevent the bug from returning unnoticed.
+
+### Running Regression Tests
+
+Run all regression tests to verify no fixed bugs have reappeared:
+
+```bash
+# Build all required iwasm variants and wamrc
+scripts/in-container.sh "cd tests/regression/ba-issues && ./build_wamr.sh"
+
+# Run all regression tests
+scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py"
+```
+
+**Expected output when all tests pass**:
+```
+==== Test results ====
+   Total: 22
+  Passed: 22
+  Failed: 0
+  Left issues in folder: no more
+  Cases in JSON but not found in folder: no more
+```
+
+**Running specific issues**:
+
+```bash
+# Test a single issue
+scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py --issues 2833"
+
+# Test multiple specific issues
+scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py -i 2833,2834,2835"
+```
+
+**Output explanation**:
+- `Total`: Number of test configurations executed
+- `Passed`: Tests where actual result matched expected result
+- `Failed`: Tests where results didn't match
+- `Left issues in folder`: Issue directories without JSON configuration
+- `Cases in JSON but not found in folder`: JSON configs referencing missing directories
+
+### Adding New Regression Tests
+
+When you fix a bug, follow this workflow to add a regression test:
+
+**Quick workflow**:
+
+```bash
+# 1. Create test case directory (example: issue #3022)
+scripts/in-container.sh "cd tests/regression/ba-issues && ./helper.sh 3022"
+
+# 2. Add test files
+# Place your WASM file and any required files in issues/issue-3022/
+# If you have a zip file: place it in the directory and run:
+scripts/in-container.sh "cd tests/regression/ba-issues && ./helper.sh -x 3022"
+
+# 3. Build iwasm variants (if not already built)
+scripts/in-container.sh "cd tests/regression/ba-issues && ./build_wamr.sh"
+
+# 4. Configure test execution
+# Edit running_config.json to add test configuration:
+# {
+#     "deprecated": false,
+#     "ids": [3022],
+#     "runtime": "iwasm-default",
+#     "file": "test.wasm",
+#     "mode": "fast-interp",
+#     "options": "--heap-size=0 -f main",
+#     "argument": "",
+#     "expected return": {
+#         "ret code": 0,
+#         "stdout content": "expected output",
+#         "description": "Issue #3022: should not crash/should return correct value"
+#     }
+# }
+
+# 5. Run test to verify
+scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py -i 3022"
+
+# 6. Commit test with the fix
+git add tests/regression/ba-issues/issues/issue-3022/
+git add tests/regression/ba-issues/running_config.json
+git commit -m "test: add regression test for issue #3022"
+```
+
+**Directory structure after adding test**:
+
+```
+tests/regression/ba-issues/
+├── issues/
+│   └── issue-3022/
+│       ├── test.wasm        (reproduces the bug)
+│       └── other-files...   (if needed)
+└── running_config.json      (test configuration)
+```
+
+### Understanding Test Results
+
+**All tests pass**:
+```
+==== Test results ====
+   Total: 22
+  Passed: 22
+  Failed: 0
+  Left issues in folder: no more
+  Cases in JSON but not found in folder: no more
+```
+
+**Test failure**:
+```
+==== Test results ====
+   Total: 22
+  Passed: 21
+  Failed: 1
+```
+
+Check the detailed failure log:
+```bash
+scripts/in-container.sh "cd tests/regression/ba-issues && cat issues_tests.log"
+```
+
+**Example failure log**:
+```
+=======================================================
+Failing issue id: 2945.
+run with command_lists: ['./build/build-iwasm-default/iwasm', '--heap-size=0', '-f', 'to_test', 'test.wasm']
+exit code (actual, expected) : (1, 0)
+stdout (actual, expected) : ('Exception: out of bounds', 'Success')
+=======================================================
+```
+
+**Missing configuration**:
+```
+Left issues in folder: #3022
+```
+
+**Meaning**: You created `issues/issue-3022/` but forgot to add configuration to `running_config.json`.
+
+**Fix**: Add JSON configuration entry for the test.
+
+**Missing directory**:
+```
+Cases in JSON but not found in folder: #3022
+```
+
+**Meaning**: `running_config.json` references issue #3022 but the directory doesn't exist.
+
+**Fix**: Create the directory with `./helper.sh 3022` or remove the JSON entry.
+
+### Troubleshooting
+
+**Build failures**:
+
+```bash
+# Ensure you're in the devcontainer
+scripts/in-container.sh --status
+
+# Clean and rebuild
+scripts/in-container.sh "cd tests/regression/ba-issues && rm -rf build && ./build_wamr.sh"
+```
+
+**Test configuration errors**:
+
+```bash
+# Validate JSON syntax
+scripts/in-container.sh "cd tests/regression/ba-issues && python3 -m json.tool running_config.json > /dev/null"
+
+# Common issues:
+# - Missing commas between array elements
+# - Trailing comma after last element
+# - Unescaped quotes in strings
+```
+
+**Wrong expected output**:
+
+If a test fails because expected output has changed legitimately:
+1. Verify the new behavior is correct
+2. Update the `expected return` section in `running_config.json`
+3. Document why the expected output changed in the description field
+
+**Deprecated tests**:
+
+Tests may become deprecated when:
+- WebAssembly spec changes invalidate the test
+- The WASM file is no longer valid according to current spec
+- The issue was closed as "not a bug"
+
+Process to deprecate:
+1. Move test files: `mv issues/issue-47 issues-deprecated/`
+2. Mark configuration: `"deprecated": true` in JSON
+3. Update description to explain why deprecated
+
+### Detailed Documentation
+
+For comprehensive information about regression tests:
+
+**See [tests/regression/README.md](../tests/regression/README.md)** for:
+- Complete configuration reference
+- All available runtime variants
+- Advanced test scenarios (AOT compilation, multiple execution modes)
+- Full troubleshooting guide
+
+**See [tests/regression/ba-issues/README.md](../tests/regression/ba-issues/README.md)** for:
+- Detailed JSON configuration syntax
+- wamrc + iwasm test patterns
+- Build configuration customization
+- Helper script reference
 
 ---
 
@@ -568,8 +799,11 @@ Place tests in the appropriate directory:
 | Unit tests (C++) | `tests/unit/<component>/` | CMake + CTest |
 | Spec tests | Managed by `test_wamr.sh` | Shell script |
 | Integration tests | `samples/<feature>/` | CMake + CTest |
+| Regression tests | `tests/regression/ba-issues/` | Python + JSON config |
 | Benchmarks | `tests/benchmarks/<name>/` | Custom scripts |
 | Standalone tests | `tests/standalone/<name>/` | CMake |
+
+**Note**: When fixing a bug, always add a regression test. See the [Regression Tests](#regression-tests) section for details.
 
 ### Naming Conventions
 
@@ -734,6 +968,11 @@ int main(int argc, char *argv[])
 - Add comments explaining complex test setup
 - Document what behavior is being verified
 - Include references to relevant specifications or issues
+
+**Regression Testing**:
+- When fixing a bug, add a regression test to prevent recurrence
+- See [Regression Tests](#regression-tests) section for workflow
+- Include the issue number in the test to track the bug fix
 
 ### Adding Tests to CI
 
@@ -979,6 +1218,12 @@ scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t 
 # Run spec tests (AOT)
 scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -b"
 
+# Run regression tests (verify bug fixes)
+scripts/in-container.sh "cd tests/regression/ba-issues && ./build_wamr.sh && ./run.py"
+
+# Run specific regression test
+scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py -i 2833"
+
 # Run benchmark
 scripts/in-container.sh "cd tests/benchmarks/coremark && ./build.sh && ./run_aot.sh"
 
@@ -995,8 +1240,10 @@ scripts/in-container.sh --status
 
 - **[building.md](building.md)** - Build instructions for iwasm and wamrc
 - **[dev-in-container.md](dev-in-container.md)** - Devcontainer setup and usage
-- **[debugging.md](debugging.md)** - Debugging WAMR with GDB and other tools (to be created)
-- **[code-quality.md](code-quality.md)** - Code formatting and quality standards (to be created)
+- **[debugging.md](debugging.md)** - Debugging WAMR with GDB and other tools
+- **[code-quality.md](code-quality.md)** - Code formatting and quality standards
+- **[tests/regression/README.md](../tests/regression/README.md)** - Regression testing overview and best practices
+- **[tests/regression/ba-issues/README.md](../tests/regression/ba-issues/README.md)** - Detailed BA issue regression test guide
 
 ---
 
