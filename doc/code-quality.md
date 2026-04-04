@@ -1,555 +1,401 @@
-# Code Quality and Formatting Guide
+# Code Quality in WAMR
 
-## Overview
+This guide explains WAMR's code quality standards, what they mean, why they matter, and when to apply them. For operational pre-commit checklists and detailed commands, see [linting.md](linting.md).
 
-This guide covers code quality standards, formatting rules, and static analysis tools used in the WAMR project. Following these practices ensures consistent, maintainable, and high-quality code across the codebase.
-
-### Quality Standards
-
-WAMR maintains strict code quality standards:
-- **Formatting**: Consistent code style enforced by clang-format-14
-- **Linting**: Static analysis for C/C++, Python, and shell scripts
-- **Compiler Warnings**: Strict warning levels (-Wall, -Wextra, -Werror)
-- **Static Analysis**: Additional checks via clang static analyzer
-- **Pre-commit Checks**: Automated quality gates before commits
-- **CI Enforcement**: Quality checks in continuous integration pipeline
+**Philosophy**: High code quality prevents bugs, improves maintainability, and enables confident refactoring. WAMR enforces quality through automated tools, clear standards, and continuous integration.
 
 ---
 
 ## Prerequisites
 
-All code quality tools are pre-installed in the devcontainer environment. Before using these tools, ensure you're working within the container:
+All code quality tools are pre-installed in the devcontainer. Before using quality tools:
 
-- **For AI Agents**: Use `scripts/in-container.sh` wrapper for ALL commands
-- **For Humans**: Open project in VS Code devcontainer or use `docker exec`
-
-See **[dev-in-container.md](dev-in-container.md)** for complete container setup and usage instructions.
+- **Read [dev-in-container.md](dev-in-container.md)** - All quality commands run in the container
+- **Verify container**: Run `scripts/in-container.sh --status`
 
 ---
 
 ## For AI Agents
 
-**CRITICAL REQUIREMENT**: All code quality commands MUST be executed inside the devcontainer using the `scripts/in-container.sh` wrapper script.
+**CRITICAL**: ALL code quality commands MUST run inside the devcontainer using the `scripts/in-container.sh` wrapper.
 
-### Basic Pattern
+**Before claiming work complete:**
+1. Format check passes (`clang-format-14 --dry-run --Werror`)
+2. Build succeeds with no warnings
+3. Relevant tests pass
 
-```bash
-scripts/in-container.sh "<quality-command>"
-```
+**Never commit if checks fail.** Fix issues first.
 
-### Common Quality Workflows
-
-**Format check before commit:**
-```bash
-# Check formatting (dry run, non-destructive)
-scripts/in-container.sh "find core/iwasm -name '*.c' -o -name '*.h' | xargs clang-format-14 --dry-run --Werror"
-```
-
-**Format staged changes:**
-```bash
-# Format only files staged for commit
-scripts/in-container.sh "git diff --cached --name-only --diff-filter=ACM | grep -E '\.(c|h|cpp|hpp)$' | xargs -r clang-format-14 -i"
-```
-
-**Full project format:**
-```bash
-# Format all C/C++ files (use with caution)
-scripts/in-container.sh "find core product-mini samples -type f \( -name '*.c' -o -name '*.h' -o -name '*.cpp' -o -name '*.hpp' \) -exec clang-format-14 -i {} +"
-```
-
-**Python linting:**
-```bash
-# Lint Python scripts
-scripts/in-container.sh "pylint ci/coding_guidelines_check.py ci/validate_lldb.py"
-```
-
-**Shell script checks:**
-```bash
-# Check shell scripts for issues
-scripts/in-container.sh "shellcheck scripts/in-container.sh .devcontainer/finalize.sh"
-```
+**→ See [linting.md](linting.md) for complete pre-commit workflow**
 
 ---
 
-## Code Formatting (clang-format)
+## Code Quality Standards Overview
 
-WAMR uses **clang-format-14** for consistent C/C++ code formatting. The configuration is defined in `.clang-format` at the project root.
+WAMR maintains multiple quality gates to ensure correctness, consistency, and maintainability:
 
-### Formatting Configuration
+| Standard | Purpose | When Enforced | Tool | Documentation |
+|----------|---------|---------------|------|---------------|
+| **Code Formatting** | Consistent visual style | Every commit | clang-format-14 | [linting.md](linting.md) |
+| **Compiler Warnings** | Catch potential bugs | Every build | gcc/clang -Wall -Werror | [linting.md](linting.md) |
+| **Static Analysis** | Find logic errors | Critical changes | scan-build, clang-tidy | This doc + [linting.md](linting.md) |
+| **Python Linting** | Script quality | When changing Python | pylint | [linting.md](linting.md) |
+| **Shell Linting** | Script safety | When changing shell | shellcheck | [linting.md](linting.md) |
+| **Pre-commit Checks** | Quality gate | Before every commit | Multiple tools | [linting.md](linting.md) |
+| **CI Enforcement** | Automated validation | Every PR | GitHub Actions | [linting.md](linting.md) |
 
-The project uses a Mozilla-based style with customizations:
-- **Indentation**: 4 spaces (no tabs)
-- **Line Length**: 80 characters maximum
-- **Braces**: Custom placement (functions on new line, control statements on same line)
-- **Pointer Alignment**: Right-aligned (`char *ptr` not `char* ptr`)
-- **Base Style**: Mozilla
+---
 
-Configuration file: `.clang-format`
+## Code Formatting Standards
 
-### Check Formatting (Dry Run)
+### What is Code Formatting?
 
-Before making changes, check if files conform to the style:
+WAMR uses **clang-format-14** to enforce consistent visual style based on K&R coding conventions with Mozilla customizations. Configuration lives in `.clang-format` at project root.
 
-```bash
-# Check single file
-scripts/in-container.sh "clang-format-14 --dry-run --Werror core/iwasm/common/wasm_runtime_common.c"
+### Why Enforce Formatting?
 
-# Check multiple files
-scripts/in-container.sh "clang-format-14 --dry-run --Werror core/iwasm/common/*.c"
+**Benefits**:
+- **Readability**: Consistent style makes code easier to scan
+- **Cleaner diffs**: Only functional changes appear, not whitespace
+- **Eliminates debates**: Tool decides, not personal preference
+- **Zero effort**: Automated formatting
 
-# Check all C files in a directory recursively
-scripts/in-container.sh "find core/iwasm/common -name '*.c' | xargs clang-format-14 --dry-run --Werror"
+**Without enforcement**: Diffs mix style and logic, reviews waste time on formatting, merge conflicts from whitespace.
+
+### Key Style Rules
+
+```c
+// Indentation: 4 spaces, brace placement: functions on new line
+void function()
+{
+    if (condition) {  // Control: same line
+        do_something();
+    }
+}
+
+// 80 chars max, pointer right-aligned
+char *ptr;
 ```
 
-**Exit codes:**
-- `0` - All files properly formatted
-- `1` - Formatting issues found (if `--Werror` flag used)
+### When Enforced
 
-### Auto-Format Code
+**Required**: Before every commit, PR, merge to main
+**CI fails if**: Files don't match clang-format-14 rules
 
-Apply formatting fixes automatically:
-
-```bash
-# Format single file
-scripts/in-container.sh "clang-format-14 -i core/iwasm/common/wasm_runtime_common.c"
-
-# Format multiple files
-scripts/in-container.sh "clang-format-14 -i core/iwasm/common/*.c"
-
-# Format all C/C++ files in directory
-scripts/in-container.sh "find core/iwasm/interpreter -type f \( -name '*.c' -o -name '*.h' \) -exec clang-format-14 -i {} +"
-```
-
-**Important**: The `-i` flag modifies files in-place. Always commit or backup before bulk formatting.
-
-### Format Staged Git Changes
-
-Format only files you're about to commit:
+### Quick Example
 
 ```bash
-# Format staged C/C++ files
-scripts/in-container.sh "git diff --cached --name-only --diff-filter=ACM | grep -E '\.(c|h|cpp|hpp)$' | xargs -r clang-format-14 -i"
+# Check formatting
+scripts/in-container.sh "clang-format-14 --dry-run --Werror file.c"
 
-# Then re-stage the formatted files
-scripts/in-container.sh "git add -u"
+# Auto-fix
+scripts/in-container.sh "clang-format-14 -i file.c"
 ```
 
-### Format Modified Files
+**→ See [linting.md](linting.md) for complete formatting workflow**
 
-Format only files changed in your working directory:
+---
+
+## Compiler Warnings
+
+### What Are Compiler Warnings?
+
+Compiler warnings alert you to potential bugs and questionable code patterns. WAMR builds with strict flags: `-Wall -Wextra -Werror`
+
+### Why Treat Warnings as Errors?
+
+**Catches bugs like**:
+- Uninitialized variables
+- Unused variables (dead code)
+- Missing headers (implicit declarations)
+- Type mismatches
+
+**Result**: Warning-free builds = safer, more maintainable code
+
+### When Enforced
+
+**Always**: Local builds, CI/CD, pre-commit checks
+**Build fails if**: Any warning generated
+
+### Quick Example
 
 ```bash
-# Format all modified C/C++ files
-scripts/in-container.sh "git diff --name-only --diff-filter=ACM | grep -E '\.(c|h|cpp|hpp)$' | xargs -r clang-format-14 -i"
+scripts/in-container.sh "cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build"
 ```
 
-### Format Changes in Pull Request
-
-Format files changed since branching from main:
-
-```bash
-# Show files that would be formatted
-scripts/in-container.sh "git diff --name-only main...HEAD | grep -E '\.(c|h|cpp|hpp)$'"
-
-# Format all changed files
-scripts/in-container.sh "git diff --name-only main...HEAD | grep -E '\.(c|h|cpp|hpp)$' | xargs -r clang-format-14 -i"
-```
-
-### Bulk Formatting Patterns
-
-**Format entire component:**
-```bash
-# Format interpreter module
-scripts/in-container.sh "find core/iwasm/interpreter -type f \( -name '*.c' -o -name '*.h' \) -exec clang-format-14 -i {} +"
-
-# Format AOT module
-scripts/in-container.sh "find core/iwasm/aot -type f \( -name '*.c' -o -name '*.h' \) -exec clang-format-14 -i {} +"
-```
-
-**Format with exclusions:**
-```bash
-# Format core but skip third-party code
-scripts/in-container.sh "find core/iwasm -type f \( -name '*.c' -o -name '*.h' \) ! -path '*/deps/*' -exec clang-format-14 -i {} +"
-```
-
-### Formatting Best Practices
-
-1. **Format before committing**: Always run format checks before creating commits
-2. **Format incrementally**: Format only files you modify, not the entire codebase
-3. **Separate formatting commits**: Keep formatting changes separate from functional changes
-4. **Check diff carefully**: Review formatting changes to ensure no unintended modifications
-5. **Use dry-run first**: Always test with `--dry-run --Werror` before applying `-i`
+**→ See [linting.md](linting.md) for fixing common warnings**
 
 ---
 
 ## Static Analysis
 
-### Compiler Warnings
+### What is Static Analysis?
 
-WAMR uses strict compiler warning flags to catch potential issues:
+Static analysis examines code without executing it, finding bugs through deep inspection of code paths, data flow, and logic. Catches bugs that compilers and tests miss.
 
-```bash
-# Build with all warnings enabled
-scripts/in-container.sh "cmake -B build -DCMAKE_C_FLAGS='-Wall -Wextra -Werror' && cmake --build build"
+**Tools**: scan-build (memory/logic), clang-tidy (C++ practices), cppcheck (portability)
 
-# Build specific component with strict warnings
-scripts/in-container.sh "cd core/iwasm/common && gcc -Wall -Wextra -Werror -c *.c"
-```
+### Why Use Static Analysis?
 
-**Key warning flags:**
-- `-Wall` - Enable all standard warnings
-- `-Wextra` - Enable additional warnings beyond -Wall
-- `-Werror` - Treat warnings as errors (build fails on warnings)
+**Finds bugs like**:
+- Memory leaks, use-after-free, null dereferences
+- Resource leaks (files, sockets)
+- Dead code, logic errors
+- Race conditions
 
-### Clang Static Analyzer
+### When to Run
 
-The Clang static analyzer performs deeper analysis than compiler warnings:
+**Required**: Memory management changes, security fixes, large refactors
+**Recommended**: New features, complex code paths
+**Skip**: Documentation, simple config changes
 
-```bash
-# Analyze single file
-scripts/in-container.sh "clang --analyze -Xanalyzer -analyzer-output=text core/iwasm/common/wasm_runtime_common.c"
+### Available Tools
 
-# Analyze entire project with scan-build
-scripts/in-container.sh "scan-build cmake -B build && scan-build cmake --build build"
+| Tool | Checks | When to Use |
+|------|--------|-------------|
+| scan-build | Memory safety, leaks | Memory changes, critical fixes |
+| clang-tidy | C++ practices, readability | C++ code, performance |
+| cppcheck | Portability, bug patterns | Cross-platform, embedded |
 
-# Generate HTML report
-scripts/in-container.sh "scan-build -o scan-reports cmake --build build"
-```
-
-**Common issues detected:**
-- Memory leaks
-- Use-after-free
-- Null pointer dereferences
-- Uninitialized variables
-- Dead code
-
-### Integration with Build System
-
-Add static analysis to CMake configuration:
+### Quick Example
 
 ```bash
-# Enable static analysis in build
-scripts/in-container.sh "cmake -B build -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_FLAGS='-Wall -Wextra -Werror'"
+# Analyze build
+scripts/in-container.sh "scan-build cmake --build build"
 ```
+
+**→ See [linting.md](linting.md) for detailed analysis workflows**
 
 ---
 
 ## Python Code Quality
 
-### Linting with pylint
+### Standards
 
-WAMR includes Python scripts for testing and tooling. Lint these with pylint:
+WAMR Python scripts follow PEP 8 using **pylint** for style compliance and bug detection.
+
+**Checks**: PEP 8 style, unused imports, missing docstrings, potential bugs
+
+### Why Lint Python?
+
+Prevents bugs (undefined variables), ensures consistency (PEP 8), maintains readable code.
+
+### When Required
+
+Before committing changes to `ci/`, `tests/`, or new Python utilities.
 
 ```bash
-# Lint single script
 scripts/in-container.sh "pylint ci/coding_guidelines_check.py"
-
-# Lint all Python files in directory
-scripts/in-container.sh "find ci -name '*.py' -exec pylint {} +"
-
-# Lint with specific configuration
-scripts/in-container.sh "pylint --max-line-length=100 --disable=C0111 ci/*.py"
 ```
 
-**Common pylint checks:**
-- Code style violations
-- Unused imports and variables
-- Missing docstrings
-- Naming conventions
-- Potential bugs
-
-### Formatting with black
-
-Format Python code with black (if available):
-
-```bash
-# Check formatting
-scripts/in-container.sh "black --check ci/"
-
-# Apply formatting
-scripts/in-container.sh "black ci/"
-
-# Format with line length limit
-scripts/in-container.sh "black --line-length=100 ci/"
-```
-
-### Python Best Practices
-
-1. **PEP 8 compliance**: Follow Python style guidelines
-2. **Type hints**: Use type annotations where beneficial
-3. **Docstrings**: Document functions and modules
-4. **Error handling**: Proper exception handling and logging
-5. **Testing**: Include unit tests for Python utilities
+**→ See [linting.md](linting.md) for complete workflow**
 
 ---
 
 ## Shell Script Quality
 
-### ShellCheck
+### Standards
 
-ShellCheck analyzes shell scripts for common issues:
+Shell scripts use **shellcheck** for static analysis.
+
+**Checks**: Unquoted variables, missing error handling, unreachable code, portability issues
+
+### Why Lint Shell Scripts?
+
+Prevents critical bugs: word splitting from unquoted variables, deleting wrong directories from unchecked `cd` failures, missing error handling.
+
+### Best Practices
+
+1. Always quote: `"$var"` not `$var`
+2. Use strict mode: `set -euo pipefail`
+3. Check exit codes: `command || exit 1`
+
+### When Required
+
+Before committing: build scripts, test scripts, `scripts/in-container.sh`, new utilities.
 
 ```bash
-# Check single script
 scripts/in-container.sh "shellcheck scripts/in-container.sh"
-
-# Check all shell scripts
-scripts/in-container.sh "find . -name '*.sh' -type f -exec shellcheck {} +"
-
-# Check with specific severity level
-scripts/in-container.sh "shellcheck --severity=warning scripts/in-container.sh"
-
-# Exclude specific warnings
-scripts/in-container.sh "shellcheck --exclude=SC2086,SC2046 scripts/in-container.sh"
 ```
 
-**Common shellcheck warnings:**
-- Unquoted variables (SC2086)
-- Missing quotes (SC2046)
-- Useless use of cat (SC2002)
-- Unreachable code (SC2317)
-
-### Shell Script Best Practices
-
-1. **Quote variables**: Always quote `"$variable"` to handle spaces
-2. **Use shellcheck**: Run shellcheck on all scripts before commit
-3. **Set strict mode**: Use `set -euo pipefail` for safer scripts
-4. **Consistent style**: Follow project conventions for indentation and naming
-5. **Error handling**: Check exit codes and provide meaningful error messages
+**→ See [linting.md](linting.md) for complete workflow**
 
 ---
 
-## Pre-commit Checks
+## Code Review Standards
 
-### Manual Pre-commit Workflow
+### Review Philosophy
 
-Before committing, run these checks:
+**Goals**: Catch bugs early, share knowledge, maintain quality, mentor contributors
+**Not goals**: Nitpick style (tools handle that), block with perfectionism, assert preferences
 
-```bash
-# 1. Format check
-scripts/in-container.sh "git diff --cached --name-only | grep -E '\.(c|h)$' | xargs -r clang-format-14 --dry-run --Werror"
+### What Reviewers Check
 
-# 2. If formatting issues, fix them
-scripts/in-container.sh "git diff --cached --name-only | grep -E '\.(c|h)$' | xargs -r clang-format-14 -i"
+**Automatic** (CI-enforced): Formatting, warnings, tests pass
+**Manual focus**:
+- Correctness: Logic handles edge cases, errors checked, resources cleaned
+- Testing: New tests added, error paths covered, regression tests for bugs
+- Code quality: No duplication, appropriate abstractions
+- Documentation: Public APIs documented, complex logic explained
 
-# 3. Re-stage formatted files
-scripts/in-container.sh "git add -u"
+### Review Guidelines
 
-# 4. Check for shell script issues
-scripts/in-container.sh "git diff --cached --name-only | grep '\.sh$' | xargs -r shellcheck"
+**Authors**: Self-review first, ensure CI passes, add tests, update docs
+**Reviewers**: Understand purpose, check correctness over style, verify tests, suggest improvements without demanding perfection
 
-# 5. Run quick build test
-scripts/in-container.sh "cmake --build build"
+### Common Issues to Catch
 
-# 6. Now commit
-scripts/in-container.sh "git commit"
-```
+**Memory management**: Missing `free()` in error paths
+**Error handling**: Unchecked return values from risky operations
+**Resource cleanup**: File handles, sockets not closed in all paths
+**Edge cases**: Boundary conditions, null inputs, empty data
 
-### Automated Pre-commit Hooks
+**Examples**:
+```c
+// ❌ Leak in error path
+char *buf = malloc(1024);
+if (error) return -1;  // Forgot free()
 
-Install git hooks to automate checks (optional):
-
-```bash
-# Create pre-commit hook
-cat > .git/hooks/pre-commit << 'EOF'
-#!/bin/bash
-# Run format check on staged files
-exec scripts/in-container.sh "git diff --cached --name-only | grep -E '\.(c|h)$' | xargs -r clang-format-14 --dry-run --Werror"
-EOF
-
-chmod +x .git/hooks/pre-commit
+// ✅ Cleanup all paths
+char *buf = malloc(1024);
+if (error) { free(buf); return -1; }
 ```
 
 ---
 
-## CI Quality Gates
+## Code Quality Decision Guide
 
-### GitHub Actions Integration
+Use this guide to determine which quality checks to run:
 
-WAMR's CI pipeline enforces quality checks on all pull requests:
+### Before Committing (Always)
 
-1. **Format verification**: Checks all C/C++ files conform to clang-format rules
-2. **Build with warnings**: Builds with `-Wall -Wextra -Werror`
-3. **Static analysis**: Runs clang static analyzer on changed files
-4. **Linting**: Checks Python and shell scripts
-5. **Test execution**: Runs full test suite
+```
+All changes:
+  ├─ Format check (clang-format-14)
+  ├─ Build successfully
+  └─ No compiler warnings
 
-### CI Quality Script
+Python changes:
+  └─ pylint passes
 
-The CI uses automated quality checks:
-
-```bash
-# Run same checks as CI locally
-scripts/in-container.sh "python3 ci/coding_guidelines_check.py"
+Shell changes:
+  └─ shellcheck passes
 ```
 
-### Pre-CI Validation
+**→ [linting.md](linting.md) has complete pre-commit checklist**
 
-Before pushing, validate your changes will pass CI:
+### For Different Change Types
 
-```bash
-# Check formatting
-scripts/in-container.sh "find core product-mini -name '*.c' -o -name '*.h' | xargs clang-format-14 --dry-run --Werror"
+**Small bug fix (< 50 lines)**:
+- Formatting check ✓
+- Build check ✓
+- Unit tests (if available) ✓
+- Regression test added ✓
 
-# Build with strict warnings
-scripts/in-container.sh "cmake -B build -DCMAKE_C_FLAGS='-Wall -Wextra -Werror' && cmake --build build"
+**Feature addition**:
+- Formatting check ✓
+- Build check ✓
+- Unit tests ✓
+- Integration tests ✓
+- Documentation updated ✓
 
-# Run tests
-scripts/in-container.sh "cd build && ctest --output-on-failure"
-```
+**Refactoring (no behavior change)**:
+- Formatting check ✓
+- Build check ✓
+- All tests pass ✓
+- Static analysis recommended
+
+**Memory management changes**:
+- Formatting check ✓
+- Build check ✓
+- Unit tests ✓
+- **Static analysis required** ✓
+- Valgrind recommended
+
+**Security fix**:
+- Formatting check ✓
+- Build check ✓
+- All tests ✓
+- **Static analysis required** ✓
+- Regression test required ✓
+- Security review required ✓
+
+### When to Use Each Tool
+
+| Situation | Tool | Why |
+|-----------|------|-----|
+| Every commit | clang-format | Enforced by CI |
+| Every build | -Wall -Werror | Catch bugs early |
+| Python changes | pylint | Script quality |
+| Shell changes | shellcheck | Script safety |
+| Memory changes | scan-build | Find leaks |
+| Large refactor | scan-build + tests | Safety net |
+| Security fixes | All tools | Maximum assurance |
+| Documentation | None | No code changes |
+
+---
+
+## Pre-Commit Quality Workflow
+
+Before every commit:
+
+1. **Format check** - `clang-format-14 --dry-run --Werror` (auto-fix with `-i`)
+2. **Build check** - `cmake --build build` with `-Wall -Werror`
+3. **Test check** - Run relevant tests (unit, spec, regression)
+
+**→ See [linting.md](linting.md) for complete step-by-step workflow**
 
 ---
 
 ## Best Practices
 
-### Code Style Guidelines
+### Development Workflow
 
-1. **Follow .clang-format**: Trust the automated formatting
-2. **80-character lines**: Keep lines under 80 characters when possible
-3. **Consistent indentation**: Use 4 spaces (never tabs)
-4. **Meaningful names**: Use descriptive variable and function names
-5. **Comments**: Document complex logic and non-obvious behavior
+**During**: Format regularly, build with warnings, run tests frequently, fix immediately
+**Before commit**: Pre-commit checklist, self-review, tests pass, docs updated
+**Before push**: Rebase on main, verify CI locally, full test suite for critical changes
 
-### Quality Workflow
+### Quality Mindset
 
-1. **Before making changes**:
-   - Pull latest code
-   - Build successfully
-   - Run existing tests
+**Do**: Trust tools, fix root causes, add tests for bugs, small focused commits
+**Don't**: Disable warnings, commit failing tests, mix formatting and logic, skip checks, ignore analyzer
 
-2. **While developing**:
-   - Write clean, readable code
-   - Add tests for new functionality
-   - Document public APIs
+### Continuous Improvement
 
-3. **Before committing**:
-   - Format code with clang-format-14
-   - Run static analysis
-   - Build with strict warnings
-   - Run affected tests
+Learn from mistakes: Why didn't tests catch it? Why didn't local checks catch it? Add regression tests. Document gotchas.
 
-4. **Before pushing**:
-   - Rebase on latest main
-   - Run full test suite
-   - Verify CI will pass
+---
 
-### Code Review Checklist
+## CI Quality Enforcement
 
-When reviewing code, check for:
+### What CI Checks
 
-- [ ] Code formatted with clang-format-14
-- [ ] No compiler warnings with -Wall -Wextra -Werror
-- [ ] No static analyzer warnings
-- [ ] Shell scripts pass shellcheck
-- [ ] Python scripts pass pylint
-- [ ] Tests added for new functionality
-- [ ] Documentation updated if needed
-- [ ] Commit messages follow conventions
+Every PR runs: formatting, build (multiple configs), warnings check, unit tests, spec tests, regression tests, platform builds (Linux/macOS/Windows/embedded).
+
+### Why It Matters
+
+**Benefits**: Catches issues pre-merge, maintains quality bar, prevents regressions, enables safe refactoring
+**Failures indicate**: Didn't meet standards, local checks skipped, needs revision
+
+### Reproducing Failures
+
+1. Check CI logs for failing command
+2. Run same command via `scripts/in-container.sh`
+3. Fix issue, verify, push
+
+**Devcontainer ensures local = CI environment.**
+
+**→ See [linting.md](linting.md) for reproducing specific failures**
 
 ---
 
 ## Troubleshooting
 
-### Formatting Issues
+**Format check fails**: Auto-fix with `clang-format-14 -i file.c`
+**Build warnings**: Read message, fix root cause, rebuild
+**Static analysis warnings**: Determine true/false positive, fix or document
 
-**Issue**: clang-format-14 not found
-
-```bash
-# Verify clang-format-14 is available
-scripts/in-container.sh "which clang-format-14"
-
-# Check version
-scripts/in-container.sh "clang-format-14 --version"
-
-# If missing, rebuild container
-# In VS Code: F1 → "Dev Containers: Rebuild Container"
-```
-
-**Issue**: Formatting produces unexpected changes
-
-```bash
-# Review changes before committing
-scripts/in-container.sh "git diff"
-
-# Verify .clang-format config is correct
-cat .clang-format
-
-# Test on single file first
-scripts/in-container.sh "clang-format-14 -i test_file.c"
-```
-
-**Issue**: Files keep showing formatting issues after fixing
-
-```bash
-# Ensure you're formatting with correct version
-scripts/in-container.sh "clang-format-14 --version"
-# Should show: clang-format version 14.x.x
-
-# Clear any cached state
-scripts/in-container.sh "git clean -fdx"
-
-# Re-apply formatting
-scripts/in-container.sh "git diff --name-only | grep -E '\.(c|h)$' | xargs -r clang-format-14 -i"
-```
-
-### Static Analysis Issues
-
-**Issue**: Too many analyzer warnings
-
-```bash
-# Focus on high-severity issues first
-scripts/in-container.sh "scan-build -enable-checker security cmake --build build"
-
-# Suppress false positives (carefully)
-# Add comments in code: // NOLINT or /* NOLINTNEXTLINE */
-```
-
-**Issue**: Analyzer takes too long
-
-```bash
-# Analyze only changed files
-scripts/in-container.sh "git diff --name-only main...HEAD | grep '\.c$' | xargs clang --analyze"
-
-# Use parallel analysis
-scripts/in-container.sh "scan-build -j$(nproc) cmake --build build"
-```
-
-### Python/Shell Linting Issues
-
-**Issue**: pylint or shellcheck not found
-
-```bash
-# Verify tools are installed
-scripts/in-container.sh "which pylint shellcheck"
-
-# Install if missing (should not be needed in devcontainer)
-scripts/in-container.sh "apt-get update && apt-get install -y pylint shellcheck"
-```
-
-**Issue**: Too many linting warnings
-
-```bash
-# Fix issues incrementally
-scripts/in-container.sh "pylint --disable=all --enable=E ci/coding_guidelines_check.py"
-
-# Gradually enable more checks
-scripts/in-container.sh "pylint --disable=all --enable=E,W ci/"
-```
-
-### Performance Issues
-
-**Issue**: Quality checks take too long
-
-```bash
-# Check only modified files
-scripts/in-container.sh "git diff --name-only | grep -E '\.(c|h)$' | xargs -r clang-format-14 --dry-run"
-
-# Use parallel processing
-scripts/in-container.sh "find core -name '*.c' | xargs -P$(nproc) -n1 clang-format-14 --dry-run"
-
-# Skip third-party code
-scripts/in-container.sh "find . -name '*.c' ! -path '*/deps/*' ! -path '*/third-party/*' -exec clang-format-14 -i {} +"
-```
+**→ See [linting.md](linting.md) for detailed troubleshooting**
 
 ---
 
@@ -561,11 +407,11 @@ scripts/in-container.sh "find . -name '*.c' ! -path '*/deps/*' ! -path '*/third-
 # Format check (dry run)
 scripts/in-container.sh "clang-format-14 --dry-run --Werror <file>"
 
-# Format file
+# Auto-fix formatting
 scripts/in-container.sh "clang-format-14 -i <file>"
 
-# Format staged changes
-scripts/in-container.sh "git diff --cached --name-only | grep -E '\.(c|h)$' | xargs -r clang-format-14 -i"
+# Build with strict warnings
+scripts/in-container.sh "cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build"
 
 # Check shell script
 scripts/in-container.sh "shellcheck <script.sh>"
@@ -573,35 +419,31 @@ scripts/in-container.sh "shellcheck <script.sh>"
 # Lint Python
 scripts/in-container.sh "pylint <script.py>"
 
-# Build with strict warnings
-scripts/in-container.sh "cmake -B build -DCMAKE_C_FLAGS='-Wall -Wextra -Werror' && cmake --build build"
+# Static analysis
+scripts/in-container.sh "scan-build cmake --build build"
 ```
 
-### File Patterns
+### Quality Standards Summary
 
-```bash
-# All C/C++ files
-\( -name '*.c' -o -name '*.h' -o -name '*.cpp' -o -name '*.hpp' \)
-
-# Exclude third-party
-! -path '*/deps/*' ! -path '*/third-party/*'
-
-# Only modified files
-git diff --name-only --diff-filter=ACM
-
-# Only staged files
-git diff --cached --name-only --diff-filter=ACM
-```
+| Check | Tool | Enforced | Purpose |
+|-------|------|----------|---------|
+| Format | clang-format-14 | Every commit | Visual consistency |
+| Warnings | -Wall -Werror | Every build | Catch bugs |
+| Python | pylint | Python changes | Script quality |
+| Shell | shellcheck | Shell changes | Script safety |
+| Analysis | scan-build | Critical changes | Deep bug finding |
 
 ---
 
 ## Related Documentation
 
+- **[linting.md](linting.md)** - Complete pre-commit checklist and operational guide
 - **[dev-in-container.md](dev-in-container.md)** - Container setup and usage
-- **[building.md](building.md)** - Build instructions and CMake configuration
-- **[testing.md](testing.md)** - Test suite documentation (to be created)
-- **[debugging.md](debugging.md)** - Debugging tools and techniques (to be created)
-- **[AGENTS.md](../AGENTS.md)** - AI agent development guidelines
+- **[building.md](building.md)** - Build configuration and options
+- **[testing.md](testing.md)** - Testing strategy and test types
+- **[debugging.md](debugging.md)** - Debugging with GDB and Valgrind
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Contribution guidelines
+- **[AGENTS.md](../AGENTS.md)** - AI agent development guide
 
 ---
 
@@ -611,10 +453,10 @@ git diff --cached --name-only --diff-filter=ACM
 - [Clang Static Analyzer](https://clang-analyzer.llvm.org/)
 - [ShellCheck Wiki](https://github.com/koalaman/shellcheck/wiki)
 - [Pylint Documentation](https://pylint.pycqa.org/)
-- [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html)
+- [C Coding Standards (Linux Kernel)](https://www.kernel.org/doc/html/latest/process/coding-style.html)
 
 ---
 
-**Documentation Version**: 1.0.0  
-**Last Updated**: 2026-04-03  
+**Documentation Version**: 2.0.0  
+**Last Updated**: 2026-04-04  
 **Maintained By**: WAMR Development Team

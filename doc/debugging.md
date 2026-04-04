@@ -1,26 +1,22 @@
 # Debugging WAMR
 
-This guide covers debugging techniques for WAMR itself and WebAssembly applications running on WAMR. It includes GDB debugging workflows, memory debugging with Valgrind, and troubleshooting common issues.
+This guide explains debugging strategies for WAMR and provides guidance on selecting the right debugging tools. It covers both WAMR runtime debugging (native code) and WebAssembly application debugging (source-level).
+
+**Philosophy**: Different debugging scenarios require different tools. Understanding which tool to use and when is key to efficient debugging.
 
 ---
 
 ## Prerequisites
 
-Before debugging WAMR, you need a debug build with symbols enabled:
+Before debugging WAMR:
 
-1. **Read [building.md](building.md)** for complete build instructions
-2. **Build with debug symbols**: Use `CMAKE_BUILD_TYPE=Debug`
-3. **Enable debugging features**: Set appropriate `WAMR_BUILD_DEBUG_*` options
-4. **Verify devcontainer**: Debugging tools (GDB, Valgrind) are pre-installed
+1. **Read [dev-in-container.md](dev-in-container.md)** - All debugging runs in the devcontainer
+2. **Read [building.md](building.md)** - Debugging requires debug builds
+3. **Verify container**: Run `scripts/in-container.sh --status`
 
 **Quick debug build:**
 ```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. \
-  -DCMAKE_BUILD_TYPE=Debug \
-  -DWAMR_BUILD_INTERP=1 \
-  -DWAMR_BUILD_DUMP_CALL_STACK=1 \
-  -DWAMR_BUILD_DEBUG_INTERP=1 && \
-  cmake --build . -j\$(nproc)"
+scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build . -j\$(nproc)"
 ```
 
 ---
@@ -37,6 +33,7 @@ scripts/in-container.sh "<debug-command>"
 The devcontainer provides:
 - GDB with Python support
 - Valgrind with all tools (memcheck, callgrind, cachegrind)
+- lldb for WebAssembly source debugging
 - Debug builds of system libraries
 - Proper capabilities (SYS_PTRACE, seccomp=unconfined)
 
@@ -44,1193 +41,585 @@ The devcontainer provides:
 
 ---
 
-## Building for Debugging
+## Debugging Tools Overview
 
-### Debug Build Options
+WAMR supports multiple debugging approaches depending on what you're debugging:
 
-A proper debug build requires specific CMake options:
-
-**Minimal debug build:**
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. \
-  -DCMAKE_BUILD_TYPE=Debug \
-  -DWAMR_BUILD_INTERP=1 && \
-  cmake --build . -j\$(nproc)"
-```
-
-**Full-featured debug build:**
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. \
-  -DCMAKE_BUILD_TYPE=Debug \
-  -DWAMR_BUILD_INTERP=1 \
-  -DWAMR_BUILD_AOT=1 \
-  -DWAMR_BUILD_DEBUG_INTERP=1 \
-  -DWAMR_BUILD_DEBUG_AOT=1 \
-  -DWAMR_BUILD_DUMP_CALL_STACK=1 \
-  -DWAMR_BUILD_MEMORY_PROFILING=1 \
-  -DWAMR_BUILD_CUSTOM_NAME_SECTION=1 && \
-  cmake --build . -j\$(nproc)"
-```
-
-**Debug options explained:**
-
-| Option | Effect | Use Case |
-|--------|--------|----------|
-| `CMAKE_BUILD_TYPE=Debug` | Enables `-g`, disables `-O2` | Source-level debugging |
-| `WAMR_BUILD_DEBUG_INTERP=1` | Debug interpreter internals | Debugging interpreter mode |
-| `WAMR_BUILD_DEBUG_AOT=1` | Debug AOT compilation/execution | Debugging AOT mode |
-| `WAMR_BUILD_DUMP_CALL_STACK=1` | Print stack on errors | Crash investigation |
-| `WAMR_BUILD_MEMORY_PROFILING=1` | Track memory allocations | Memory leak hunting |
-| `WAMR_BUILD_CUSTOM_NAME_SECTION=1` | Load WASM function names | Better stack traces |
-
-**Binary location:** `product-mini/platforms/linux/build-debug/iwasm`
-
-### RelWithDebInfo Build
-
-For debugging with some optimizations (useful for performance issues):
-
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-relwithdebinfo && cd build-relwithdebinfo && cmake .. \
-  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-  -DWAMR_BUILD_INTERP=1 \
-  -DWAMR_BUILD_DUMP_CALL_STACK=1 && \
-  cmake --build . -j\$(nproc)"
-```
-
-**RelWithDebInfo** provides:
-- Debug symbols (`-g`)
-- Optimizations enabled (`-O2`)
-- Better performance than Debug builds
-- Harder to step through (optimized code)
-
-**Use case:** Debugging performance issues where Debug build is too slow to reproduce the problem.
+| Tool | What It Debugs | Best For | When to Use | Documentation |
+|------|----------------|----------|-------------|---------------|
+| **GDB** | WAMR runtime (native C code) | Crashes, assertions, runtime behavior | Debugging WAMR itself, investigating segfaults | See below |
+| **Valgrind** | Memory errors, leaks, performance | Memory corruption, leaks, profiling | Finding memory bugs, performance analysis | See below |
+| **lldb (interpreter)** | WASM source code (C/Rust/etc.) | Debugging WASM applications | Stepping through WASM source code | [source_debugging_interpreter.md](source_debugging_interpreter.md) |
+| **lldb (AOT)** | AOT-compiled WASM code | Debugging AOT modules | Source-level debugging of AOT | [source_debugging_aot.md](source_debugging_aot.md) |
+| **AddressSanitizer** | Memory safety violations | Use-after-free, buffer overflows | Faster than Valgrind, integrated | See below |
+| **Log levels** | Runtime behavior, diagnostics | Understanding execution flow | Quick diagnostics without debugger | See below |
 
 ---
 
-## Debugging with GDB
+## Debugging Decision Guide
 
-GDB is the primary debugging tool for WAMR native code.
+**Choose your tool based on the problem:**
 
-### Basic GDB Session
+```
+┌─ Crash or segfault? ──────────────────────────→ GDB
+│
+├─ Memory leak or corruption? ──────────────────→ Valgrind memcheck or AddressSanitizer
+│
+├─ Performance bottleneck? ─────────────────────→ Valgrind callgrind
+│
+├─ Need to debug WASM application source? ─────→ lldb (source debugging)
+│  ├─ Interpreter mode? ──────────────────────→ lldb with patch (see source_debugging_interpreter.md)
+│  └─ AOT mode? ──────────────────────────────→ lldb with GDB JIT loader (see source_debugging_aot.md)
+│
+├─ Assertion failure? ─────────────────────────→ GDB (break on __assert_fail)
+│
+├─ Need quick diagnostics? ────────────────────→ WAMR_LOG_LEVEL environment variable
+│
+└─ Understanding execution flow? ──────────────→ Log levels + GDB tracing
+```
 
-Start GDB with a WASM module:
+---
 
+## GDB Debugging
+
+### What Is GDB?
+
+GDB is the GNU Debugger for native code. It allows you to debug WAMR's C code: set breakpoints, inspect variables, examine stack traces, and step through execution.
+
+### When to Use GDB
+
+**Use GDB when:**
+- WAMR crashes (segmentation fault, assertion failure)
+- Investigating WAMR runtime behavior
+- Debugging module loading/validation
+- Debugging execution engine (interpreter, AOT, JIT)
+- Analyzing core dumps
+- Need to inspect WAMR internal state
+
+**Don't use GDB for:**
+- Debugging WASM application source code (use lldb with source debugging instead)
+- Memory leak detection (use Valgrind for comprehensive analysis)
+- Performance profiling (use Valgrind callgrind)
+
+### Debug Build Requirements
+
+| Build Option | Effect | Needed For |
+|--------------|--------|------------|
+| `CMAKE_BUILD_TYPE=Debug` | Enables `-g`, disables `-O2` | All debugging |
+| `WAMR_BUILD_DEBUG_INTERP=1` | Debug interpreter internals | Interpreter debugging |
+| `WAMR_BUILD_DEBUG_AOT=1` | Debug AOT compilation | AOT debugging |
+| `WAMR_BUILD_DUMP_CALL_STACK=1` | Print stack on errors | Crash investigation |
+| `WAMR_BUILD_MEMORY_PROFILING=1` | Track memory allocations | Memory leak hunting |
+
+### Quick Examples
+
+**Basic debugging session:**
 ```bash
 scripts/in-container.sh "gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
 ```
 
-**Common GDB commands:**
-
+In GDB:
 ```gdb
-# Run the program
-(gdb) run
-
-# Run with arguments
-(gdb) run arg1 arg2
-
-# Set breakpoint
-(gdb) break main
 (gdb) break wasm_runtime_instantiate
-(gdb) break core/iwasm/interpreter/wasm_interp_classic.c:1234
-
-# View backtrace
-(gdb) backtrace
-(gdb) bt full
-
-# Inspect variables
-(gdb) print module
-(gdb) print *exec_env
-(gdb) print frame->ip
-
-# Step through code
-(gdb) next        # Next line (step over)
-(gdb) step        # Step into function
-(gdb) finish      # Step out of function
-(gdb) continue    # Continue execution
-
-# Examine memory
-(gdb) x/16xb 0x12345678    # Examine 16 bytes in hex
-(gdb) x/s 0x12345678       # Examine string
-
-# Watch variable
-(gdb) watch module->name
-(gdb) watch *0x12345678
-
-# List source code
-(gdb) list
-(gdb) list function_name
-
-# Quit
-(gdb) quit
-```
-
-### Debugging Module Loading
-
-Debug issues during WASM module loading and validation:
-
-```bash
-scripts/in-container.sh "gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
-
-**GDB session:**
-```gdb
-# Set breakpoints at key loading stages
-(gdb) break wasm_load
-(gdb) break wasm_loader_load
-(gdb) break load_from_sections
-
-# Run and stop at module loading
 (gdb) run
-
-# Inspect module structure
+(gdb) backtrace
 (gdb) print *module
-(gdb) print module->function_count
-(gdb) print module->import_count
-(gdb) print module->malloc_function
-
-# Check validation errors
-(gdb) break wasm_set_exception
-(gdb) commands
-> print (char*)exception_buf
-> continue
-> end
-
-# Continue execution
 (gdb) continue
 ```
 
-**Common module loading breakpoints:**
-- `wasm_load` - Entry point for loading
-- `load_from_sections` - Parse WASM sections
-- `wasm_loader_prepare_bytecode` - Bytecode preparation
-- `wasm_loader_link_wasi` - WASI imports linking
-
-### Debugging Execution
-
-Debug WASM code execution and runtime behavior:
-
+**Crash investigation:**
 ```bash
-scripts/in-container.sh "gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
-
-**Interpreter execution breakpoints:**
-```gdb
-# Break at interpreter entry
-(gdb) break wasm_runtime_call_wasm
-(gdb) break wasm_interp_call_wasm
-
-# Break at specific opcodes (classic interpreter)
-(gdb) break wasm_interp_classic.c:2000
-(gdb) condition 1 opcode == 0x20  # local.get
-
-# Inspect execution environment
-(gdb) print *exec_env
-(gdb) print exec_env->cur_frame
-(gdb) print exec_env->wasm_stack
-
-# Watch program counter
-(gdb) watch frame->ip
-(gdb) commands
-> x/i frame->ip
-> continue
-> end
-
-# Run
-(gdb) run
-```
-
-**AOT execution breakpoints:**
-```gdb
-# Break at AOT entry
-(gdb) break aot_call_function
-(gdb) break aot_invoke_native
-
-# Inspect AOT module
-(gdb) print *aot_module
-(gdb) print aot_module->func_ptrs[0]
-(gdb) print aot_module->import_func_count
-
-# Run
-(gdb) run
-```
-
-**Fast JIT execution:**
-```gdb
-# Break at JIT compilation
-(gdb) break jit_compiler_compile_op_block
-(gdb) break jit_compile_op_call
-
-# Break at JIT execution
-(gdb) break jit_interp_switch_to_jitted
-
-# Inspect JIT context
-(gdb) print *jit_compiler_ctx
-(gdb) print cc->jitted_addr_begin
-
-# Run
-(gdb) run
-```
-
-### Debugging Memory Issues
-
-Debug memory corruption, out-of-bounds access, and allocation issues:
-
-```bash
-scripts/in-container.sh "gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
-
-**Memory debugging session:**
-```gdb
-# Break on memory allocation/free
-(gdb) break wasm_runtime_malloc
-(gdb) break wasm_runtime_free
-
-# Watch for out-of-bounds access
-(gdb) break wasm_runtime_validate_app_addr
-(gdb) break wasm_runtime_addr_app_to_native
-
-# Break on memory operations
-(gdb) break memmove
-(gdb) break memcpy
-(gdb) break memset
-
-# Catch segmentation faults
-(gdb) catch signal SIGSEGV
-(gdb) commands
-> backtrace
-> print $_siginfo
-> end
-
-# Run and examine crash
-(gdb) run
-
-# When stopped, examine memory
-(gdb) bt full
-(gdb) print module->memory_data
-(gdb) x/64xb module->memory_data
-```
-
-**Memory watchpoints:**
-```gdb
-# Watch specific memory location
-(gdb) watch *0x12345678
-(gdb) rwatch *0x12345678  # Read watchpoint
-(gdb) awatch *0x12345678  # Access watchpoint (read or write)
-
-# Watch structure field
-(gdb) watch module->memory_count
-(gdb) watch exec_env->cur_frame->sp
-```
-
-### Debugging with Core Dumps
-
-Analyze crashes after they occur using core dumps:
-
-**Enable core dumps:**
-```bash
-# Inside container (for interactive debugging)
-scripts/in-container.sh "ulimit -c unlimited"
-
-# Or set for specific command
+# Enable core dumps and run
 scripts/in-container.sh "ulimit -c unlimited && product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
 
-**Analyze core dump:**
-```bash
-# Find core dump
-scripts/in-container.sh "ls -lh core*"
-
-# Load in GDB
+# Analyze core dump
 scripts/in-container.sh "gdb product-mini/platforms/linux/build-debug/iwasm core"
 ```
 
-**GDB core dump analysis:**
+In GDB:
 ```gdb
-# View backtrace
 (gdb) backtrace full
-(gdb) bt
-
-# Examine registers at crash
-(gdb) info registers
-
-# Examine crash location
 (gdb) frame 0
+(gdb) info registers
 (gdb) list
-
-# Print all variables in all frames
-(gdb) bt full
-
-# Examine memory at crash point
-(gdb) x/32xb $rip
-(gdb) x/32xb $rsp
-
-# Print specific variables
-(gdb) print module
-(gdb) print *exec_env
-
-# Switch between frames
-(gdb) frame 3
-(gdb) print local_var
 ```
 
-**Automated crash analysis:**
-```bash
-# Generate backtrace from core dump
-scripts/in-container.sh "gdb -batch -ex 'bt full' product-mini/platforms/linux/build-debug/iwasm core > crash-report.txt"
-```
+### Common Breakpoints
 
-### GDB Scripting
-
-Automate debugging tasks with GDB scripts:
-
-**Create GDB script (`debug.gdb`):**
+**Module loading:**
 ```gdb
-# debug.gdb - WAMR debugging script
+break wasm_load
+break load_from_sections
+break wasm_loader_prepare_bytecode
+```
 
-# Pretty printing
-set print pretty on
-set print array on
-set print array-indexes on
-
-# Auto-load symbols
-set auto-solib-add on
-
-# Breakpoints
-break wasm_runtime_instantiate
+**Execution:**
+```gdb
 break wasm_runtime_call_wasm
+break wasm_interp_call_wasm
+break aot_call_function
+```
 
-# Break on exceptions
+**Memory operations:**
+```gdb
+break wasm_runtime_malloc
+break wasm_runtime_free
+break wasm_runtime_validate_app_addr
+```
+
+**Errors:**
+```gdb
 break wasm_set_exception
-commands
-  silent
-  printf "Exception: %s\n", (char*)exception_buf
-  backtrace 5
-  continue
-end
-
-# Useful functions
-define print-module
-  print module->name
-  print module->function_count
-  print module->import_count
-  print module->export_count
-end
-
-define print-frame
-  print *frame
-  print frame->function->func_name
-  print frame->ip
-  print frame->sp
-end
-
-# Run with arguments
-run
+break __assert_fail
 ```
 
-**Use GDB script:**
+### GDB Workflows
+
+**1. Crash Investigation:**
 ```bash
-scripts/in-container.sh "gdb -x debug.gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
+# Build with debug symbols
+scripts/in-container.sh "cd product-mini/platforms/linux && cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build build-debug"
+
+# Run under GDB
+scripts/in-container.sh "gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
 ```
 
-**Batch mode (no interaction):**
-```bash
-scripts/in-container.sh "gdb -batch -x debug.gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm 2>&1 | tee debug.log"
+**2. Module Loading Issues:**
+```gdb
+(gdb) break wasm_load
+(gdb) break wasm_set_exception
+(gdb) commands 2
+> print (char*)exception_buf
+> backtrace
+> continue
+> end
+(gdb) run
 ```
+
+**3. Execution Tracing:**
+```gdb
+(gdb) break wasm_runtime_call_wasm
+(gdb) commands
+> silent
+> printf "Calling function: %s\n", function->func_name
+> continue
+> end
+(gdb) run
+```
+
+**→ For complete GDB reference, command examples, and troubleshooting, see:** [GDB Debugging Guide](https://sourceware.org/gdb/documentation/) (external) and WAMR-specific breakpoints above.
 
 ---
 
 ## Memory Debugging with Valgrind
 
-Valgrind detects memory errors, leaks, and performance issues that are hard to find with GDB.
+### What Is Valgrind?
 
-### Memory Leak Detection
+Valgrind is a dynamic analysis framework that detects memory errors, leaks, and can profile performance. It runs your program in a virtual environment that tracks all memory operations.
 
-Find memory leaks in WAMR:
+### When to Use Valgrind
 
-**Basic leak check:**
+**Use Valgrind when:**
+- Hunting memory leaks (memory not freed)
+- Detecting invalid memory access (buffer overflows, use-after-free)
+- Finding uninitialized memory usage
+- Performance profiling (with callgrind)
+- Cache analysis (with cachegrind)
+
+**Don't use Valgrind for:**
+- Quick crash debugging (use GDB, Valgrind is slow)
+- Real-time performance testing (Valgrind adds 10-50x slowdown)
+- Source-level debugging (use GDB or lldb)
+
+### Valgrind Tools
+
+| Tool | Purpose | Use Case |
+|------|---------|----------|
+| **memcheck** | Memory errors and leaks | Default tool, most common |
+| **callgrind** | Call graph profiling | Find performance bottlenecks |
+| **cachegrind** | Cache simulation | Optimize cache usage |
+| **helgrind** | Thread error detection | Debugging multithreaded code |
+| **massif** | Heap profiler | Track heap usage over time |
+
+### Quick Examples
+
+**Memory leak detection:**
 ```bash
 scripts/in-container.sh "valgrind --leak-check=full --show-leak-kinds=all product-mini/platforms/linux/build-debug/iwasm test.wasm"
 ```
 
-**Detailed leak report:**
+**Memory error detection:**
 ```bash
-scripts/in-container.sh "valgrind \
-  --leak-check=full \
-  --show-leak-kinds=all \
-  --track-origins=yes \
-  --verbose \
-  --log-file=valgrind-leak.log \
-  product-mini/platforms/linux/build-debug/iwasm test.wasm"
+scripts/in-container.sh "valgrind --tool=memcheck --track-origins=yes product-mini/platforms/linux/build-debug/iwasm test.wasm"
 ```
 
-**Valgrind leak check options:**
-
-| Option | Description |
-|--------|-------------|
-| `--leak-check=full` | Detailed leak information with backtraces |
-| `--show-leak-kinds=all` | Show all leak types (definite, indirect, possible, reachable) |
-| `--track-origins=yes` | Track origin of uninitialized values (slower but helpful) |
-| `--verbose` | Detailed diagnostic messages |
-| `--log-file=FILE` | Save output to file |
-
-**Understanding Valgrind leak reports:**
-
-```text
-==12345== HEAP SUMMARY:
-==12345==     in use at exit: 1,024 bytes in 1 blocks
-==12345==   total heap usage: 100 allocs, 99 frees, 10,240 bytes allocated
-==12345==
-==12345== 1,024 bytes in 1 blocks are definitely lost in loss record 1 of 1
-==12345==    at 0x4C2FB0F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
-==12345==    by 0x401234: wasm_runtime_malloc (wasm_runtime_common.c:123)
-==12345==    by 0x402345: wasm_runtime_instantiate (wasm_runtime.c:456)
-==12345==    by 0x403456: main (main.c:789)
-==12345==
-==12345== LEAK SUMMARY:
-==12345==    definitely lost: 1,024 bytes in 1 blocks
-==12345==    indirectly lost: 0 bytes in 0 blocks
-==12345==      possibly lost: 0 bytes in 0 blocks
-==12345==    still reachable: 0 bytes in 0 blocks
-==12345==         suppressed: 0 bytes in 0 blocks
-```
-
-**Leak types:**
-- **Definitely lost**: Real memory leak, must fix
-- **Indirectly lost**: Leaked memory referenced by definitely lost blocks
-- **Possibly lost**: Pointer to block interior, may or may not be leak
-- **Still reachable**: Memory still pointed to at exit (usually OK)
-
-### Memory Error Detection
-
-Detect invalid memory access, use of uninitialized memory, and other errors:
-
-**Full memory checking:**
-```bash
-scripts/in-container.sh "valgrind \
-  --tool=memcheck \
-  --leak-check=full \
-  --track-origins=yes \
-  --read-var-info=yes \
-  --error-exitcode=1 \
-  product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
-
-**Common memory errors detected:**
-
-1. **Invalid read/write:**
-```text
-==12345== Invalid write of size 4
-==12345==    at 0x401234: wasm_interp_call_func (wasm_interp.c:123)
-==12345==  Address 0x5000004 is 4 bytes after a block of size 1,000 alloc'd
-```
-
-2. **Use of uninitialized value:**
-```text
-==12345== Conditional jump or move depends on uninitialised value(s)
-==12345==    at 0x402345: wasm_runtime_call_wasm (wasm_runtime.c:456)
-```
-
-3. **Invalid free:**
-```text
-==12345== Invalid free() / delete / delete[]
-==12345==    at 0x4C30D3B: free (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
-==12345==    by 0x403456: wasm_runtime_free (wasm_runtime_common.c:789)
-```
-
-**Memcheck options:**
-
-| Option | Description |
-|--------|-------------|
-| `--track-origins=yes` | Track origin of uninitialized values |
-| `--read-var-info=yes` | Read DWARF3 variable info for better error messages |
-| `--error-exitcode=N` | Exit with code N if errors found (for CI) |
-| `--gen-suppressions=all` | Generate suppression entries for false positives |
-
-### Valgrind with Suppressions
-
-Suppress known false positives (e.g., from third-party libraries):
-
-**Create suppression file (`valgrind.supp`):**
-```text
-{
-   known_glibc_leak
-   Memcheck:Leak
-   match-leak-kinds: reachable
-   fun:malloc
-   fun:_dl_init
-   obj:/lib/x86_64-linux-gnu/ld-2.*.so
-}
-
-{
-   llvm_jit_reachable
-   Memcheck:Leak
-   match-leak-kinds: reachable
-   fun:malloc
-   obj:/usr/lib/llvm-*/lib/libLLVM-*.so
-}
-```
-
-**Use suppression file:**
-```bash
-scripts/in-container.sh "valgrind --leak-check=full --suppressions=valgrind.supp product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
-
-**Generate suppressions automatically:**
-```bash
-scripts/in-container.sh "valgrind --leak-check=full --gen-suppressions=all product-mini/platforms/linux/build-debug/iwasm test.wasm 2>&1 | grep -A 10 '^{'"
-```
-
-### Performance Profiling with Callgrind
-
-Profile execution to find performance bottlenecks:
-
-**Run Callgrind:**
+**Performance profiling:**
 ```bash
 scripts/in-container.sh "valgrind --tool=callgrind --callgrind-out-file=callgrind.out product-mini/platforms/linux/build-debug/iwasm test.wasm"
+scripts/in-container.sh "callgrind_annotate callgrind.out | head -50"
 ```
 
-**Analyze results:**
+### Understanding Valgrind Output
+
+**Leak types:**
+- **Definitely lost**: Real leak, must fix
+- **Indirectly lost**: Leaked memory referenced by definitely lost blocks
+- **Possibly lost**: Pointer to block interior, may or may not be leak
+- **Still reachable**: Memory still pointed to at exit (usually OK for cleanup)
+
+**Common errors:**
+- **Invalid read/write**: Buffer overflow or out-of-bounds access
+- **Use of uninitialized value**: Variable used before initialization
+- **Invalid free**: Double free or freeing invalid pointer
+- **Mismatched free**: Using wrong free function (malloc/new mismatch)
+
+### Valgrind Workflow
+
+**Memory leak hunting:**
 ```bash
-# View in terminal
-scripts/in-container.sh "callgrind_annotate callgrind.out"
+# 1. Build with memory profiling
+scripts/in-container.sh "cd product-mini/platforms/linux && cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_MEMORY_PROFILING=1 && cmake --build build-debug"
 
-# View top functions
-scripts/in-container.sh "callgrind_annotate --auto=yes --threshold=1 callgrind.out | head -50"
+# 2. Run with Valgrind
+scripts/in-container.sh "valgrind --leak-check=full --track-origins=yes --log-file=leak.log product-mini/platforms/linux/build-debug/iwasm test.wasm"
 
-# View specific function
-scripts/in-container.sh "callgrind_annotate --include=wasm_interp callgrind.out"
-```
-
-**Callgrind output:**
-```text
---------------------------------------------------------------------------------
-Profile data file 'callgrind.out' (creator: callgrind-3.15.0)
---------------------------------------------------------------------------------
-I1 cache: 
-D1 cache: 
-LL cache: 
-Timerange: Basic block 0 - 1234567
-Trigger: Program termination
-Profiled target:  product-mini/platforms/linux/build-debug/iwasm test.wasm
-Events recorded:  Ir
-Events shown:     Ir
-Event sort order: Ir
-Thresholds:       99
-Include dirs:     
-User annotated:   
-Auto-annotation:  on
-
---------------------------------------------------------------------------------
-Ir          file:function
---------------------------------------------------------------------------------
-12,345,678  core/iwasm/interpreter/wasm_interp_classic.c:wasm_interp_call_func_bytecode
- 3,456,789  core/iwasm/common/wasm_runtime_common.c:wasm_runtime_lookup_function
- 2,345,678  core/iwasm/interpreter/wasm_runtime.c:wasm_runtime_call_wasm
-```
-
-**Callgrind options:**
-
-| Option | Description |
-|--------|-------------|
-| `--cache-sim=yes` | Simulate cache behavior (slower, more detail) |
-| `--branch-sim=yes` | Simulate branch prediction |
-| `--collect-jumps=yes` | Collect jump information |
-| `--separate-threads=yes` | Profile threads separately |
-
----
-
-## Common Debug Workflows
-
-Step-by-step guides for common debugging scenarios.
-
-### Workflow 1: Crash Investigation
-
-**Scenario:** iwasm crashes with segmentation fault.
-
-**Steps:**
-
-1. **Build with debug symbols:**
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build . -j\$(nproc)"
-```
-
-2. **Enable core dumps and reproduce:**
-```bash
-scripts/in-container.sh "ulimit -c unlimited && product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
-
-3. **Analyze crash with GDB:**
-```bash
-scripts/in-container.sh "gdb product-mini/platforms/linux/build-debug/iwasm core"
-```
-
-4. **In GDB, examine crash:**
-```gdb
-(gdb) backtrace full
-(gdb) frame 0
-(gdb) list
-(gdb) info registers
-(gdb) x/32xb $rip
-```
-
-5. **Identify root cause:**
-   - Check for NULL pointer dereference
-   - Check for buffer overflow
-   - Check for use-after-free
-   - Check for uninitialized memory
-
-6. **Verify fix:**
-```bash
-scripts/in-container.sh "product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
-
-### Workflow 2: Memory Leak Hunting
-
-**Scenario:** Memory usage grows over time.
-
-**Steps:**
-
-1. **Build with memory profiling:**
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_MEMORY_PROFILING=1 && cmake --build . -j\$(nproc)"
-```
-
-2. **Run with Valgrind:**
-```bash
-scripts/in-container.sh "valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=leak.log product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
-
-3. **Analyze leak report:**
-```bash
+# 3. Analyze report
 scripts/in-container.sh "cat leak.log | grep 'definitely lost' -A 10"
 ```
 
-4. **Find leak location:**
-   - Look for "definitely lost" leaks first
-   - Note the allocation backtrace
-   - Find where the memory should be freed
+**→ For complete Valgrind options, suppression files, and advanced usage, see:** [Valgrind User Manual](https://valgrind.org/docs/manual/manual.html) (external).
 
-5. **Reproduce with GDB:**
+---
+
+## AddressSanitizer
+
+### What Is AddressSanitizer?
+
+AddressSanitizer (ASan) is a compiler-based memory error detector. It's faster than Valgrind and detects similar memory bugs by instrumenting code at compile time.
+
+### When to Use AddressSanitizer
+
+**Use ASan when:**
+- Need faster memory error detection than Valgrind (only 2x slowdown)
+- Running in CI/CD (faster than Valgrind)
+- Detecting use-after-free, buffer overflows, stack corruption
+- Want precise error locations with stack traces
+
+**Don't use ASan for:**
+- Production builds (adds overhead and extra memory)
+- When you need leak detection without recompiling (use Valgrind)
+
+### Quick Example
+
+**Build with ASan:**
 ```bash
-scripts/in-container.sh "gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
+scripts/in-container.sh "cd product-mini/platforms/linux && cmake -B build-asan -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS='-fsanitize=address -fno-omit-frame-pointer' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address' && cmake --build build-asan"
 ```
 
-```gdb
-# Set breakpoint at allocation site from Valgrind report
-(gdb) break wasm_runtime_malloc
-(gdb) commands
-> backtrace 5
-> continue
-> end
-(gdb) run
-```
-
-6. **Fix and verify:**
+**Run:**
 ```bash
-# After fix, run Valgrind again
-scripts/in-container.sh "valgrind --leak-check=full --error-exitcode=1 product-mini/platforms/linux/build-debug/iwasm test.wasm"
-echo $?  # Should be 0 if no leaks
+scripts/in-container.sh "product-mini/platforms/linux/build-asan/iwasm test.wasm"
 ```
 
-### Workflow 3: Assertion Failure Debugging
+ASan will automatically print detailed error reports on memory violations.
 
-**Scenario:** Assertion fails with unclear reason.
+**→ For complete ASan documentation, see:** [AddressSanitizer Documentation](https://github.com/google/sanitizers/wiki/AddressSanitizer) (external).
 
-**Steps:**
+---
 
-1. **Run with full stack dump:**
+## Source-Level Debugging (WASM Applications)
+
+### What Is Source-Level Debugging?
+
+Source-level debugging allows you to debug WebAssembly applications at the source code level (C, Rust, etc.) using lldb. You can set breakpoints in your WASM source, step through code, and inspect variables.
+
+### When to Use Source-Level Debugging
+
+**Use lldb source debugging when:**
+- Debugging a WASM application (not WAMR runtime)
+- Need to step through WASM source code
+- Investigating WASM application bugs
+- Want to inspect WASM application variables
+
+**Don't use source debugging for:**
+- Debugging WAMR runtime itself (use GDB)
+- Quick crash investigation (use GDB for native crashes)
+
+### Requirements
+
+1. **WASM module compiled with debug info** (`-g` flag):
 ```bash
-scripts/in-container.sh "product-mini/platforms/linux/build-debug/iwasm test.wasm"
+scripts/in-container.sh "/opt/wasi-sdk/bin/clang -g test.c -o test.wasm"
 ```
 
-2. **Start GDB and break at assertion:**
+2. **Verify debug info** (optional):
 ```bash
-scripts/in-container.sh "gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
+scripts/in-container.sh "llvm-dwarfdump test.wasm"
 ```
 
-```gdb
-# Break on assertion functions
-(gdb) break __assert_fail
-(gdb) break bh_assert
-(gdb) run
-```
+3. **WAMR built with debug support**:
+   - Interpreter: `WAMR_BUILD_DEBUG_INTERP=1`
+   - AOT: `WAMR_BUILD_DEBUG_AOT=1`
 
-3. **When stopped, examine state:**
-```gdb
-(gdb) backtrace full
-(gdb) frame 2  # Go to frame before assertion
-(gdb) print *module
-(gdb) print exec_env->cur_frame
-```
+### Debugging Modes
 
-4. **Understand invariant:**
-   - Read assertion message
-   - Read source code around assertion
-   - Check what condition was violated
+**Interpreter Mode:**
+- Uses patched lldb with WebAssembly support
+- Connects to iwasm via network (GDB remote protocol)
+- Full source-level debugging capabilities
 
-5. **Trace back to root cause:**
-```gdb
-# Set breakpoint earlier in call chain
-(gdb) break wasm_load
-(gdb) run
-# Step through to see where invariant is violated
-(gdb) step
-(gdb) next
-```
+**→ See [source_debugging_interpreter.md](source_debugging_interpreter.md) for complete guide**
 
-6. **Fix and verify:**
+**AOT Mode:**
+- Uses lldb with GDB JIT loader
+- Debugs AOT-compiled native code
+- Maps back to WASM source via DWARF info
+
+**→ See [source_debugging_aot.md](source_debugging_aot.md) for complete guide**
+
+### Quick Example (Interpreter)
+
 ```bash
-scripts/in-container.sh "product-mini/platforms/linux/build-debug/iwasm test.wasm"
+# Terminal 1: Run iwasm with debug engine
+scripts/in-container.sh "product-mini/platforms/linux/build-debug/iwasm -g=127.0.0.1:1234 test.wasm"
+
+# Terminal 2: Connect lldb
+scripts/in-container.sh "lldb"
 ```
 
-### Workflow 4: Performance Issue Profiling
-
-**Scenario:** WASM execution is slower than expected.
-
-**Steps:**
-
-1. **Profile with Callgrind:**
-```bash
-scripts/in-container.sh "valgrind --tool=callgrind --callgrind-out-file=callgrind.out product-mini/platforms/linux/build-debug/iwasm test.wasm"
+In lldb:
+```
+(lldb) process connect -p wasm connect://127.0.0.1:1234
+(lldb) b main
+(lldb) continue
+(lldb) step
 ```
 
-2. **Analyze hot functions:**
-```bash
-scripts/in-container.sh "callgrind_annotate --auto=yes callgrind.out | head -100 > profile.txt"
-scripts/in-container.sh "cat profile.txt"
-```
-
-3. **Identify bottleneck:**
-   - Look for functions with highest instruction counts
-   - Check if bottleneck is in WAMR runtime or WASM module
-
-4. **Profile with GDB sampling:**
-```bash
-scripts/in-container.sh "gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
-
-```gdb
-# Set breakpoint at hot function
-(gdb) break wasm_interp_call_func_bytecode
-(gdb) commands
-> silent
-> backtrace 1
-> continue
-> end
-(gdb) run
-# Ctrl-C after a few seconds to see samples
-```
-
-5. **Compare execution modes:**
-```bash
-# Interpreter
-scripts/in-container.sh "time product-mini/platforms/linux/build/iwasm test.wasm"
-
-# Fast JIT (if available)
-scripts/in-container.sh "time product-mini/platforms/linux/build-fastjit/iwasm test.wasm"
-
-# AOT (if available)
-scripts/in-container.sh "wamr-compiler/build/wamrc -o test.aot test.wasm"
-scripts/in-container.sh "time product-mini/platforms/linux/build/iwasm test.aot"
-```
-
-6. **Optimize based on findings:**
-   - If in interpreter, try Fast JIT or AOT
-   - If in runtime, optimize hot code path
-   - If in WASM, optimize WASM code
-
-### Workflow 5: AOT/JIT Compilation Debugging
-
-**Scenario:** AOT or JIT compilation fails or generates incorrect code.
-
-**Steps:**
-
-1. **Enable debug logging:**
-```bash
-scripts/in-container.sh "WAMR_LOG_LEVEL=4 product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
-
-2. **Build with debug symbols:**
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DEBUG_AOT=1 -DWAMR_BUILD_AOT=1 && cmake --build . -j\$(nproc)"
-```
-
-3. **Debug AOT compilation:**
-```bash
-scripts/in-container.sh "gdb --args wamr-compiler/build/wamrc -o test.aot test.wasm"
-```
-
-```gdb
-# Break at compilation stages
-(gdb) break aot_compile_wasm
-(gdb) break aot_compile_op_call
-(gdb) break aot_emit_llvm_file
-(gdb) run
-```
-
-4. **Examine generated code:**
-```bash
-# Dump LLVM IR
-scripts/in-container.sh "wamr-compiler/build/wamrc --enable-dump-ir -o test.aot test.wasm"
-scripts/in-container.sh "cat test.aot.ll"
-
-# Disassemble AOT file
-scripts/in-container.sh "objdump -d test.aot | less"
-```
-
-5. **Debug JIT execution:**
-```bash
-scripts/in-container.sh "gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
-
-```gdb
-# Break at JIT compilation
-(gdb) break jit_compiler_compile
-(gdb) break fast_jit_compile_op_call
-
-# Break at tier-up (multi-tier JIT)
-(gdb) break jit_check_suspend_flags
-(gdb) break llvm_jit_compile_func
-
-(gdb) run
-```
-
-6. **Compare with interpreter:**
-```bash
-# Run in interpreter mode (for comparison)
-scripts/in-container.sh "product-mini/platforms/linux/build-interp/iwasm test.wasm"
-
-# Run with AOT
-scripts/in-container.sh "product-mini/platforms/linux/build-aot/iwasm test.aot"
-```
+**→ For complete setup, lldb commands, and troubleshooting:**
+- **[source_debugging_interpreter.md](source_debugging_interpreter.md)** - Interpreter mode
+- **[source_debugging_aot.md](source_debugging_aot.md)** - AOT mode
+- **[source_debugging.md](source_debugging.md)** - Overview
 
 ---
 
 ## Debug Logging
 
-WAMR provides runtime logging for diagnostics without a debugger.
+### What Is Debug Logging?
+
+WAMR provides runtime logging for diagnostics without a debugger. Log levels control verbosity from fatal errors only to trace-level debugging.
+
+### When to Use Logging
+
+**Use logging when:**
+- Need quick diagnostics without debugger setup
+- Understanding execution flow
+- Debugging in environments where debuggers are unavailable
+- CI/CD diagnostics
 
 ### Log Levels
 
-Control log verbosity with environment variable:
-
-```bash
-# No logging (default in release builds)
-scripts/in-container.sh "WAMR_LOG_LEVEL=0 product-mini/platforms/linux/build/iwasm test.wasm"
-
-# Fatal errors only
-scripts/in-container.sh "WAMR_LOG_LEVEL=1 product-mini/platforms/linux/build/iwasm test.wasm"
-
-# Errors and warnings
-scripts/in-container.sh "WAMR_LOG_LEVEL=2 product-mini/platforms/linux/build/iwasm test.wasm"
-
-# Info messages (default in debug builds)
-scripts/in-container.sh "WAMR_LOG_LEVEL=3 product-mini/platforms/linux/build/iwasm test.wasm"
-
-# Verbose/debug messages
-scripts/in-container.sh "WAMR_LOG_LEVEL=4 product-mini/platforms/linux/build/iwasm test.wasm"
-
-# Very verbose (trace level)
-scripts/in-container.sh "WAMR_LOG_LEVEL=5 product-mini/platforms/linux/build/iwasm test.wasm"
-```
-
-**Log level meanings:**
+Control log verbosity with `WAMR_LOG_LEVEL` environment variable:
 
 | Level | Name | Description |
 |-------|------|-------------|
-| 0 | NONE | No logging |
-| 1 | FATAL | Fatal errors (crash imminent) |
+| 0 | NONE | No logging (default in release) |
+| 1 | FATAL | Fatal errors only |
 | 2 | ERROR | Errors and warnings |
-| 3 | INFO | Informational messages |
+| 3 | INFO | Informational messages (default in debug) |
 | 4 | DEBUG | Debug messages |
 | 5 | VERBOSE | Trace-level verbosity |
 
-### Log Output
+### Quick Examples
 
-**Example verbose output:**
 ```bash
-scripts/in-container.sh "WAMR_LOG_LEVEL=4 product-mini/platforms/linux/build-debug/iwasm test.wasm"
+# Verbose logging
+scripts/in-container.sh "WAMR_LOG_LEVEL=4 product-mini/platforms/linux/build/iwasm test.wasm"
+
+# Trace level (very verbose)
+scripts/in-container.sh "WAMR_LOG_LEVEL=5 product-mini/platforms/linux/build-debug/iwasm test.wasm"
 ```
 
-```text
+**Example output:**
+```
 [INFO] wasm_runtime_init
-[DEBUG] wasm_runtime_init: allocate global data
-[DEBUG] wasm_runtime_init: initialize global data
-[INFO] wasm_runtime_load: loading module
+[DEBUG] wasm_runtime_load: loading module
 [DEBUG] load_from_sections: parsing sections
 [DEBUG] load_import_section: 5 imports
-[DEBUG] load_function_section: 20 functions
-[DEBUG] load_table_section: 1 tables
-[DEBUG] load_memory_section: 1 memories
-[DEBUG] load_export_section: 10 exports
 [INFO] wasm_runtime_instantiate: instantiating module
-[DEBUG] wasm_runtime_instantiate: allocating memory
-[DEBUG] wasm_runtime_instantiate: initializing memory
 [INFO] wasm_runtime_call_wasm: calling function "main"
-[DEBUG] wasm_interp_call_func_bytecode: entering function
-Hello from WASM!
-[INFO] wasm_runtime_deinstantiate
-[INFO] wasm_runtime_unload
-[INFO] wasm_runtime_destroy
 ```
-
-### Debug Assertions
-
-Enable runtime assertions (debug builds only):
-
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS='-UNDEBUG' && cmake --build . -j\$(nproc)"
-```
-
-Assertions check internal invariants:
-- Module structure validity
-- Execution environment consistency
-- Memory bounds
-- Stack pointer validity
-
-**When assertion fails:**
-```text
-Assertion failed: module != NULL (wasm_runtime.c: wasm_runtime_instantiate: 123)
-```
-
-The message shows:
-- Failed condition: `module != NULL`
-- Source file: `wasm_runtime.c`
-- Function: `wasm_runtime_instantiate`
-- Line: `123`
 
 ---
 
-## Troubleshooting
+## Debugging Scenarios
+
+### Scenario 1: WAMR Crashes
+
+**Problem**: iwasm segfaults or assertion fails
+
+**Solution**:
+1. Build with debug symbols and stack dump
+2. Run under GDB or capture core dump
+3. Analyze backtrace to find crash location
+4. Examine variables and memory state
+
+**→ Use**: GDB (see GDB section above)
+
+### Scenario 2: Memory Leak
+
+**Problem**: Memory usage grows over time
+
+**Solution**:
+1. Build with memory profiling
+2. Run with Valgrind memcheck
+3. Analyze "definitely lost" leaks
+4. Find allocation site and add missing free
+
+**→ Use**: Valgrind memcheck (see Valgrind section above)
+
+### Scenario 3: WASM Application Bug
+
+**Problem**: WASM module behaves incorrectly
+
+**Solution**:
+1. Compile WASM with debug info (`-g`)
+2. Build iwasm with debug support
+3. Use lldb source debugging
+4. Step through WASM source code
+
+**→ Use**: lldb source debugging (see [source_debugging_interpreter.md](source_debugging_interpreter.md))
+
+### Scenario 4: Performance Issue
+
+**Problem**: WASM execution is slow
+
+**Solution**:
+1. Profile with Valgrind callgrind
+2. Identify hot functions
+3. Compare execution modes (interpreter vs AOT vs JIT)
+4. Optimize bottlenecks
+
+**→ Use**: Valgrind callgrind (see Valgrind section above)
+
+### Scenario 5: Module Loading Failure
+
+**Problem**: WASM module fails to load or validate
+
+**Solution**:
+1. Enable verbose logging (WAMR_LOG_LEVEL=4)
+2. Check exception message
+3. If unclear, debug with GDB at module loading breakpoints
+
+**→ Use**: Logging + GDB (see sections above)
+
+---
+
+## Build Types for Debugging
+
+### Debug Build
+
+**Purpose**: Full debugging with symbols, no optimizations
+
+**When**: Active development, crash investigation
+
+```bash
+scripts/in-container.sh "cd product-mini/platforms/linux && cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build build-debug"
+```
+
+**Characteristics**:
+- Debug symbols (`-g`)
+- No optimization (`-O0`)
+- Assertions enabled
+- Easy to step through
+- Slower execution
+
+### RelWithDebInfo Build
+
+**Purpose**: Debugging with some optimizations
+
+**When**: Performance issues where Debug build is too slow
+
+```bash
+scripts/in-container.sh "cd product-mini/platforms/linux && cmake -B build-relwithdebinfo -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-relwithdebinfo"
+```
+
+**Characteristics**:
+- Debug symbols (`-g`)
+- Optimizations enabled (`-O2`)
+- Better performance
+- Harder to step through (optimized code)
+
+---
+
+## Common Issues
 
 ### GDB Shows No Debug Symbols
 
-**Problem:** GDB shows "No debugging symbols found".
+**Problem**: GDB shows "No debugging symbols found"
 
-**Solution:** Rebuild with debug symbols:
+**Solution**: Rebuild with `CMAKE_BUILD_TYPE=Debug`
 
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux/build-debug && cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build . --clean-first -j\$(nproc)"
-```
-
-**Verify debug info:**
+**Verify**:
 ```bash
 scripts/in-container.sh "file product-mini/platforms/linux/build-debug/iwasm"
 # Should show "with debug_info, not stripped"
-
-scripts/in-container.sh "objdump -h product-mini/platforms/linux/build-debug/iwasm | grep debug"
-# Should show .debug_* sections
 ```
 
 ### Valgrind Reports False Positives
 
-**Problem:** Valgrind reports leaks or errors in third-party libraries.
+**Problem**: Valgrind reports leaks in third-party libraries
 
-**Solution:** Use suppression file:
+**Solution**: Use suppression file to filter known false positives
 
-1. **Generate suppressions:**
+**Generate suppressions**:
 ```bash
-scripts/in-container.sh "valgrind --leak-check=full --gen-suppressions=all product-mini/platforms/linux/build-debug/iwasm test.wasm 2>&1 > valgrind-full.log"
+scripts/in-container.sh "valgrind --gen-suppressions=all product-mini/platforms/linux/build-debug/iwasm test.wasm 2>&1 | grep -A 10 '^{' > valgrind.supp"
 ```
 
-2. **Extract suppression entries:**
-```bash
-scripts/in-container.sh "grep -A 10 '^{' valgrind-full.log > valgrind.supp"
-```
-
-3. **Use suppression file:**
+**Use suppressions**:
 ```bash
 scripts/in-container.sh "valgrind --suppressions=valgrind.supp --leak-check=full product-mini/platforms/linux/build-debug/iwasm test.wasm"
 ```
 
-### Debugging Optimized Code
-
-**Problem:** Optimized code is hard to debug (variables optimized away, execution jumps).
-
-**Solution:** Use RelWithDebInfo or disable specific optimizations:
-
-```bash
-# RelWithDebInfo (moderate optimization)
-scripts/in-container.sh "cd product-mini/platforms/linux/build && cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build . -j\$(nproc)"
-
-# Or disable optimization for specific file
-scripts/in-container.sh "cd product-mini/platforms/linux/build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS_DEBUG='-g -O0' && cmake --build . -j\$(nproc)"
-```
-
-**In GDB, try:**
-```gdb
-# Print optimized-out variable
-(gdb) print variable
-# If "optimized out", try:
-(gdb) print $rax  # Check register
-(gdb) x/xg $rbp-0x18  # Check stack location
-```
-
-### Container Doesn't Have Debug Capabilities
-
-**Problem:** Valgrind fails with permission errors.
-
-**Solution:** Verify container has proper capabilities:
-
-```bash
-# Check container capabilities
-scripts/in-container.sh "cat /proc/self/status | grep Cap"
-
-# Devcontainer should have:
-# - SYS_PTRACE capability (for GDB)
-# - seccomp=unconfined (for Valgrind)
-```
-
-If missing, rebuild devcontainer:
-1. Open project in VS Code
-2. Press `F1` → "Dev Containers: Rebuild Container"
-
-### Debugging Hangs or Loops Forever
-
-**Problem:** Program hangs and GDB doesn't show where.
-
-**Solution:** Interrupt and examine state:
-
-```bash
-scripts/in-container.sh "gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
-
-```gdb
-(gdb) run
-# Wait for hang, then Ctrl-C
-(gdb) backtrace
-(gdb) info threads
-(gdb) thread apply all backtrace
-```
-
-**For infinite loops, sample periodically:**
-```gdb
-(gdb) run &
-(gdb) shell sleep 1 && kill -INT $!
-(gdb) backtrace
-(gdb) continue &
-(gdb) shell sleep 1 && kill -INT $!
-(gdb) backtrace
-# Repeat to see if same location
-```
-
 ### Core Dump Not Generated
 
-**Problem:** Program crashes but no core file appears.
+**Problem**: Program crashes but no core file
 
-**Solution:** Check core dump configuration:
+**Solution**: Enable core dumps
 
 ```bash
-# Check core dump limit
+# Check limit
 scripts/in-container.sh "ulimit -c"
-# Should show "unlimited"
 
-# Enable core dumps
+# Enable unlimited core dumps
 scripts/in-container.sh "ulimit -c unlimited"
-
-# Check core pattern
-scripts/in-container.sh "cat /proc/sys/kernel/core_pattern"
-# Should show "core" or "core.%p"
-
-# If set to pipe (e.g., "| /usr/share/apport/apport..."), core dumps may be elsewhere
-# Check /var/crash/ or /var/lib/systemd/coredump/
 ```
 
----
+### Optimized Variables Are "Optimized Out"
 
-## Reference
+**Problem**: GDB can't print variables in optimized code
 
-### GDB Cheat Sheet
+**Solution**: Use Debug build or try inspecting registers/stack
 
 ```gdb
-# Breakpoints
-break function_name
-break file.c:123
-break *0x401234
-delete 1
-disable 1
-enable 1
-
-# Execution
-run [args]
-continue
-next
-step
-finish
-until
-kill
-
-# Inspection
-backtrace [full]
-frame N
-info registers
-info locals
-info args
-print variable
-print *pointer
-print array[0]@10
-x/16xb address
-
-# Watchpoints
-watch variable
-rwatch variable
-awatch variable
-watch *0x401234
-
-# Threads
-info threads
-thread N
-thread apply all backtrace
-
-# Core dumps
-gdb program core
+(gdb) print variable
+# If shows "<optimized out>", try:
+(gdb) info registers
+(gdb) x/xg $rbp-0x18
 ```
-
-### Valgrind Tools
-
-| Tool | Purpose | Command |
-|------|---------|---------|
-| Memcheck | Memory errors and leaks | `valgrind --tool=memcheck` (default) |
-| Callgrind | Call graph profiling | `valgrind --tool=callgrind` |
-| Cachegrind | Cache simulation | `valgrind --tool=cachegrind` |
-| Helgrind | Thread error detection | `valgrind --tool=helgrind` |
-| Massif | Heap profiler | `valgrind --tool=massif` |
-
-### Common WAMR Breakpoints
-
-**Module loading:**
-- `wasm_load` - Entry point
-- `load_from_sections` - Section parsing
-- `wasm_loader_prepare_bytecode` - Bytecode prep
-
-**Instantiation:**
-- `wasm_runtime_instantiate` - Create instance
-- `wasm_instantiate` - Internal instantiation
-
-**Execution:**
-- `wasm_runtime_call_wasm` - Call entry point
-- `wasm_interp_call_wasm` - Interpreter dispatch
-- `wasm_interp_call_func_bytecode` - Bytecode execution
-- `aot_call_function` - AOT execution
-
-**Memory:**
-- `wasm_runtime_malloc` - Allocate
-- `wasm_runtime_free` - Free
-- `wasm_enlarge_memory` - Grow memory
-
-**Errors:**
-- `wasm_set_exception` - Set exception
-- `wasm_runtime_set_exception` - Set runtime exception
-
-### External Documentation
-
-- [GDB Documentation](https://sourceware.org/gdb/documentation/)
-- [Valgrind User Manual](https://valgrind.org/docs/manual/manual.html)
-- [WAMR Source-Level Debugging](source_debugging.md)
-- [WAMR Architecture Overview](architecture-overview.md)
 
 ---
 
-**Documentation Version**: 1.0.0  
-**Last Updated**: 2026-04-03  
+## External Resources
+
+- **[GDB Documentation](https://sourceware.org/gdb/documentation/)** - Complete GDB reference
+- **[Valgrind User Manual](https://valgrind.org/docs/manual/manual.html)** - Valgrind tools and options
+- **[AddressSanitizer Wiki](https://github.com/google/sanitizers/wiki/AddressSanitizer)** - ASan documentation
+- **[LLDB Tutorial](https://lldb.llvm.org/use/tutorial.html)** - lldb command reference
+- **[WAMR Source Debugging Blog](https://bytecodealliance.github.io/wamr.dev/blog/wamr-source-debugging-basic/)** - WAMR-specific debugging guide
+
+---
+
+**Documentation Version**: 2.0.0  
+**Last Updated**: 2026-04-04  
 **Maintained By**: WAMR Development Team

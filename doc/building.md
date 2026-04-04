@@ -1,7 +1,8 @@
 # Building WAMR
 
-This guide shows how to build WAMR components inside the devcontainer environment. WAMR consists of two main components:
+This guide explains WAMR's build system architecture, when to use different build configurations, and how to make build decisions. For detailed commands and all build options, see the platform-specific operational guides.
 
+WAMR consists of two main components:
 - **iwasm** - The WebAssembly runtime that executes WASM/AOT modules
 - **wamrc** - The AOT (Ahead-of-Time) compiler that compiles WASM to native code
 
@@ -9,29 +10,13 @@ This guide shows how to build WAMR components inside the devcontainer environmen
 
 ## Prerequisites
 
-Before building WAMR, ensure you have the devcontainer environment set up:
+Before building WAMR:
 
 1. **Read [dev-in-container.md](dev-in-container.md)** for complete devcontainer setup
 2. **Verify container is available**: Run `scripts/in-container.sh --status`
-3. **All build tools are pre-installed** in the devcontainer (CMake, GCC, Clang, LLVM)
+3. All build tools are pre-installed in the devcontainer (CMake, GCC, Clang, LLVM)
 
----
-
-## For AI Agents
-
-**CRITICAL**: All build commands MUST run inside the devcontainer using the `scripts/in-container.sh` wrapper script.
-
-**Pattern for all build commands:**
-```bash
-scripts/in-container.sh "<command>"
-```
-
-The script automatically:
-- Detects or starts the devcontainer
-- Executes commands in the correct environment
-- Returns proper exit codes for error handling
-
-**Never run build commands directly on the host.** The devcontainer provides consistent toolchains and dependencies.
+**For AI Agents**: ALL build commands MUST run inside the devcontainer using `scripts/in-container.sh "<command>"`.
 
 ---
 
@@ -40,604 +25,347 @@ The script automatically:
 Get a working iwasm binary in under 60 seconds:
 
 ```bash
-# Configure and build basic iwasm with interpreter
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_INTERP=1 && cmake --build . -j\$(nproc)"
-
-# Binary location (inside container)
-# /workspaces/ai-thoughts/product-mini/platforms/linux/build/iwasm
-
-# Test it works
-scripts/in-container.sh "product-mini/platforms/linux/build/iwasm --version"
+scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. && cmake --build . -j\$(nproc)"
 ```
 
-**Output location on host:** `product-mini/platforms/linux/build/iwasm` (files sync bidirectionally)
+Binary location: `product-mini/platforms/linux/build/iwasm`
+
+See [product-mini/platforms/linux/README.md](../product-mini/platforms/linux/README.md) for detailed build instructions.
 
 ---
 
-## Building iwasm Runtime
+## Build Types
 
-The iwasm runtime is the executable that runs WebAssembly modules. It supports multiple execution modes and features.
+### What Are Build Types?
 
-### Basic Interpreter Build
+WAMR supports different CMake build types that control optimization levels and debug information.
 
-Smallest, simplest build with just the fast interpreter:
+### Build Types Explained
+
+| Build Type | Purpose | When to Use |
+|------------|---------|-------------|
+| **Release** (default) | Optimized for performance (-O3) | Production, performance testing |
+| **Debug** | Debug symbols, no optimization (-O0, -g) | Debugging WAMR or WASM modules with GDB |
+| **RelWithDebInfo** | Optimized with debug symbols (-O2, -g) | Performance profiling with debugger |
+| **MinSizeRel** | Optimized for size (-Os) | Embedded systems, size-constrained environments |
+
+### Quick Example
 
 ```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_INTERP=1 -DWAMR_BUILD_AOT=0 && cmake --build . -j\$(nproc)"
+# Debug build
+scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build . -j\$(nproc)"
 ```
 
-**Features enabled:**
-- Fast interpreter (default)
-- WASI libc support
-- Builtin libc support
-
-**Binary location:** `product-mini/platforms/linux/build/iwasm`
-
-**Use case:** Quick testing, minimal footprint, embedded systems
+See [product-mini/platforms/linux/README.md](../product-mini/platforms/linux/README.md) for all build type configurations.
 
 ---
 
-### Full-Featured Build
+## Execution Modes
 
-Build with all major features enabled (recommended for development):
+### What Are Execution Modes?
+
+WAMR supports multiple ways to execute WebAssembly code, each with different performance and startup characteristics.
+
+### Execution Modes Comparison
+
+| Mode | Startup Speed | Peak Performance | Memory Usage | Build Complexity |
+|------|---------------|------------------|--------------|------------------|
+| **Classic Interpreter** | Fastest | Baseline (1x) | Lowest | Simple |
+| **Fast Interpreter** | Fast | 2-3x | Low | Simple |
+| **AOT** | N/A (pre-compiled) | 5-10x | Low | Requires wamrc |
+| **Fast JIT** | Fast | 2-5x | Medium | Simple |
+| **LLVM JIT** | Slow | 8-12x | High | Requires LLVM build |
+| **Multi-tier JIT** | Fast | 8-12x (after warmup) | High | Requires LLVM build |
+
+### When to Use Each Mode
+
+**Classic Interpreter**:
+- Minimal memory footprint needed
+- Simplest possible build
+- Embedded systems with size constraints
+
+**Fast Interpreter** (default):
+- General purpose usage
+- Development and testing
+- Good balance of speed and simplicity
+
+**AOT**:
+- Maximum performance required
+- Can pre-compile offline
+- Production deployments
+
+**Fast JIT**:
+- Better performance than interpreter
+- Don't want AOT compilation step
+- Quick prototyping
+
+**LLVM JIT**:
+- Maximum performance without pre-compilation
+- Long-running applications
+- Server-side workloads
+
+**Multi-tier JIT**:
+- Need fast startup AND peak performance
+- Production servers with varied workloads
+- Best of both worlds
+
+### Quick Examples
 
 ```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-full && cd build-full && cmake .. \
-  -DWAMR_BUILD_INTERP=1 \
-  -DWAMR_BUILD_AOT=1 \
-  -DWAMR_BUILD_JIT=1 \
-  -DWAMR_BUILD_LIBC_WASI=1 \
-  -DWAMR_BUILD_LIBC_BUILTIN=1 \
-  -DWAMR_BUILD_FAST_INTERP=1 \
-  -DWAMR_BUILD_MULTI_MODULE=1 \
-  -DWAMR_BUILD_LIB_PTHREAD=1 \
-  -DWAMR_BUILD_SIMD=1 \
-  -DWAMR_BUILD_TAIL_CALL=1 \
-  -DWAMR_BUILD_REF_TYPES=1 \
-  -DWAMR_BUILD_BULK_MEMORY=1 && \
-  cmake --build . -j\$(nproc)"
+# Fast Interpreter (default)
+scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_INTERP=1 && cmake --build ."
+
+# AOT (runtime only - requires wamrc to compile wasm to aot)
+scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_AOT=1 && cmake --build ."
+
+# LLVM JIT (requires LLVM build first)
+scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_JIT=1 && cmake --build ."
 ```
 
-**Features enabled:**
-- Fast interpreter + AOT + LLVM JIT
-- WASI + Builtin libc
-- Multi-module support
-- Pthread support
-- SIMD (128-bit)
-- Tail call optimization
-- Reference types
-- Bulk memory operations
-
-**Binary location:** `product-mini/platforms/linux/build-full/iwasm`
-
-**Use case:** Maximum compatibility, full feature set for testing
-
-**Note:** LLVM JIT requires LLVM libraries. See [Building with LLVM JIT](#building-with-llvm-jit) section.
+See [product-mini/platforms/linux/README.md](../product-mini/platforms/linux/README.md) for detailed mode configurations and examples.
 
 ---
 
-### Debug Build
+## Feature Flags
 
-Build with debug symbols and optimizations disabled for debugging:
+### What Are Feature Flags?
+
+WAMR uses CMake variables to enable/disable runtime features and WebAssembly proposals. Features are organized into categories.
+
+### Feature Categories
+
+**Core Execution** (mode selection):
+- `WAMR_BUILD_INTERP` - Classic/Fast interpreter
+- `WAMR_BUILD_AOT` - AOT runtime support
+- `WAMR_BUILD_JIT` - LLVM JIT compilation
+- `WAMR_BUILD_FAST_JIT` - Fast JIT compilation
+
+**Standard Library**:
+- `WAMR_BUILD_LIBC_BUILTIN` - Minimal built-in libc
+- `WAMR_BUILD_LIBC_WASI` - WASI system interface
+
+**WebAssembly Proposals**:
+- `WAMR_BUILD_SIMD` - 128-bit SIMD instructions
+- `WAMR_BUILD_BULK_MEMORY` - Bulk memory operations
+- `WAMR_BUILD_REF_TYPES` - Reference types
+- `WAMR_BUILD_TAIL_CALL` - Tail call optimization
+- `WAMR_BUILD_MULTI_MODULE` - Module linking
+- `WAMR_BUILD_GC` - Garbage collection
+
+**Threading**:
+- `WAMR_BUILD_LIB_PTHREAD` - POSIX threads
+- `WAMR_BUILD_SHARED_MEMORY` - Shared memory with atomics
+
+**Debugging**:
+- `WAMR_BUILD_DEBUG_INTERP` - Interpreter debugging
+- `WAMR_BUILD_DUMP_CALL_STACK` - Call stack on errors
+
+### Decision Guide for Common Scenarios
+
+| Scenario | Recommended Flags |
+|----------|------------------|
+| **Development/Testing** | INTERP=1, AOT=1, FAST_INTERP=1, LIBC_WASI=1 |
+| **Production (Performance)** | AOT=1, SIMD=1, BULK_MEMORY=1 |
+| **Embedded (Size)** | INTERP=1, LIBC_BUILTIN=1, FAST_INTERP=0 |
+| **Debugging** | INTERP=1, DEBUG_INTERP=1, DUMP_CALL_STACK=1 |
+| **Modern Wasm** | SIMD=1, BULK_MEMORY=1, REF_TYPES=1 |
+
+### Quick Example
 
 ```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. \
-  -DCMAKE_BUILD_TYPE=Debug \
-  -DWAMR_BUILD_INTERP=1 \
-  -DWAMR_BUILD_DUMP_CALL_STACK=1 \
-  -DWAMR_BUILD_DEBUG_INTERP=1 && \
-  cmake --build . -j\$(nproc)"
+# Enable SIMD and bulk memory
+scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_SIMD=1 -DWAMR_BUILD_BULK_MEMORY=1 && cmake --build ."
 ```
 
-**Features enabled:**
-- Debug symbols (-g)
-- No optimizations (-O0)
-- Call stack dumping
-- Source-level debugging support
-
-**Binary location:** `product-mini/platforms/linux/build-debug/iwasm`
-
-**Use case:** Debugging WAMR itself or WASM modules with GDB/Valgrind
-
-**Run under GDB:**
-```bash
-scripts/in-container.sh "gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
-```
+See [doc/build_wamr.md](build_wamr.md) for complete CMake flag reference (all 100+ options).
 
 ---
 
-### Fast JIT Build
+## Platform-Specific Builds
 
-Enable Fast JIT for better performance than interpreter:
+### Supported Platforms
 
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-fastjit && cd build-fastjit && cmake .. \
-  -DWAMR_BUILD_FAST_JIT=1 \
-  -DWAMR_BUILD_INTERP=1 && \
-  cmake --build . -j\$(nproc)"
-```
+WAMR supports building for multiple platforms and architectures. The build process varies by platform.
 
-**Features:**
-- Fast JIT (lightweight JIT with quick startup)
-- Fallback to interpreter for unsupported instructions
-- ~50% of AOT performance with faster cold start
+| Platform | Status | Platform Directory |
+|----------|--------|-------------------|
+| **Linux** | Production | `product-mini/platforms/linux/` |
+| **macOS** | Production | `product-mini/platforms/darwin/` |
+| **Windows** | Production | `product-mini/platforms/windows/` |
+| **Android** | Production | `product-mini/platforms/android/` |
+| **Zephyr** | Production | `product-mini/platforms/zephyr/` |
+| **ESP-IDF** | Production | `product-mini/platforms/esp-idf/` |
+| **VxWorks** | Supported | `product-mini/platforms/vxworks/` |
+| **Linux SGX** | Supported | `product-mini/platforms/linux-sgx/` |
+| **NuttX** | Supported | `product-mini/platforms/nuttx/` |
+| **RT-Thread** | Supported | `product-mini/platforms/rt-thread/` |
 
-**Supported architectures:** x86_64, ARM, AArch64 (limited)
+### When to Use Each Platform
 
-**Binary location:** `product-mini/platforms/linux/build-fastjit/iwasm`
+**Linux**: General development, servers, testing, CI/CD
+**macOS**: Development on Mac hardware
+**Windows**: Windows-based development and deployment
+**Android**: Mobile applications
+**Zephyr/ESP-IDF**: IoT and embedded devices
+**Linux SGX**: Trusted execution environments
+**RTOS platforms**: Real-time embedded systems
 
-**Use case:** Better performance than interpreter without AOT compilation step
+### Cross-Compilation
 
----
-
-### Multi-Tier JIT Build
-
-Combine Fast JIT + LLVM JIT for best of both worlds:
-
-```bash
-# First build LLVM libraries (one-time setup)
-scripts/in-container.sh "cd product-mini/platforms/linux && ./build_llvm.sh"
-
-# Then build iwasm with both JIT engines
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-multi-jit && cd build-multi-jit && cmake .. \
-  -DWAMR_BUILD_FAST_JIT=1 \
-  -DWAMR_BUILD_JIT=1 && \
-  cmake --build . -j\$(nproc)"
-```
-
-**Features:**
-- Fast JIT starts execution immediately
-- LLVM JIT compiles functions in background
-- Automatic tier-up from Fast JIT to LLVM JIT
-- Best cold-start + best peak performance
-
-**Binary location:** `product-mini/platforms/linux/build-multi-jit/iwasm`
-
-**Use case:** Production deployments needing both fast startup and optimal throughput
-
----
-
-### Building with LLVM JIT
-
-LLVM JIT provides the best performance but requires building LLVM libraries first.
-
-**Step 1: Build LLVM libraries (one-time, takes 15-30 minutes)**
+To build for a different architecture, specify the target:
 
 ```bash
-# Build LLVM for x86_64
-scripts/in-container.sh "cd product-mini/platforms/linux && ./build_llvm.sh"
-
-# Or use Python script with ccache for faster rebuilds
-scripts/in-container.sh "cd build-scripts && python3 build_llvm.py --arch X86 --use-ccache"
+scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_TARGET=AARCH64 && cmake --build ."
 ```
 
-**LLVM is cached:** Subsequent builds of iwasm with LLVM JIT are fast. You only build LLVM once.
+**Supported architectures**: X86_64, X86_32, AARCH64, ARM, ARMV7, RISCV64, RISCV32, MIPS, XTENSA
 
-**Step 2: Build iwasm with LLVM JIT enabled**
-
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-jit && cd build-jit && cmake .. \
-  -DWAMR_BUILD_JIT=1 \
-  -DWAMR_BUILD_LAZY_JIT=1 && \
-  cmake --build . -j\$(nproc)"
-```
-
-**Lazy JIT (recommended):** Functions compiled on-demand in background threads for faster startup.
-
-**Eager JIT:** Set `-DWAMR_BUILD_LAZY_JIT=0` to compile all functions upfront (slower startup, faster first execution).
-
-**Binary location:** `product-mini/platforms/linux/build-jit/iwasm`
+See platform-specific READMEs for detailed instructions:
+- Linux: [product-mini/platforms/linux/README.md](../product-mini/platforms/linux/README.md) (to be created)
+- All platforms: [product-mini/README.md](../product-mini/README.md)
 
 ---
 
 ## Building wamrc AOT Compiler
 
-The wamrc compiler converts WASM modules to native AOT (Ahead-of-Time) code for maximum performance.
+### What is wamrc?
 
-### Build wamrc
+wamrc is WAMR's AOT (Ahead-of-Time) compiler that converts WASM modules to native machine code for maximum runtime performance.
+
+### When to Use wamrc
+
+**Use wamrc when:**
+- Maximum performance is required (5-10x faster than interpreter)
+- You can pre-compile offline before deployment
+- Running on production systems
+- Workload is CPU-intensive
+
+**Don't use wamrc when:**
+- Dynamic code loading is needed
+- Build pipeline complexity is a concern
+- Interpreter performance is sufficient
+
+### Quick Example
 
 ```bash
-# First, ensure LLVM is built (same as for LLVM JIT)
+# Build LLVM (one-time setup)
 scripts/in-container.sh "cd wamr-compiler && ./build_llvm.sh"
 
 # Build wamrc
 scripts/in-container.sh "cd wamr-compiler && mkdir -p build && cd build && cmake .. && cmake --build . -j\$(nproc)"
-```
 
-**Binary location:** `wamr-compiler/build/wamrc`
-
-**Verify it works:**
-```bash
-scripts/in-container.sh "wamr-compiler/build/wamrc --version"
-```
-
-### Using wamrc
-
-Compile a WASM module to AOT:
-
-```bash
+# Compile WASM to AOT
 scripts/in-container.sh "wamr-compiler/build/wamrc -o app.aot app.wasm"
-```
 
-**Common wamrc options:**
-
-```bash
-# Target specific architecture
-scripts/in-container.sh "wamr-compiler/build/wamrc --target=aarch64 -o app.aot app.wasm"
-
-# Optimization levels
-scripts/in-container.sh "wamr-compiler/build/wamrc -o app.aot --opt-level=3 app.wasm"
-
-# Enable SIMD
-scripts/in-container.sh "wamr-compiler/build/wamrc -o app.aot --enable-simd app.wasm"
-
-# Size optimization
-scripts/in-container.sh "wamr-compiler/build/wamrc -o app.aot --size-level=3 app.wasm"
-```
-
-### Run AOT Files
-
-AOT files are executed by iwasm just like WASM files:
-
-```bash
-# Build iwasm with AOT support
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_AOT=1 && cmake --build . -j\$(nproc)"
-
-# Run the AOT file
+# Run AOT file with iwasm
 scripts/in-container.sh "product-mini/platforms/linux/build/iwasm app.aot"
 ```
 
-**Performance:** AOT files typically run 5-10x faster than interpreter mode.
+See [wamr-compiler/README.md](../wamr-compiler/README.md) for complete wamrc documentation and all compiler options.
 
 ---
 
-## Common Build Options
+## Build Configuration Decision Guide
 
-Complete reference of CMake options for configuring WAMR builds.
+Use this table to choose the right build configuration for your use case:
 
-### Platform and Architecture
+| Use Case | Build Type | Execution Mode | Key Flags | Trade-offs |
+|----------|------------|----------------|-----------|------------|
+| **Quick Testing** | Release | Fast Interpreter | `INTERP=1, FAST_INTERP=1` | Fast build, moderate performance |
+| **Production (Max Performance)** | Release | AOT | `AOT=1, SIMD=1` | Requires pre-compilation, best performance |
+| **Production (Balanced)** | Release | Multi-tier JIT | `FAST_JIT=1, JIT=1` | Fast startup + peak performance, large binary |
+| **Debugging WAMR** | Debug | Interpreter | `DEBUG_INTERP=1, DUMP_CALL_STACK=1` | Slow, easy to debug |
+| **Embedded (Size)** | MinSizeRel | Classic Interpreter | `INTERP=1, FAST_INTERP=0, LIBC_BUILTIN=1` | Smallest binary, slowest |
+| **Embedded (Speed)** | Release | AOT | `AOT=1, MINI_LOADER=1` | Pre-compile required, fast |
+| **Development** | RelWithDebInfo | Fast Interpreter + AOT | `INTERP=1, AOT=1` | Good balance for dev |
+| **Modern WebAssembly** | Release | Fast Interpreter | `SIMD=1, BULK_MEMORY=1, REF_TYPES=1` | Full WASM feature support |
 
-| Option | Values | Description |
-|--------|--------|-------------|
-| `WAMR_BUILD_PLATFORM` | `linux`, `darwin`, `windows`, etc. | Target platform (default: auto-detected) |
-| `WAMR_BUILD_TARGET` | `X86_64`, `X86_32`, `AARCH64`, `ARM`, `RISCV64`, etc. | Target CPU architecture (default: auto-detected) |
+### Decision Tree
 
-**Example:**
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_PLATFORM=linux -DWAMR_BUILD_TARGET=X86_64 && cmake --build . -j\$(nproc)"
 ```
-
-### Execution Modes
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `WAMR_BUILD_INTERP` | 1/0 | 1 | Enable interpreter mode |
-| `WAMR_BUILD_FAST_INTERP` | 1/0 | 1 | Use fast interpreter (2x faster, 2x memory) |
-| `WAMR_BUILD_AOT` | 1/0 | 1 | Enable AOT mode (run pre-compiled modules) |
-| `WAMR_BUILD_JIT` | 1/0 | 0 | Enable LLVM JIT compiler |
-| `WAMR_BUILD_LAZY_JIT` | 1/0 | 0 | Enable lazy compilation for LLVM JIT |
-| `WAMR_BUILD_FAST_JIT` | 1/0 | 0 | Enable Fast JIT (lightweight) |
-
-**Example - Interpreter only:**
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_INTERP=1 -DWAMR_BUILD_AOT=0 && cmake --build . -j\$(nproc)"
-```
-
-**Example - AOT + Fast JIT:**
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_INTERP=1 -DWAMR_BUILD_AOT=1 -DWAMR_BUILD_FAST_JIT=1 && cmake --build . -j\$(nproc)"
-```
-
-### Libc Support
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `WAMR_BUILD_LIBC_BUILTIN` | 1/0 | 1 | Built-in minimal libc |
-| `WAMR_BUILD_LIBC_WASI` | 1/0 | 1 | WASI libc (system calls, file I/O) |
-| `WAMR_BUILD_LIBC_UVWASI` | 1/0 | 0 | UVWASI implementation (experimental) |
-| `WAMR_BUILD_LIBC_EMCC` | 1/0 | 0 | Emscripten libc compatibility |
-
-**Example - WASI only:**
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_LIBC_WASI=1 -DWAMR_BUILD_LIBC_BUILTIN=0 && cmake --build . -j\$(nproc)"
-```
-
-### WebAssembly Features
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `WAMR_BUILD_SIMD` | 1/0 | 0 | 128-bit SIMD instructions |
-| `WAMR_BUILD_REF_TYPES` | 1/0 | 0 | Reference types proposal |
-| `WAMR_BUILD_BULK_MEMORY` | 1/0 | 0 | Bulk memory operations |
-| `WAMR_BUILD_SHARED_MEMORY` | 1/0 | 0 | Shared memory (atomics) |
-| `WAMR_BUILD_TAIL_CALL` | 1/0 | 0 | Tail call optimization |
-| `WAMR_BUILD_MULTI_MODULE` | 1/0 | 0 | Multi-module linking |
-| `WAMR_BUILD_MEMORY64` | 1/0 | 0 | 64-bit memory addressing |
-| `WAMR_BUILD_EXCE_HANDLING` | 1/0 | 0 | Exception handling proposal |
-| `WAMR_BUILD_GC` | 1/0 | 0 | Garbage collection proposal |
-
-**Example - Enable SIMD + Bulk Memory:**
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_SIMD=1 -DWAMR_BUILD_BULK_MEMORY=1 && cmake --build . -j\$(nproc)"
-```
-
-### Threading and Concurrency
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `WAMR_BUILD_LIB_PTHREAD` | 1/0 | 0 | POSIX threads support |
-| `WAMR_BUILD_LIB_PTHREAD_SEMAPHORE` | 1/0 | 0 | Pthread semaphores |
-| `WAMR_BUILD_LIB_WASI_THREADS` | 1/0 | 0 | WASI threads |
-| `WAMR_BUILD_THREAD_MGR` | 1/0 | 0 | Thread manager |
-
-**Example - Enable pthread:**
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_LIB_PTHREAD=1 -DWAMR_BUILD_THREAD_MGR=1 && cmake --build . -j\$(nproc)"
-```
-
-### Debugging and Profiling
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `CMAKE_BUILD_TYPE` | `Debug`, `Release`, `RelWithDebInfo` | `Release` | Build type with debug info |
-| `WAMR_BUILD_DEBUG_INTERP` | 1/0 | 0 | Enable interpreter debugging |
-| `WAMR_BUILD_DEBUG_AOT` | 1/0 | 0 | Enable AOT debugging |
-| `WAMR_BUILD_DUMP_CALL_STACK` | 1/0 | 0 | Dump call stack on errors |
-| `WAMR_BUILD_MEMORY_PROFILING` | 1/0 | 0 | Memory usage profiling |
-| `WAMR_BUILD_PERF_PROFILING` | 1/0 | 0 | Performance profiling |
-| `WAMR_BUILD_LINUX_PERF` | 1/0 | 0 | Linux perf integration |
-
-**Example - Debug build with call stack:**
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build . -j\$(nproc)"
-```
-
-### Optimization and Performance
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `WAMR_BUILD_MINI_LOADER` | 1/0 | 0 | Minimal WASM loader (smaller footprint) |
-| `WAMR_BUILD_QUICK_AOT_ENTRY` | 1/0 | 0 | Fast AOT function calls |
-| `WAMR_DISABLE_HW_BOUND_CHECK` | 1/0 | 0 | Disable hardware memory bounds checking |
-| `WAMR_BUILD_WASM_CACHE` | 1/0 | 0 | Cache compiled code |
-
-**Warning:** Some options reduce security. Review [build_wamr.md](build_wamr.md) for details.
-
-### Advanced Features
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `WAMR_BUILD_WASI_NN` | 1/0 | 0 | WASI Neural Network API |
-| `WAMR_BUILD_CUSTOM_NAME_SECTION` | 1/0 | 0 | Load custom name sections |
-| `WAMR_BUILD_LOAD_CUSTOM_SECTION` | 1/0 | 0 | Load custom sections |
-| `WAMR_BUILD_SHARED_HEAP` | 1/0 | 0 | Shared heap between modules and host |
-| `WAMR_BUILD_SANITIZER` | 1/0 | 0 | Enable sanitizers (ASan, UBSan) |
-
-**Example - Enable WASI-NN:**
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_WASI_NN=1 && cmake --build . -j\$(nproc)"
+What's your priority?
+├─ Performance
+│  ├─ Can pre-compile? → Use AOT
+│  └─ Need dynamic loading? → Use Multi-tier JIT
+├─ Size
+│  ├─ Minimal footprint? → Classic Interpreter + MinSizeRel
+│  └─ Balanced? → Fast Interpreter + Release
+├─ Debugging
+│  └─ Use Debug build + DEBUG_INTERP=1
+└─ Development
+   └─ Use Fast Interpreter + AOT (both modes)
 ```
 
 ---
 
-## Build Targets
+## Common Build Issues
 
-### Build Specific Target
+### Feature Dependencies
 
-By default, `cmake --build .` builds all targets. To build only iwasm:
+Some CMake flags require others to be enabled:
 
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux/build && cmake --build . --target iwasm -j\$(nproc)"
-```
+| Flag | Requires | Reason |
+|------|----------|--------|
+| `WAMR_BUILD_FAST_JIT=1` | `WAMR_BUILD_INTERP=1` | Fast JIT needs interpreter fallback |
+| `WAMR_BUILD_LIB_PTHREAD=1` | `WAMR_BUILD_THREAD_MGR=1` | Pthread needs thread manager |
+| `WAMR_BUILD_DEBUG_INTERP=1` | `WAMR_BUILD_INTERP=1` | Debug mode for interpreter only |
+| `WAMR_BUILD_LAZY_JIT=1` | `WAMR_BUILD_JIT=1` | Lazy compilation is JIT feature |
 
-### Clean Build
+### LLVM Build Issues
 
-Remove build artifacts and rebuild:
+**Problem**: LLVM build takes too long or fails
 
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && rm -rf build && mkdir build && cd build && cmake .. && cmake --build . -j\$(nproc)"
-```
+**Solutions**:
+- Use ccache: `build_llvm.py --use-ccache`
+- LLVM only needs to be built once (cached for future builds)
+- Pre-built LLVM can be used (see build_wamr.md)
 
-Or clean within build directory:
+**Problem**: CMake can't find LLVM
 
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux/build && cmake --build . --target clean && cmake --build . -j\$(nproc)"
-```
+**Solution**: Ensure LLVM is built before configuring iwasm with JIT enabled
 
-### Parallel Builds
-
-Use `$(nproc)` to build with all available CPU cores (much faster):
-
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux/build && cmake --build . -j\$(nproc)"
-```
-
-Or specify core count explicitly:
-
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux/build && cmake --build . -j8"
-```
-
----
-
-## Verifying Build
-
-### Check Binary Exists
-
-```bash
-# Check iwasm was built
-scripts/in-container.sh "ls -lh product-mini/platforms/linux/build/iwasm"
-
-# Check wamrc was built
-scripts/in-container.sh "ls -lh wamr-compiler/build/wamrc"
-```
-
-### Test Runtime
-
-```bash
-# Check iwasm version
-scripts/in-container.sh "product-mini/platforms/linux/build/iwasm --version"
-
-# Check wamrc version
-scripts/in-container.sh "wamr-compiler/build/wamrc --version"
-```
-
-### Verify Features
-
-Check which features are enabled in your iwasm build:
-
-```bash
-scripts/in-container.sh "product-mini/platforms/linux/build/iwasm --help"
-```
-
-Output shows enabled features like:
-- AOT support
-- JIT support
-- WASI support
-- SIMD support
-
-### Run Simple Test
-
-Create a simple WASM test file and run it:
-
-```bash
-# This requires WASI SDK to compile C to WASM (pre-installed in devcontainer)
-scripts/in-container.sh "echo 'int main() { printf(\"Hello WAMR\\\\n\"); return 0; }' > /tmp/test.c && \
-  /opt/wasi-sdk/bin/clang /tmp/test.c -o /tmp/test.wasm && \
-  product-mini/platforms/linux/build/iwasm /tmp/test.wasm"
-```
-
-Expected output: `Hello WAMR`
-
----
-
-## Troubleshooting
-
-### Build Fails with "LLVM Not Found"
-
-**Problem:** CMake can't find LLVM libraries when `WAMR_BUILD_JIT=1`.
-
-**Solution:** Build LLVM first:
-
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && ./build_llvm.sh"
-# Then retry iwasm build
-```
-
-### Build Fails with "undefined reference to..."
-
-**Problem:** Missing dependencies or incompatible feature combinations.
-
-**Solution:** Check for conflicting options. Some features require others:
-
-- `WAMR_BUILD_FAST_JIT=1` requires `WAMR_BUILD_INTERP=1`
-- `WAMR_BUILD_LIB_PTHREAD=1` requires `WAMR_BUILD_THREAD_MGR=1`
-- `WAMR_BUILD_DEBUG_INTERP=1` requires `WAMR_BUILD_INTERP=1`
-
-**Reset to known good configuration:**
-
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && rm -rf build && mkdir build && cd build && cmake .. && cmake --build . -j\$(nproc)"
-```
-
-### Binary Too Large
-
-**Problem:** iwasm binary is larger than expected.
-
-**Solution:** Disable unused features or use size optimization:
-
-```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. \
-  -DCMAKE_BUILD_TYPE=MinSizeRel \
-  -DWAMR_BUILD_INTERP=1 \
-  -DWAMR_BUILD_AOT=0 \
-  -DWAMR_BUILD_JIT=0 \
-  -DWAMR_BUILD_LIBC_BUILTIN=1 \
-  -DWAMR_BUILD_LIBC_WASI=0 && \
-  cmake --build . -j\$(nproc)"
-```
-
-Use `strip` to remove symbols:
-
-```bash
-scripts/in-container.sh "strip product-mini/platforms/linux/build/iwasm"
-```
-
-### Slow Build Times
-
-**Problem:** LLVM takes too long to build.
-
-**Solution:** Enable ccache for incremental builds:
-
-```bash
-scripts/in-container.sh "cd build-scripts && python3 build_llvm.py --arch X86 --use-ccache"
-```
-
-Or use pre-built LLVM from system packages (not recommended for production):
-
-```bash
-scripts/in-container.sh "apt-cache search llvm-dev"
-```
-
-### Container Not Found
-
-**Problem:** `scripts/in-container.sh` reports "No container found".
-
-**Solution:** See [dev-in-container.md Troubleshooting](dev-in-container.md#troubleshooting) for container issues.
-
-### Permission Errors
-
-**Problem:** Build fails with permission denied errors.
-
-**Solution:** Check file ownership on host:
-
-```bash
-ls -la product-mini/platforms/linux/build/
-
-# Fix ownership if needed
-sudo chown -R $USER:$USER product-mini/platforms/linux/build/
-```
+See [product-mini/platforms/linux/README.md](../product-mini/platforms/linux/README.md) for detailed troubleshooting.
 
 ---
 
 ## Reference
 
-### Complete Documentation
+### Documentation Hierarchy
 
-- **[build_wamr.md](build_wamr.md)** - Complete reference for all CMake options and features
-- **[product-mini/README.md](../product-mini/README.md)** - Platform-specific build instructions
-- **[wamr-compiler/README.md](../wamr-compiler/README.md)** - AOT compiler build details
-- **[dev-in-container.md](dev-in-container.md)** - Devcontainer setup and usage
+**This document (building.md)**: Strategy layer - concepts, decisions, when/why
+
+**Operational guides** (complete commands and options):
+- [doc/build_wamr.md](build_wamr.md) - Complete CMake flag reference (100+ options)
+- [product-mini/README.md](../product-mini/README.md) - Platform build instructions
+- [product-mini/platforms/linux/README.md](../product-mini/platforms/linux/README.md) - Linux operational guide (to be created)
+- [wamr-compiler/README.md](../wamr-compiler/README.md) - AOT compiler details
+- [dev-in-container.md](dev-in-container.md) - Devcontainer setup
 
 ### Build Locations
 
-| Component | Source Path | Build Path | Binary Location |
-|-----------|------------|------------|-----------------|
-| iwasm (Linux) | `product-mini/platforms/linux/` | `product-mini/platforms/linux/build/` | `build/iwasm` |
-| wamrc | `wamr-compiler/` | `wamr-compiler/build/` | `build/wamrc` |
+| Component | Build Directory | Binary Output |
+|-----------|-----------------|---------------|
+| iwasm (Linux) | `product-mini/platforms/linux/build/` | `iwasm` |
+| wamrc | `wamr-compiler/build/` | `wamrc` |
 
-### Default Settings (Linux)
+### Default Configuration (Linux)
 
-When you run `cmake ..` without options in `product-mini/platforms/linux/`:
-
-- **WAMR_BUILD_INTERP**: 1 (enabled)
-- **WAMR_BUILD_FAST_INTERP**: 1 (enabled)
-- **WAMR_BUILD_AOT**: 1 (enabled)
-- **WAMR_BUILD_JIT**: 0 (disabled)
-- **WAMR_BUILD_LIBC_BUILTIN**: 1 (enabled)
-- **WAMR_BUILD_LIBC_WASI**: 1 (enabled)
-- **WAMR_BUILD_TARGET**: Auto-detected (X86_64 or X86_32)
-- **CMAKE_BUILD_TYPE**: Release
+Default flags when running `cmake ..` without options:
+- Interpreter: Fast interpreter enabled
+- AOT: Enabled (runtime support)
+- JIT: Disabled
+- Libc: Both WASI and builtin enabled
+- Build type: Release
 
 ### External Resources
 
 - [WAMR GitHub Repository](https://github.com/bytecodealliance/wasm-micro-runtime)
-- [Introduction to WAMR Running Modes](https://bytecodealliance.github.io/wamr.dev/blog/introduction-to-wamr-running-modes/)
+- [Blog: Introduction to WAMR Running Modes](https://bytecodealliance.github.io/wamr.dev/blog/introduction-to-wamr-running-modes/)
 - [WebAssembly Proposals](https://github.com/WebAssembly/proposals)
 - [WASI Documentation](https://wasi.dev/)
 
 ---
 
-**Documentation Version**: 1.0.0  
-**Last Updated**: 2026-04-03  
+**Documentation Version**: 2.0.0  
+**Last Updated**: 2026-04-04  
 **Maintained By**: WAMR Development Team
