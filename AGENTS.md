@@ -61,6 +61,21 @@ AI agents can effectively assist with these WAMR development activities:
 - **PR reviews and code quality** - Convention compliance, architectural consistency, performance implications
 - **Writing and maintaining tests** - Unit tests, integration tests, following project test patterns
 - **Code refactoring and optimization** - Code cleanup while maintaining architectural integrity
+- **Documentation improvements** - Following progressive loading and "Think once, document once" principles
+
+## Documentation Organization
+
+**IMPORTANT**: WAMR documentation follows progressive loading principles to optimize context window usage.
+
+- **Strategy Layer** (doc/*.md) - Concepts, decisions, when/why to use features
+- **Operations Layer** (component READMEs) - Detailed commands, all options, troubleshooting
+
+**Read [doc/documentation-principles.md](./doc/documentation-principles.md) if you need to**:
+- Write or improve documentation
+- Understand the documentation hierarchy
+- Learn the "Think once, document once" principle
+
+This ensures efficient context loading: read strategy docs for concepts, drill down to operational details only when needed.
 
 ## Getting Started: Read This First
 
@@ -145,6 +160,7 @@ Frequently accessed documentation:
 - [doc/debugging.md](./doc/debugging.md) - Debugging guide
 - [doc/code-quality.md](./doc/code-quality.md) - Code formatting and quality
 - [doc/linting.md](./doc/linting.md) - Pre-commit checklist
+- [doc/documentation-principles.md](./doc/documentation-principles.md) - Documentation organization and best practices
 - [doc/source_debugging.md](./doc/source_debugging.md) - Debugging WAMR applications
 - [doc/build_wasm_app.md](./doc/build_wasm_app.md) - Building Wasm applications
 - [doc/port_wamr.md](./doc/port_wamr.md) - Porting to new platforms
