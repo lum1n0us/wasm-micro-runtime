@@ -43,6 +43,7 @@ The script automatically handles container detection and startup.
 - **Testing:** [doc/testing.md](./doc/testing.md)
 - **Debugging:** [doc/debugging.md](./doc/debugging.md)
 - **Code quality:** [doc/code-quality.md](./doc/code-quality.md)
+- **Pre-commit checks:** [doc/linting.md](./doc/linting.md) ⚠️ **RUN BEFORE COMMITTING**
 
 ### For Human Developers
 
@@ -82,6 +83,7 @@ When fixing a bug, read in this order:
 2. **[doc/building.md](./doc/building.md)** - Build with necessary features
 3. **[doc/debugging.md](./doc/debugging.md)** - Debug the issue
 4. **[doc/testing.md](./doc/testing.md)** - Write tests to verify the fix
+5. **[doc/linting.md](./doc/linting.md)** - ⚠️ Run all pre-commit checks
 
 ### For Adding Features
 
@@ -94,6 +96,7 @@ When implementing new functionality:
 4. **[doc/export_native_api.md](./doc/export_native_api.md)** - If exposing native functions
 5. **[doc/testing.md](./doc/testing.md)** - Write comprehensive tests
 6. **[doc/code-quality.md](./doc/code-quality.md)** - Check code formatting
+7. **[doc/linting.md](./doc/linting.md)** - ⚠️ Run all pre-commit checks
 
 ### For PR Reviews
 
@@ -136,6 +139,12 @@ Frequently accessed documentation:
 
 **Development Workflows:**
 
+- [doc/dev-in-container.md](./doc/dev-in-container.md) - Development in devcontainer
+- [doc/building.md](./doc/building.md) - Building WAMR
+- [doc/testing.md](./doc/testing.md) - Testing strategy and practices
+- [doc/debugging.md](./doc/debugging.md) - Debugging guide
+- [doc/code-quality.md](./doc/code-quality.md) - Code formatting and quality
+- [doc/linting.md](./doc/linting.md) - Pre-commit checklist
 - [doc/source_debugging.md](./doc/source_debugging.md) - Debugging WAMR applications
 - [doc/build_wasm_app.md](./doc/build_wasm_app.md) - Building Wasm applications
 - [doc/port_wamr.md](./doc/port_wamr.md) - Porting to new platforms

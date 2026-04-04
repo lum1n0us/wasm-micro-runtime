@@ -14,6 +14,28 @@ exception. See the LICENSE file for details. This license allows you to freely
 use, modify, distribute and sell your own products based on WAMR.
 Any contributions you make will be under the same license.
 
+Pre-Commit Checks
+===================
+
+**IMPORTANT:** Before committing any code, you must run the following checks:
+
+- ✅ Code format check with clang-format-14
+- ✅ Unit tests must pass
+- ✅ Spec tests must pass (for VMcore changes)
+- ✅ Regression tests must pass (for bug fixes)
+
+**See the complete pre-commit checklist:** [doc/linting.md](./doc/linting.md)
+
+All checks must be run inside the devcontainer using:
+```bash
+./scripts/in-container.sh "<command>"
+```
+
+For detailed instructions, see:
+- [Development in Devcontainer](./doc/dev-in-container.md)
+- [Code Quality Checks](./doc/code-quality.md)
+- [Linting and Pre-Commit Checklist](./doc/linting.md)
+
 Code changes
 ===================
 We Use Github Flow, So All Code Changes Happen Through Pull Requests. Pull requests are the best way to propose changes to the codebase. We actively welcome your pull requests:
