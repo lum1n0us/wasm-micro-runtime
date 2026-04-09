@@ -13714,44 +13714,73 @@ re_scan:
             {
                 uint8 ref_type;
 
-#if WASM_ENABLE_GC == 0
-                CHECK_BUF(p, p_end, 1);
-                ref_type = read_uint8(p);
+#if WASM_ENABLE_GC != 0
+                /*
+                 * GC mode: ref.null followed by heap type (LEB128 signed)
+                 * Parse type index or abstract heap type, validate, and
+                 * push onto type stack.
+                 */
+                if (module->is_gc_enabled) {
+                    int32 heap_type;
+                    pb_read_leb_int32(p, p_end, heap_type);
 
-                if (ref_type != VALUE_TYPE_FUNCREF
-                    && ref_type != VALUE_TYPE_EXTERNREF) {
-                    set_error_buf(error_buf, error_buf_size, "type mismatch");
-                    goto fail;
-                }
-#else
-                pb_read_leb_int32(p, p_end, heap_type);
-                if (heap_type >= 0) {
-                    if (!check_type_index(module, module->type_count, heap_type,
-                                          error_buf, error_buf_size)) {
-                        goto fail;
+                    if (heap_type >= 0) {
+                        /* Type index - boundary check */
+                        if (!check_type_index(module, module->type_count, heap_type,
+                                             error_buf, error_buf_size)) {
+                            goto fail;
+                        }
+                        wasm_set_refheaptype_typeidx(&wasm_ref_type.ref_ht_typeidx,
+                                                     true, heap_type);
+                        ref_type = wasm_ref_type.ref_type;
                     }
-                    wasm_set_refheaptype_typeidx(&wasm_ref_type.ref_ht_typeidx,
-                                                 true, heap_type);
-                    ref_type = wasm_ref_type.ref_type;
-                }
-                else {
-                    if (!wasm_is_valid_heap_type(heap_type)) {
-                        set_error_buf(error_buf, error_buf_size,
-                                      "unknown type");
-                        goto fail;
+                    else {
+                        /* Abstract heap type */
+                        if (!wasm_is_valid_heap_type(heap_type)) {
+                            set_error_buf(error_buf, error_buf_size,
+                                         "unknown heap type");
+                            goto fail;
+                        }
+                        ref_type = (uint8)((int32)0x80 + heap_type);
                     }
-                    ref_type = (uint8)((int32)0x80 + heap_type);
-                }
-#endif /* end of WASM_ENABLE_GC == 0 */
 
 #if WASM_ENABLE_FAST_INTERP != 0
-                PUSH_OFFSET_TYPE(ref_type);
+                    PUSH_OFFSET_TYPE(ref_type);
 #endif
-                PUSH_TYPE(ref_type);
+                    PUSH_TYPE(ref_type);
 
 #if WASM_ENABLE_WAMR_COMPILER != 0
-                module->is_ref_types_used = true;
+                    module->is_ref_types_used = true;
 #endif
+                    break;  // GC mode processing complete
+                }
+#endif /* end of WASM_ENABLE_GC != 0 */
+
+                /*
+                 * Non-GC mode: ref.null followed by single reference type byte
+                 * Validate type is funcref or externref, then push onto type stack.
+                 */
+                {
+                    CHECK_BUF(p, p_end, 1);
+                    ref_type = read_uint8(p);
+
+                    if (ref_type != VALUE_TYPE_FUNCREF
+                        && ref_type != VALUE_TYPE_EXTERNREF) {
+                        set_error_buf_v(error_buf, error_buf_size,
+                                       "type mismatch: ref.null requires funcref (0x70) "
+                                       "or externref (0x6F), got 0x%02X", ref_type);
+                        goto fail;
+                    }
+
+#if WASM_ENABLE_FAST_INTERP != 0
+                    PUSH_OFFSET_TYPE(ref_type);
+#endif
+                    PUSH_TYPE(ref_type);
+
+#if WASM_ENABLE_WAMR_COMPILER != 0
+                    module->is_ref_types_used = true;
+#endif
+                }
                 break;
             }
             case WASM_OP_REF_IS_NULL:
