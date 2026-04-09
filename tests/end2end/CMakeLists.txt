@@ -36,3 +36,4 @@ set(E2E_TEST_ENV
 
 # Add test suites
 add_subdirectory(gc-ref-null)
+add_subdirectory(aot-gc-compatibility)
