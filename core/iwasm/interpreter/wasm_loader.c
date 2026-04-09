@@ -999,66 +999,88 @@ load_init_expr(WASMModule *module, const uint8 **p_buf, const uint8 *buf_end,
             /* ref.null */
             case INIT_EXPR_TYPE_REFNULL_CONST:
             {
-#if WASM_ENABLE_GC == 0
-                uint8 type1;
-                CHECK_BUF(p, p_end, 1);
-                type1 = read_uint8(p);
-                cur_value.ref_index = NULL_REF;
-                if (!push_const_expr_stack(&const_expr_ctx, flag, type1,
-                                           &cur_value,
-#if WASM_ENABLE_EXTENDED_CONST_EXPR != 0
-                                           NULL,
-#endif
-                                           error_buf, error_buf_size))
-                    goto fail;
-#else
+#if WASM_ENABLE_GC != 0
                 /*
-                 * According to the current GC SPEC rules, the heap_type must be
-                 * validated when ref.null is used. It can be an absheaptype,
-                 * or the type C.types[type_idx] must be defined in the context.
-                 */
-                int32 heap_type;
-                read_leb_int32(p, p_end, heap_type);
-                cur_value.gc_obj = NULL_REF;
-
-                /*
-                 * The current check of heap_type can deterministically infer
-                 * the result of the previous condition
-                 * `(!is_byte_a_type(type1) ||
-                 * wasm_is_type_multi_byte_type(type1))`. Therefore, the
-                 * original condition is redundant and has been removed.
+                 * GC mode: ref.null is followed by a heap type (LEB128 signed)
+                 * - Non-negative values are type indices
+                 * - Negative values are abstract heap types
                  *
-                 * This logic is consistent with the implementation of the
-                 * `WASM_OP_REF_NULL` case in the `wasm_loader_prepare_bytecode`
-                 * function.
+                 * This encoding is ambiguous with non-GC mode, where ref.null
+                 * is followed by a single byte (0x70 funcref or 0x6F externref).
+                 * The module's is_gc_enabled flag determines interpretation.
                  */
+                if (module->is_gc_enabled) {
+                    int32 heap_type;
+                    read_leb_int32(p, p_end, heap_type);
+                    cur_value.gc_obj = NULL_REF;
 
-                if (heap_type >= 0) {
-                    if (!check_type_index(module, module->type_count, heap_type,
-                                          error_buf, error_buf_size)) {
-                        goto fail;
-                    }
-                    wasm_set_refheaptype_typeidx(&cur_ref_type.ref_ht_typeidx,
-                                                 true, heap_type);
-                    if (!push_const_expr_stack(&const_expr_ctx, flag,
-                                               cur_ref_type.ref_type,
-                                               &cur_ref_type, 0, &cur_value,
+                    if (heap_type >= 0) {
+                        /* Type index - must be in range [0, type_count) */
+                        if (!check_type_index(module, module->type_count, heap_type,
+                                             error_buf, error_buf_size)) {
+                            goto fail;
+                        }
+                        wasm_set_refheaptype_typeidx(&cur_ref_type.ref_ht_typeidx,
+                                                     true, heap_type);
+                        if (!push_const_expr_stack(&const_expr_ctx, flag,
+                                                   cur_ref_type.ref_type,
+                                                   &cur_ref_type, 0, &cur_value,
 #if WASM_ENABLE_EXTENDED_CONST_EXPR != 0
-                                               NULL,
+                                                   NULL,
 #endif
-                                               error_buf, error_buf_size))
-                        goto fail;
+                                                   error_buf, error_buf_size))
+                            goto fail;
+                    }
+                    else {
+                        /* Abstract heap type - validate against known types */
+                        if (!wasm_is_valid_heap_type(heap_type)) {
+                            set_error_buf_v(error_buf, error_buf_size,
+                                           "unknown heap type %d", heap_type);
+                            goto fail;
+                        }
+                        cur_ref_type.ref_ht_common.ref_type =
+                            (uint8)((int32)0x80 + heap_type);
+                        if (!push_const_expr_stack(&const_expr_ctx, flag,
+                                                   cur_ref_type.ref_type, NULL, 0,
+                                                   &cur_value,
+#if WASM_ENABLE_EXTENDED_CONST_EXPR != 0
+                                                   NULL,
+#endif
+                                                   error_buf, error_buf_size))
+                            goto fail;
+                    }
+#if WASM_ENABLE_WAMR_COMPILER != 0
+                    module->is_ref_types_used = true;
+#endif
+                    break;  // GC mode processing complete
                 }
-                else {
-                    if (!wasm_is_valid_heap_type(heap_type)) {
+#endif
+
+                /*
+                 * Non-GC mode: ref.null is followed by a single reference type byte
+                 * - 0x70: funcref
+                 * - 0x6F: externref
+                 * Any other value is a type mismatch error.
+                 *
+                 * This code path is used when:
+                 * - WASM_ENABLE_GC=0 (always)
+                 * - WASM_ENABLE_GC=1 but is_gc_enabled=false (runtime selection)
+                 */
+                {
+                    uint8 type1;
+                    CHECK_BUF(p, p_end, 1);
+                    type1 = read_uint8(p);
+                    cur_value.ref_index = NULL_REF;
+
+                    if (type1 != VALUE_TYPE_FUNCREF
+                        && type1 != VALUE_TYPE_EXTERNREF) {
                         set_error_buf_v(error_buf, error_buf_size,
-                                        "unknown type %d", heap_type);
+                                       "type mismatch: ref.null requires funcref (0x70) "
+                                       "or externref (0x6F), got 0x%02X", type1);
                         goto fail;
                     }
-                    cur_ref_type.ref_ht_common.ref_type =
-                        (uint8)((int32)0x80 + heap_type);
-                    if (!push_const_expr_stack(&const_expr_ctx, flag,
-                                               cur_ref_type.ref_type, NULL, 0,
+
+                    if (!push_const_expr_stack(&const_expr_ctx, flag, type1,
                                                &cur_value,
 #if WASM_ENABLE_EXTENDED_CONST_EXPR != 0
                                                NULL,
@@ -1066,7 +1088,6 @@ load_init_expr(WASMModule *module, const uint8 **p_buf, const uint8 *buf_end,
                                                error_buf, error_buf_size))
                         goto fail;
                 }
-#endif
 #if WASM_ENABLE_WAMR_COMPILER != 0
                 module->is_ref_types_used = true;
 #endif
