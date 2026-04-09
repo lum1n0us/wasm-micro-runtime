@@ -7898,18 +7898,40 @@ wasm_loader_find_block_addr(WASMExecEnv *exec_env, BlockAddr *block_addr_cache,
                 break;
             case WASM_OP_REF_NULL:
             {
-                u8 = read_uint8(p); /* type */
-                if (is_byte_a_type(u8)) {
 #if WASM_ENABLE_GC != 0
-                    if (wasm_is_type_multi_byte_type(u8)) {
-                        /* the possible extra bytes of GC ref type have been
-                           modified to OP_NOP, no need to resolve them again */
-                    }
-#endif
+                /*
+                 * GC mode: ref.null followed by LEB128 heap type
+                 * Need to skip variable-length LEB128 encoding
+                 */
+                WASMModuleInstance *module_inst =
+                    (WASMModuleInstance *)exec_env->module_inst;
+                WASMModule *module = module_inst->module;
+
+                if (module->is_gc_enabled) {
+                    skip_leb_int32(p, p_end);  // Skip heap type
+                    break;
                 }
-                else {
-                    p--;
-                    skip_leb_uint32(p, p_end);
+#endif
+                /*
+                 * Non-GC mode: ref.null followed by single byte
+                 * Skip the single type byte (funcref or externref)
+                 */
+                {
+                    u8 = read_uint8(p); /* type */
+                    if (is_byte_a_type(u8)) {
+#if WASM_ENABLE_GC != 0
+                        if (wasm_is_type_multi_byte_type(u8)) {
+                            /* The possible extra bytes of GC ref type have been
+                               modified to OP_NOP, no need to resolve them again */
+                        }
+#endif
+                    }
+                    else {
+                        /* Not a valid type byte, backup and try LEB128
+                           (should not happen in well-formed non-GC modules) */
+                        p--;
+                        skip_leb_uint32(p, p_end);
+                    }
                 }
                 break;
             }
