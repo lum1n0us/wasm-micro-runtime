@@ -1081,6 +1081,9 @@ load_init_expr(WASMModule *module, const uint8 **p_buf, const uint8 *buf_end,
                     }
 
                     if (!push_const_expr_stack(&const_expr_ctx, flag, type1,
+#if WASM_ENABLE_GC != 0
+                                               NULL, 0,
+#endif
                                                &cur_value,
 #if WASM_ENABLE_EXTENDED_CONST_EXPR != 0
                                                NULL,
