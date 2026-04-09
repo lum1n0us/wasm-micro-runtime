@@ -6928,9 +6928,24 @@ WASMModule *
 wasm_loader_load_from_sections(WASMSection *section_list, const LoadArgs *args,
                                char *error_buf, uint32 error_buf_size)
 {
+#if WASM_ENABLE_GC == 0
+    /* Reject GC mode if not compiled with GC support */
+    if (args && args->enable_gc) {
+        set_error_buf(error_buf, error_buf_size,
+                     "GC mode requested but WAMR was compiled without "
+                     "WASM_ENABLE_GC support. Rebuild with -DWASM_ENABLE_GC=1");
+        return NULL;
+    }
+#endif
+
     WASMModule *module = create_module("", error_buf, error_buf_size);
     if (!module)
         return NULL;
+
+#if WASM_ENABLE_GC != 0
+    /* Store GC mode from LoadArgs for use during parsing */
+    module->is_gc_enabled = (args && args->enable_gc);
+#endif
 
     if (!load_from_sections(module, section_list, false, true, false, error_buf,
                             error_buf_size)) {
@@ -7274,10 +7289,25 @@ wasm_loader_load(uint8 *buf, uint32 size,
 #endif
                  const LoadArgs *args, char *error_buf, uint32 error_buf_size)
 {
+#if WASM_ENABLE_GC == 0
+    /* Reject GC mode if not compiled with GC support */
+    if (args && args->enable_gc) {
+        set_error_buf(error_buf, error_buf_size,
+                     "GC mode requested but WAMR was compiled without "
+                     "WASM_ENABLE_GC support. Rebuild with -DWASM_ENABLE_GC=1");
+        return NULL;
+    }
+#endif
+
     WASMModule *module = create_module(args->name, error_buf, error_buf_size);
     if (!module) {
         return NULL;
     }
+
+#if WASM_ENABLE_GC != 0
+    /* Store GC mode from LoadArgs for use during parsing */
+    module->is_gc_enabled = (args && args->enable_gc);
+#endif
 
 #if WASM_ENABLE_DEBUG_INTERP != 0 || WASM_ENABLE_FAST_JIT != 0 \
     || WASM_ENABLE_DUMP_CALL_STACK != 0 || WASM_ENABLE_JIT != 0
