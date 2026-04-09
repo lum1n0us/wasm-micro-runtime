@@ -181,3 +181,11 @@ install (TARGETS vmlib
 )
 
 install_iwasm_package ()
+
+# Enable end-to-end tests
+option(WAMR_BUILD_E2E_TEST "Build end-to-end tests" ON)
+
+if(WAMR_BUILD_E2E_TEST)
+    enable_testing()
+    add_subdirectory(tests/end2end)
+endif()
