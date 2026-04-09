@@ -1070,7 +1070,7 @@ load_init_expr(WASMModule *module, const uint8 **p_buf, const uint8 *buf_end,
                     uint8 type1;
                     CHECK_BUF(p, p_end, 1);
                     type1 = read_uint8(p);
-                    cur_value.ref_index = NULL_REF;
+                    cur_value.ref_index = UINT32_MAX;
 
                     if (type1 != VALUE_TYPE_FUNCREF
                         && type1 != VALUE_TYPE_EXTERNREF) {
