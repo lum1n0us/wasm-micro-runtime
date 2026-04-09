@@ -35,4 +35,4 @@ set(E2E_TEST_ENV
 )
 
 # Add test suites
-# add_subdirectory(gc-ref-null)  # Will be created in Task 4
+add_subdirectory(gc-ref-null)
