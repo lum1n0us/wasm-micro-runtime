@@ -275,6 +275,27 @@ typedef struct LoadArgs {
        wasm_runtime_load_ex has to be followed by a wasm_runtime_resolve_symbols
        call */
     bool no_resolve;
+
+    /**
+     * Enable GC mode for parsing ref.null and related opcodes.
+     *
+     * Default: false (non-GC mode)
+     *
+     * In non-GC mode, ref.null accepts only:
+     *   - 0x70 (funcref)
+     *   - 0x6F (externref)
+     *
+     * In GC mode, ref.null accepts:
+     *   - Type indices (>= 0)
+     *   - Abstract heap types (< 0)
+     *
+     * Note: This field only takes effect when WAMR is compiled with
+     * WASM_ENABLE_GC=1. If set to true when compiled without GC support,
+     * module loading will fail with an error message.
+     *
+     * @see WASM_ENABLE_GC compile option
+     */
+    bool enable_gc;
     /* TODO: more fields? */
 } LoadArgs;
 #endif /* LOAD_ARGS_OPTION_DEFINED */
