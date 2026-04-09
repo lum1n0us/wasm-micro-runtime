@@ -184,7 +184,10 @@ print_help()
     printf("  --enable-memory-profiling Enable memory usage profiling\n");
     printf("  --xip                     A shorthand of --enable-indirect-mode --disable-llvm-intrinsics\n");
     printf("  --enable-indirect-mode    Enable call function through symbol table but not direct call\n");
-    printf("  --enable-gc               Enable GC (Garbage Collection) feature\n");
+    printf("  --enable-gc               Enable GC mode: parse ref.null as GC-encoded\n");
+    printf("                            (type indices/abstract heap types) instead of\n");
+    printf("                            simple funcref/externref. Only use this for\n");
+    printf("                            modules compiled with GC proposal support.\n");
     printf("  --disable-llvm-intrinsics Disable the LLVM built-in intrinsics\n");
     printf("  --enable-builtin-intrinsics=<flags>\n");
     printf("                            Enable the specified built-in intrinsics, it will override the default\n");
@@ -837,8 +840,14 @@ main(int argc, char *argv[])
     }
 
     /* load WASM module */
-    if (!(wasm_module = wasm_runtime_load(wasm_file, wasm_file_size, error_buf,
-                                          sizeof(error_buf)))) {
+    LoadArgs load_args = { 0 };
+    load_args.name = "";
+    load_args.wasm_binary_freeable = false;
+    load_args.enable_gc = option.enable_gc;  // Pass CLI flag
+
+    if (!(wasm_module = wasm_runtime_load_ex(wasm_file, wasm_file_size,
+                                             &load_args,
+                                             error_buf, sizeof(error_buf)))) {
         printf("%s\n", error_buf);
         goto fail2;
     }
