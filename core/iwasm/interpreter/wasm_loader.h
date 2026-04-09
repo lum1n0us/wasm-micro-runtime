@@ -34,14 +34,15 @@ wasm_loader_load(uint8 *buf, uint32 size,
  * Load a WASM module from a specified WASM section list.
  *
  * @param section_list the section list which contains each section data
+ * @param args load arguments
  * @param error_buf output of the exception info
  * @param error_buf_size the size of the exception string
  *
  * @return return WASM module loaded, NULL if failed
  */
 WASMModule *
-wasm_loader_load_from_sections(WASMSection *section_list, char *error_buf,
-                               uint32 error_buf_size);
+wasm_loader_load_from_sections(WASMSection *section_list, const LoadArgs *args,
+                               char *error_buf, uint32 error_buf_size);
 
 /**
  * Unload a WASM module.

@@ -6925,8 +6925,8 @@ record_fast_op(WASMModule *module, uint8 *pos, uint8 orig_op, char *error_buf,
 #endif
 
 WASMModule *
-wasm_loader_load_from_sections(WASMSection *section_list, char *error_buf,
-                               uint32 error_buf_size)
+wasm_loader_load_from_sections(WASMSection *section_list, const LoadArgs *args,
+                               char *error_buf, uint32 error_buf_size)
 {
     WASMModule *module = create_module("", error_buf, error_buf_size);
     if (!module)

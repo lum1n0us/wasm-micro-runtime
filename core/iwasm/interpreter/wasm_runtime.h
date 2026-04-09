@@ -541,8 +541,8 @@ wasm_load(uint8 *buf, uint32 size,
           const LoadArgs *args, char *error_buf, uint32 error_buf_size);
 
 WASMModule *
-wasm_load_from_sections(WASMSection *section_list, char *error_buf,
-                        uint32 error_buf_size);
+wasm_load_from_sections(WASMSection *section_list, const LoadArgs *args,
+                        char *error_buf, uint32 error_buf_size);
 
 void
 wasm_unload(WASMModule *module);

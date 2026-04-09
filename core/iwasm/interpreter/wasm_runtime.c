@@ -70,10 +70,10 @@ wasm_load(uint8 *buf, uint32 size,
 }
 
 WASMModule *
-wasm_load_from_sections(WASMSection *section_list, char *error_buf,
-                        uint32 error_buf_size)
+wasm_load_from_sections(WASMSection *section_list, const LoadArgs *args,
+                        char *error_buf, uint32 error_buf_size)
 {
-    return wasm_loader_load_from_sections(section_list, error_buf,
+    return wasm_loader_load_from_sections(section_list, args, error_buf,
                                           error_buf_size);
 }
 

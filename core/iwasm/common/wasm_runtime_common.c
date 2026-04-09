@@ -1577,7 +1577,7 @@ wasm_runtime_load_from_sections(WASMSection *section_list, bool is_aot,
     if (!is_aot) {
 #if WASM_ENABLE_INTERP != 0
         module_common = (WASMModuleCommon *)wasm_load_from_sections(
-            section_list, error_buf, error_buf_size);
+            section_list, NULL, error_buf, error_buf_size);
         if (!module_common) {
             LOG_DEBUG("WASM module load failed from sections");
             return NULL;
