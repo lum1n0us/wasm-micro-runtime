@@ -1021,6 +1021,12 @@ struct WASMModule {
 #endif
 
 #if WASM_ENABLE_GC != 0
+    /* Whether this module uses GC encoding for ref.null and related opcodes.
+     * Set from LoadArgs.enable_gc during module loading.
+     * Controls parsing behavior: GC mode uses LEB128 heap types,
+     * non-GC mode uses single-byte funcref/externref. */
+    bool is_gc_enabled;
+
     /* Ref types hash set */
     HashMap *ref_type_set;
     struct WASMRttType **rtt_types;
