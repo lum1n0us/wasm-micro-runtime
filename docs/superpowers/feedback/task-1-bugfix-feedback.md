@@ -1,0 +1,5 @@
+- 新增 end2end 测试。并行于现有测试体系
+- 补充 design-limitations.md 或者在 architecture-overview.md 中新增 design-limitations 节，放入关于 GC 的说明
+  - 如果 iwasm 编译时没有开启 Wasm-GC，则 wamrc 不能使用 --enable-gc
+  - 如果 iwasm 编译时开启了 Wasm-GC，则 wamrc 必须使用 --enable-gc
+  - 其余情况，出错是可预期的
