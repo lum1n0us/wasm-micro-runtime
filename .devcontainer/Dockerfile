@@ -33,6 +33,12 @@ RUN wget -c --progress=dot:giga https://github.com/WebAssembly/wabt/releases/dow
   && tar xf /tmp/wabt-${WABT_VER}-ubuntu-20.04.tar.gz -C /opt \
   && ln -sf /opt/wabt-${WABT_VER} /opt/wabt
 
+# Install wasm-tools
+ARG WASM_TOOLS_VER=1.243.0
+RUN wget -c --progress=dot:giga https://github.com/bytecodealliance/wasm-tools/releases/download/v${WASM_TOOLS_VER}/wasm-tools-${WASM_TOOLS_VER}-x86_64-linux.tar.gz -P /tmp
+RUN tar xzf /tmp/wasm-tools-${WASM_TOOLS_VER}-x86_64-linux.tar.gz -C /opt\
+  && ln -sf /opt/wasm-tools-${WASM_TOOLS_VER}-x86_64-linux/wasm-tools /usr/local/bin/wasm-tools
+
 # set path
 
 # clean up
