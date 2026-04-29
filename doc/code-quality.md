@@ -8,23 +8,17 @@ This guide explains WAMR's code quality standards, what they mean, why they matt
 
 ## Prerequisites
 
-All code quality tools are pre-installed in the devcontainer. Before using quality tools:
+All code quality tools are pre-installed in the devcontainer:
 
-- **Read [dev-in-container.md](dev-in-container.md)** - All quality commands run in the container
-- **Verify container**: Run `scripts/in-container.sh --status`
+1. **Read [AGENTS.md](../AGENTS.md)** - Platform-specific execution requirements
+2. **Read [dev-in-container.md](dev-in-container.md)** - Container technical details
 
----
-
-## For AI Agents
-
-**CRITICAL**: ALL code quality commands MUST run inside the devcontainer using the `scripts/in-container.sh` wrapper.
+> **Note**: All commands in this guide show raw syntax. See [AGENTS.md](../AGENTS.md) for platform-specific execution.
 
 **Before claiming work complete:**
 1. Format check passes (`clang-format-14 --dry-run --Werror`)
 2. Build succeeds with no warnings
 3. Relevant tests pass
-
-**Never commit if checks fail.** Fix issues first.
 
 **→ See [linting.md](linting.md) for complete pre-commit workflow**
 
@@ -86,10 +80,10 @@ char *ptr;
 
 ```bash
 # Check formatting
-scripts/in-container.sh "clang-format-14 --dry-run --Werror file.c"
+clang-format-14 --dry-run --Werror file.c
 
 # Auto-fix
-scripts/in-container.sh "clang-format-14 -i file.c"
+clang-format-14 -i file.c
 ```
 
 **→ See [linting.md](linting.md) for complete formatting workflow**
@@ -120,7 +114,7 @@ Compiler warnings alert you to potential bugs and questionable code patterns. WA
 ### Quick Example
 
 ```bash
-scripts/in-container.sh "cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build"
+cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build
 ```
 
 **→ See [linting.md](linting.md) for fixing common warnings**
@@ -161,7 +155,7 @@ Static analysis examines code without executing it, finding bugs through deep in
 
 ```bash
 # Analyze build
-scripts/in-container.sh "scan-build cmake --build build"
+scan-build cmake --build build
 ```
 
 **→ See [linting.md](linting.md) for detailed analysis workflows**
@@ -185,7 +179,7 @@ Prevents bugs (undefined variables), ensures consistency (PEP 8), maintains read
 Before committing changes to `ci/`, `tests/`, or new Python utilities.
 
 ```bash
-scripts/in-container.sh "pylint ci/coding_guidelines_check.py"
+pylint ci/coding_guidelines_check.py
 ```
 
 **→ See [linting.md](linting.md) for complete workflow**
@@ -212,10 +206,10 @@ Prevents critical bugs: word splitting from unquoted variables, deleting wrong d
 
 ### When Required
 
-Before committing: build scripts, test scripts, `scripts/in-container.sh`, new utilities.
+Before committing: build scripts, test scripts, `devcontainer exec`, new utilities.
 
 ```bash
-scripts/in-container.sh "shellcheck scripts/in-container.sh"
+shellcheck devcontainer exec
 ```
 
 **→ See [linting.md](linting.md) for complete workflow**
@@ -380,7 +374,7 @@ Every PR runs: formatting, build (multiple configs), warnings check, unit tests,
 ### Reproducing Failures
 
 1. Check CI logs for failing command
-2. Run same command via `scripts/in-container.sh`
+2. Run same command via `devcontainer exec`
 3. Fix issue, verify, push
 
 **Devcontainer ensures local = CI environment.**
@@ -405,22 +399,22 @@ Every PR runs: formatting, build (multiple configs), warnings check, unit tests,
 
 ```bash
 # Format check (dry run)
-scripts/in-container.sh "clang-format-14 --dry-run --Werror <file>"
+clang-format-14 --dry-run --Werror <file>
 
 # Auto-fix formatting
-scripts/in-container.sh "clang-format-14 -i <file>"
+clang-format-14 -i <file>
 
 # Build with strict warnings
-scripts/in-container.sh "cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build"
+cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build
 
 # Check shell script
-scripts/in-container.sh "shellcheck <script.sh>"
+shellcheck <script.sh>
 
 # Lint Python
-scripts/in-container.sh "pylint <script.py>"
+pylint <script.py>
 
 # Static analysis
-scripts/in-container.sh "scan-build cmake --build build"
+scan-build cmake --build build
 ```
 
 ### Quality Standards Summary

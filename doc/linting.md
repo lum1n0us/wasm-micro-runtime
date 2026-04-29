@@ -31,23 +31,14 @@ All checks documented here run automatically in the CI pipeline. When CI fails, 
 
 ---
 
-## Container Requirement
+## Prerequisites
 
-**CRITICAL**: All code quality checks, builds, and tests MUST run inside the devcontainer to ensure environment consistency.
+Before running pre-commit checks:
 
-### Using the Container Wrapper
+1. **Read [AGENTS.md](../AGENTS.md)** - Platform-specific execution requirements
+2. **Read [dev-in-container.md](dev-in-container.md)** - Container technical details
 
-All commands in this document use the wrapper script:
-
-```bash
-./scripts/in-container.sh "<command>"
-```
-
-This script automatically:
-- Detects existing devcontainers
-- Starts the container if not running
-- Executes commands in the correct environment
-- Returns proper exit codes for error handling
+> **Note**: All commands in this guide show raw syntax. See [AGENTS.md](../AGENTS.md) for platform-specific execution.
 
 **Detailed guide**: [doc/dev-in-container.md](dev-in-container.md)
 
@@ -90,7 +81,7 @@ WAMR uses **clang-format-14** to enforce consistent code formatting according to
 Check if a file needs formatting (dry-run mode):
 
 ```bash
-./scripts/in-container.sh "clang-format-14 --dry-run --Werror core/iwasm/common/wasm_runtime_common.c"
+./clang-format-14 --dry-run --Werror core/iwasm/common/wasm_runtime_common.c
 ```
 
 **Expected output:**
@@ -102,7 +93,7 @@ Check if a file needs formatting (dry-run mode):
 Check all C/C++ files in a directory:
 
 ```bash
-./scripts/in-container.sh "find core/iwasm/interpreter -name '*.c' -o -name '*.h' | xargs clang-format-14 --dry-run --Werror"
+./find core/iwasm/interpreter -name '*.c' -o -name '*.h' | xargs clang-format-14 --dry-run --Werror
 ```
 
 ### Check Git Staged Changes
@@ -110,7 +101,7 @@ Check all C/C++ files in a directory:
 Check only files you're about to commit:
 
 ```bash
-./scripts/in-container.sh "git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 --dry-run --Werror"
+./git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 --dry-run --Werror
 ```
 
 ### Check All Modified Files
@@ -118,7 +109,7 @@ Check only files you're about to commit:
 Check all files changed in your current branch compared to main:
 
 ```bash
-./scripts/in-container.sh "git diff main...HEAD --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 --dry-run --Werror"
+./git diff main...HEAD --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 --dry-run --Werror
 ```
 
 ### Auto-Fix Formatting
@@ -127,13 +118,13 @@ Apply formatting automatically to fix issues:
 
 ```bash
 # Fix single file
-./scripts/in-container.sh "clang-format-14 -i core/iwasm/common/wasm_runtime_common.c"
+./clang-format-14 -i core/iwasm/common/wasm_runtime_common.c
 
 # Fix all staged files
-./scripts/in-container.sh "git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 -i"
+./git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 -i
 
 # Fix all modified files in branch
-./scripts/in-container.sh "git diff main...HEAD --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 -i"
+./git diff main...HEAD --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 -i
 ```
 
 After auto-fixing, review the changes with `git diff` before committing.
@@ -143,7 +134,7 @@ After auto-fixing, review the changes with `git diff` before committing.
 The CI pipeline runs format checks like this:
 
 ```bash
-./scripts/in-container.sh "git diff --name-only HEAD~1 | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 --dry-run --Werror"
+./git diff --name-only HEAD~1 | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 --dry-run --Werror
 ```
 
 ### Troubleshooting Format Issues
@@ -152,17 +143,17 @@ The CI pipeline runs format checks like this:
 
 ```bash
 # Verify clang-format-14 is installed
-./scripts/in-container.sh "which clang-format-14"
+./which clang-format-14
 
 # Check version
-./scripts/in-container.sh "clang-format-14 --version"
+./clang-format-14 --version
 ```
 
 **Issue**: Format check fails but you see no diff
 
 ```bash
 # Run without --Werror to see the actual diff
-./scripts/in-container.sh "clang-format-14 --dry-run core/iwasm/common/wasm_runtime_common.c"
+./clang-format-14 --dry-run core/iwasm/common/wasm_runtime_common.c
 ```
 
 **Issue**: Some files should not be formatted
@@ -170,7 +161,7 @@ The CI pipeline runs format checks like this:
 Exclude third-party code, generated files, or special cases using `grep -v`:
 
 ```bash
-./scripts/in-container.sh "git diff --cached --name-only | grep '\.\(c\|h\)$' | grep -v 'third_party/' | xargs -r clang-format-14 --dry-run --Werror"
+./git diff --cached --name-only | grep '\.\(c\|h\)$' | grep -v 'third_party/' | xargs -r clang-format-14 --dry-run --Werror
 ```
 
 ---
@@ -185,10 +176,10 @@ First, configure and build WAMR with unit tests enabled:
 
 ```bash
 # Configure with unit tests
-./scripts/in-container.sh "cmake -B build -DWAMR_BUILD_UNIT_TEST=1"
+./cmake -B build -DWAMR_BUILD_UNIT_TEST=1
 
 # Build
-./scripts/in-container.sh "cmake --build build -j$(nproc)"
+./cmake --build build -j$(nproc)
 ```
 
 ### Running All Unit Tests
@@ -196,7 +187,7 @@ First, configure and build WAMR with unit tests enabled:
 Run the entire unit test suite:
 
 ```bash
-./scripts/in-container.sh "cd build && ctest --output-on-failure"
+./cd build && ctest --output-on-failure
 ```
 
 **Expected output:**
@@ -216,10 +207,10 @@ Run tests matching a pattern:
 
 ```bash
 # Run specific test by name
-./scripts/in-container.sh "cd build && ctest -R test_wasm_runtime --verbose"
+./cd build && ctest -R test_wasm_runtime --verbose
 
 # Run tests for a specific component
-./scripts/in-container.sh "cd build && ctest -R 'test_(runtime|memory)' --verbose"
+./cd build && ctest -R 'test_(runtime|memory)' --verbose
 ```
 
 ### Running Tests with Verbose Output
@@ -227,7 +218,7 @@ Run tests matching a pattern:
 For debugging test failures:
 
 ```bash
-./scripts/in-container.sh "cd build && ctest --verbose --output-on-failure"
+./cd build && ctest --verbose --output-on-failure
 ```
 
 ### Interpreting Test Results
@@ -260,7 +251,7 @@ Check the detailed output to see assertion failures, crashes, or timeouts.
 
 ```bash
 # Increase timeout for specific test
-./scripts/in-container.sh "cd build && ctest -R test_name --timeout 300"
+./cd build && ctest -R test_name --timeout 300
 ```
 
 **Issue**: Tests pass locally but fail in CI
@@ -291,25 +282,25 @@ The spec test suite is in `tests/wamr-test-suites/`. Tests run against different
 **Run spec tests with fast-interp mode:**
 
 ```bash
-./scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp"
+./cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp
 ```
 
 **Run spec tests with classic-interp mode:**
 
 ```bash
-./scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t classic-interp"
+./cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t classic-interp
 ```
 
 **Run spec tests with JIT mode:**
 
 ```bash
-./scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t jit"
+./cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t jit
 ```
 
 **Run spec tests with AOT mode:**
 
 ```bash
-./scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot"
+./cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot
 ```
 
 ### Expected Pass Rates
@@ -332,13 +323,13 @@ Test specific WebAssembly proposals:
 
 ```bash
 # SIMD spec tests
-./scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -S"
+./cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -S
 
 # GC spec tests
-./scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -G"
+./cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -G
 
 # Multi-memory spec tests
-./scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -E"
+./cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -E
 ```
 
 ### Handling Spec Test Failures
@@ -346,7 +337,7 @@ Test specific WebAssembly proposals:
 **Check test report:**
 
 ```bash
-./scripts/in-container.sh "cat tests/wamr-test-suites/workspace/report/spec_test_report.txt"
+./cat tests/wamr-test-suites/workspace/report/spec_test_report.txt
 ```
 
 **Analyze specific failure:**
@@ -356,7 +347,7 @@ Test specific WebAssembly proposals:
 3. Run the specific test manually for debugging:
 
 ```bash
-./scripts/in-container.sh "cd tests/wamr-test-suites/workspace && ./iwasm --interp test.wasm"
+./cd tests/wamr-test-suites/workspace && ./iwasm --interp test.wasm
 ```
 
 **Expected failures:**
@@ -383,13 +374,13 @@ Run regression tests if you:
 **Build test infrastructure:**
 
 ```bash
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./build_wamr.sh"
+./cd tests/regression/ba-issues && ./build_wamr.sh
 ```
 
 **Run all regression tests:**
 
 ```bash
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py"
+./cd tests/regression/ba-issues && ./run.py
 ```
 
 **Expected output:**
@@ -408,10 +399,10 @@ Test specific issue numbers:
 
 ```bash
 # Single issue
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py --issues 2833"
+./cd tests/regression/ba-issues && ./run.py --issues 2833
 
 # Multiple issues
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py -i 2833,2834,2835"
+./cd tests/regression/ba-issues && ./run.py -i 2833,2834,2835
 ```
 
 ### Adding New Regression Tests
@@ -421,7 +412,7 @@ When you fix a bug, always add a regression test:
 **Step 1: Create test directory**
 
 ```bash
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./helper.sh 3022"
+./cd tests/regression/ba-issues && ./helper.sh 3022
 ```
 
 **Step 2: Add test artifacts**
@@ -452,7 +443,7 @@ Add an entry to `tests/regression/ba-issues/running_config.json`:
 **Step 4: Verify test passes**
 
 ```bash
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py -i 3022"
+./cd tests/regression/ba-issues && ./run.py -i 3022
 ```
 
 **Step 5: Commit with your fix**
@@ -470,7 +461,7 @@ git commit -m "fix: resolve issue #3022 with regression test"
 **View detailed failure log:**
 
 ```bash
-./scripts/in-container.sh "cd tests/regression/ba-issues && cat issues_tests.log"
+./cd tests/regression/ba-issues && cat issues_tests.log
 ```
 
 **Test fails after code changes:**
@@ -490,8 +481,8 @@ WAMR aims for warning-free builds. New code should not introduce compiler warnin
 Configure build to treat warnings as errors:
 
 ```bash
-./scripts/in-container.sh "cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' -DCMAKE_CXX_FLAGS='-Wall -Werror'"
-./scripts/in-container.sh "cmake --build build"
+./cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' -DCMAKE_CXX_FLAGS='-Wall -Werror'
+./cmake --build build
 ```
 
 If the build succeeds, you have no warnings.
@@ -542,10 +533,10 @@ Some warnings only appear on specific platforms:
 
 ```bash
 # Check x86_64 build
-./scripts/in-container.sh "cmake -B build-x64 -DWAMR_BUILD_TARGET=X86_64 -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build-x64"
+./cmake -B build-x64 -DWAMR_BUILD_TARGET=X86_64 -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build-x64
 
 # Check ARM build (if cross-compiling)
-./scripts/in-container.sh "cmake -B build-arm -DWAMR_BUILD_TARGET=ARMV7 -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build-arm"
+./cmake -B build-arm -DWAMR_BUILD_TARGET=ARMV7 -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build-arm
 ```
 
 ---
@@ -559,8 +550,8 @@ Static analysis tools find potential bugs without running code.
 Configure build with static analyzer:
 
 ```bash
-./scripts/in-container.sh "cmake -B build-analyze -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
-./scripts/in-container.sh "cd build-analyze && scan-build -o ../analysis-results make -j$(nproc)"
+./cmake -B build-analyze -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+./cd build-analyze && scan-build -o ../analysis-results make -j$(nproc)
 ```
 
 ### Interpreting Results
@@ -568,7 +559,7 @@ Configure build with static analyzer:
 The analyzer generates HTML reports in `analysis-results/`:
 
 ```bash
-./scripts/in-container.sh "ls -la analysis-results/"
+./ls -la analysis-results/
 ```
 
 View reports to see:
@@ -590,11 +581,11 @@ Use Valgrind to detect memory leaks when making changes to memory management.
 
 ```bash
 # Build with debug symbols
-./scripts/in-container.sh "cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug"
-./scripts/in-container.sh "cmake --build build-debug"
+./cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug
+./cmake --build build-debug
 
 # Run iwasm under Valgrind
-./scripts/in-container.sh "valgrind --leak-check=full --show-leak-kinds=all ./build-debug/product-mini/platforms/linux/build/iwasm test.wasm"
+./valgrind --leak-check=full --show-leak-kinds=all ./build-debug/product-mini/platforms/linux/build/iwasm test.wasm
 ```
 
 ### Interpreting Leak Reports
@@ -639,47 +630,47 @@ You've fixed a bug in the interpreter. Here's the complete workflow:
 
 ```bash
 # Check formatting of changed files
-./scripts/in-container.sh "git diff main...HEAD --name-only --diff-filter=ACM | grep '\.\(c\|h\)$' | xargs -r clang-format-14 --dry-run --Werror"
+./git diff main...HEAD --name-only --diff-filter=ACM | grep '\.\(c\|h\)$' | xargs -r clang-format-14 --dry-run --Werror
 
 # Auto-fix if needed
-./scripts/in-container.sh "git diff main...HEAD --name-only --diff-filter=ACM | grep '\.\(c\|h\)$' | xargs -r clang-format-14 -i"
+./git diff main...HEAD --name-only --diff-filter=ACM | grep '\.\(c\|h\)$' | xargs -r clang-format-14 -i
 ```
 
 **Step 2: Build and Check Warnings**
 
 ```bash
-./scripts/in-container.sh "cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build -j$(nproc)"
+./cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build -j$(nproc)
 ```
 
 **Step 3: Unit Tests**
 
 ```bash
-./scripts/in-container.sh "cd build && ctest --output-on-failure"
+./cd build && ctest --output-on-failure
 ```
 
 **Step 4: Spec Tests (VMcore change)**
 
 ```bash
 # Test the affected mode
-./scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp"
+./cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp
 ```
 
 **Step 5: Add and Run Regression Test**
 
 ```bash
 # Create test
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./helper.sh 3022"
+./cd tests/regression/ba-issues && ./helper.sh 3022
 
 # Add test files and config (manual step)
 
 # Build test infrastructure
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./build_wamr.sh"
+./cd tests/regression/ba-issues && ./build_wamr.sh
 
 # Run the new test
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py -i 3022"
+./cd tests/regression/ba-issues && ./run.py -i 3022
 
 # Run all regression tests
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py"
+./cd tests/regression/ba-issues && ./run.py
 ```
 
 **Step 6: Stage and Commit**
@@ -705,17 +696,17 @@ You've added a new feature to the runtime:
 
 ```bash
 # If adding SIMD support
-./scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -S"
+./cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -S
 
 # If adding multi-memory support
-./scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -E"
+./cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -E
 ```
 
 **Step 5: Integration Tests**
 
 ```bash
 # Run relevant samples
-./scripts/in-container.sh "cd samples/basic && ./build.sh && ./run.sh"
+./cd samples/basic && ./build.sh && ./run.sh
 ```
 
 **Step 6: Documentation Check**
@@ -753,13 +744,13 @@ Error: code not formatted correctly
 **Step 2: Run same command locally**
 
 ```bash
-./scripts/in-container.sh "clang-format-14 --dry-run --Werror core/iwasm/common/wasm_runtime_common.c"
+./clang-format-14 --dry-run --Werror core/iwasm/common/wasm_runtime_common.c
 ```
 
 **Step 3: Fix the issue**
 
 ```bash
-./scripts/in-container.sh "clang-format-14 -i core/iwasm/common/wasm_runtime_common.c"
+./clang-format-14 -i core/iwasm/common/wasm_runtime_common.c
 git add core/iwasm/common/wasm_runtime_common.c
 git commit --amend --no-edit
 git push --force-with-lease
@@ -785,7 +776,7 @@ git push --force-with-lease
 - Cross-compile locally to reproduce:
 
 ```bash
-./scripts/in-container.sh "cmake -B build-arm -DWAMR_BUILD_TARGET=ARMV7 && cmake --build build-arm"
+./cmake -B build-arm -DWAMR_BUILD_TARGET=ARMV7 && cmake --build build-arm
 ```
 
 **Timeout in CI:**
@@ -803,37 +794,37 @@ git push --force-with-lease
 
 ```bash
 # View actual diff
-./scripts/in-container.sh "clang-format-14 file.c | diff -u file.c -"
+./clang-format-14 file.c | diff -u file.c -
 
 # Check for invisible characters (tabs vs spaces)
-./scripts/in-container.sh "cat -A file.c | head -20"
+./cat -A file.c | head -20
 ```
 
 **Issue: Tests fail locally but not in CI**
 
 - You may be running on host instead of container
-- Always use `./scripts/in-container.sh` wrapper
+- Always use `./devcontainer exec` wrapper
 - Check container is up-to-date:
 
 ```bash
-./scripts/in-container.sh --status
+./docker ps | grep devcontainer
 ```
 
 **Issue: Tests timeout**
 
 ```bash
 # Increase timeout
-./scripts/in-container.sh "cd build && ctest --timeout 600"
+./cd build && ctest --timeout 600
 
 # Run specific test to debug
-./scripts/in-container.sh "cd build && ctest -R test_name --verbose"
+./cd build && ctest -R test_name --verbose
 ```
 
 **Issue: Container problems**
 
 ```bash
 # Check container status
-./scripts/in-container.sh --status
+./docker ps | grep devcontainer
 
 # Restart container
 docker restart <container-name>
@@ -846,7 +837,7 @@ docker restart <container-name>
 
 ```bash
 # Clean build artifacts
-./scripts/in-container.sh "rm -rf build"
+./rm -rf build
 
 # Clean Docker resources
 docker system prune -a
@@ -857,7 +848,7 @@ docker system prune -a
 ```bash
 # Error: iwasm-default not found
 # Solution: Build test infrastructure first
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./build_wamr.sh"
+./cd tests/regression/ba-issues && ./build_wamr.sh
 ```
 
 ---
@@ -895,15 +886,15 @@ echo "Running pre-commit checks..."
 
 # Format check
 echo "Checking code formatting..."
-if ! ./scripts/in-container.sh "git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\)$' | xargs -r clang-format-14 --dry-run --Werror"; then
-    echo "❌ Format check failed. Run: ./scripts/in-container.sh \"git diff --cached --name-only | grep '\.\(c\|h\)$' | xargs -r clang-format-14 -i\""
+if ! ./git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\)$' | xargs -r clang-format-14 --dry-run --Werror; then
+    echo "❌ Format check failed. Run: ./devcontainer exec \"git diff --cached --name-only | grep '\.\(c\|h\)$' | xargs -r clang-format-14 -i\""
     exit 1
 fi
 
 # Unit tests (if build exists)
 if [ -d "build" ]; then
     echo "Running unit tests..."
-    if ! ./scripts/in-container.sh "cd build && ctest --output-on-failure --timeout 60"; then
+    if ! ./cd build && ctest --output-on-failure --timeout 60; then
         echo "❌ Unit tests failed"
         exit 1
     fi
@@ -963,11 +954,11 @@ Don't just run tests - verify they passed:
 
 ```bash
 # ❌ Wrong: Not checking result
-./scripts/in-container.sh "cd build && ctest"
+./cd build && ctest
 echo "Tests passed"  # Assumption without verification
 
 # ✅ Correct: Check exit code
-if ./scripts/in-container.sh "cd build && ctest --output-on-failure"; then
+if ./cd build && ctest --output-on-failure; then
     echo "Tests passed"
 else
     echo "Tests failed"
@@ -1009,7 +1000,7 @@ Never run commands on host:
 cd build && ctest
 
 # ✅ Correct
-./scripts/in-container.sh "cd build && ctest"
+./cd build && ctest
 ```
 
 ### Understand Test Failures
@@ -1070,46 +1061,46 @@ Key style points:
 **Format checks:**
 ```bash
 # Check staged files
-./scripts/in-container.sh "git diff --cached --name-only | grep '\.\(c\|h\)$' | xargs -r clang-format-14 --dry-run --Werror"
+./git diff --cached --name-only | grep '\.\(c\|h\)$' | xargs -r clang-format-14 --dry-run --Werror
 
 # Auto-fix
-./scripts/in-container.sh "git diff --cached --name-only | grep '\.\(c\|h\)$' | xargs -r clang-format-14 -i"
+./git diff --cached --name-only | grep '\.\(c\|h\)$' | xargs -r clang-format-14 -i
 ```
 
 **Build and test:**
 ```bash
 # Build with warnings as errors
-./scripts/in-container.sh "cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build -j$(nproc)"
+./cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build -j$(nproc)
 
 # Run unit tests
-./scripts/in-container.sh "cd build && ctest --output-on-failure"
+./cd build && ctest --output-on-failure
 ```
 
 **Spec tests:**
 ```bash
 # Fast interpreter
-./scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp"
+./cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp
 ```
 
 **Regression tests:**
 ```bash
 # Build test infrastructure
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./build_wamr.sh"
+./cd tests/regression/ba-issues && ./build_wamr.sh
 
 # Run all tests
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py"
+./cd tests/regression/ba-issues && ./run.py
 
 # Run specific test
-./scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py -i 3022"
+./cd tests/regression/ba-issues && ./run.py -i 3022
 ```
 
 **Container status:**
 ```bash
 # Check container
-./scripts/in-container.sh --status
+./docker ps | grep devcontainer
 
 # Debug detection
-./scripts/in-container.sh --verbose --status
+./devcontainer exec --verbose --status
 ```
 
 ---

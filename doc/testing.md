@@ -10,26 +10,17 @@ This guide provides a strategic overview of testing approaches for WAMR. It expl
 
 Before running tests:
 
-1. **Read [dev-in-container.md](dev-in-container.md)** - All tests run in the devcontainer
-2. **Read [building.md](building.md)** - Tests require iwasm and sometimes wamrc
-3. **Verify container**: Run `scripts/in-container.sh --status`
+1. **Read [AGENTS.md](../AGENTS.md)** - Platform-specific execution requirements
+2. **Read [dev-in-container.md](dev-in-container.md)** - Container technical details  
+3. **Read [building.md](building.md)** - Tests require iwasm and sometimes wamrc
+
+> **Note**: All commands in this guide show raw syntax. See [AGENTS.md](../AGENTS.md) for platform-specific execution.
 
 ---
 
-## For AI Agents
-
-**CRITICAL**: ALL test commands MUST run inside the devcontainer using the `scripts/in-container.sh` wrapper.
-
-**Pattern for all test commands:**
+## Test Types Overview
 ```bash
-scripts/in-container.sh "<command>"
-```
-
-The script automatically detects or starts the devcontainer. Never run test commands directly on the host system.
-
-**Error handling**: The wrapper properly propagates exit codes:
-```bash
-if scripts/in-container.sh "cd tests/unit/build && ctest"; then
+if cd tests/unit/build && ctest; then
     echo "Tests passed"
 else
     echo "Tests failed"
@@ -84,10 +75,10 @@ Located in: `tests/unit/`
 
 ```bash
 # Build and run all unit tests
-scripts/in-container.sh "cd tests/unit && cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure"
+cd tests/unit && cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure
 
 # Run specific test category
-scripts/in-container.sh "cd tests/unit && ctest --test-dir build -R interpreter --output-on-failure"
+cd tests/unit && ctest --test-dir build -R interpreter --output-on-failure
 ```
 
 ### Test Categories
@@ -144,13 +135,13 @@ Located in: `tests/wamr-test-suites/`
 
 ```bash
 # Run core spec tests with fast interpreter
-scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -b"
+cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -b
 
 # Run spec tests with AOT compilation
-scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -b"
+cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -b
 
 # Test with SIMD enabled
-scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -S -b"
+cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -S -b
 ```
 
 ### Test Coverage
@@ -219,13 +210,13 @@ Located in: `tests/regression/`
 
 ```bash
 # Build WAMR variants for regression testing
-scripts/in-container.sh "cd tests/regression/ba-issues && ./build_wamr.sh"
+cd tests/regression/ba-issues && ./build_wamr.sh
 
 # Run all regression tests
-scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py"
+cd tests/regression/ba-issues && ./run.py
 
 # Test specific issue
-scripts/in-container.sh "cd tests/regression/ba-issues && ./run.py --issues 2833"
+cd tests/regression/ba-issues && ./run.py --issues 2833
 ```
 
 ### Test Organization
@@ -283,13 +274,13 @@ Located in: `samples/`
 
 ```bash
 # Test basic WAMR usage
-scripts/in-container.sh "cd samples/basic && mkdir -p build && cd build && cmake .. && cmake --build . && ./basic"
+cd samples/basic && mkdir -p build && cd build && cmake .. && cmake --build . && ./basic
 
 # Test multi-threading
-scripts/in-container.sh "cd samples/multi-thread && mkdir -p build && cd build && cmake .. && cmake --build . && ctest"
+cd samples/multi-thread && mkdir -p build && cd build && cmake .. && cmake --build . && ctest
 
 # Test WASM C API
-scripts/in-container.sh "cd samples/wasm-c-api && mkdir -p build && cd build && cmake .. && cmake --build . && ctest"
+cd samples/wasm-c-api && mkdir -p build && cd build && cmake .. && cmake --build . && ctest
 ```
 
 ### Available Sample Tests
@@ -349,32 +340,32 @@ Before committing or creating a PR, run these tests locally:
 
 ```bash
 # Build iwasm
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. && cmake --build . -j\$(nproc)"
+cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. && cmake --build . -j\$(nproc)
 
 # Unit tests only
-scripts/in-container.sh "cd tests/unit && cmake -S . -B build && cmake --build build -j\$(nproc) && ctest --test-dir build --output-on-failure"
+cd tests/unit && cmake -S . -B build && cmake --build build -j\$(nproc) && ctest --test-dir build --output-on-failure
 ```
 
 ### Recommended (Moderate - ~10 minutes)
 
 ```bash
 # Unit tests + core spec tests
-scripts/in-container.sh "cd tests/unit && cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure"
-scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -b"
+cd tests/unit && cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure
+cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -b
 
 # Regression tests
-scripts/in-container.sh "cd tests/regression/ba-issues && ./build_wamr.sh && ./run.py"
+cd tests/regression/ba-issues && ./build_wamr.sh && ./run.py
 ```
 
 ### Thorough (Complete - ~30 minutes)
 
 ```bash
 # All of the above plus multiple execution modes
-scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -b"
-scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -b"
+cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -b
+cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -b
 
 # Feature-specific tests if applicable
-scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -S"  # SIMD
+cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -S  # SIMD
 ```
 
 **Also see**: [code-quality.md](code-quality.md) for linting and formatting checks.
@@ -411,10 +402,10 @@ CI uses the same test scripts and devcontainer as local development:
 
 ```bash
 # Example: Reproduce "spec-test-aot" CI job
-scripts/in-container.sh "cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -b"
+cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -b
 
 # Example: Reproduce "unit-tests" CI job
-scripts/in-container.sh "cd tests/unit && cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure"
+cd tests/unit && cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure
 ```
 
 ---
@@ -438,7 +429,7 @@ Located in: `tests/benchmarks/`
 
 ```bash
 # Run CoreMark in AOT mode
-scripts/in-container.sh "cd tests/benchmarks/coremark && ./build.sh && ./run_aot.sh"
+cd tests/benchmarks/coremark && ./build.sh && ./run_aot.sh
 ```
 
 **Note**: Benchmarks are for performance measurement, not correctness verification. They complement but don't replace the test types above.
@@ -453,10 +444,10 @@ Valgrind detects memory leaks, use-after-free, buffer overflows, and other memor
 
 ```bash
 # Build debug version of iwasm
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build ."
+cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build .
 
 # Run with memory leak detection
-scripts/in-container.sh "valgrind --leak-check=full product-mini/platforms/linux/build-debug/iwasm test.wasm"
+valgrind --leak-check=full product-mini/platforms/linux/build-debug/iwasm test.wasm
 ```
 
 **When to use Valgrind:**
@@ -478,10 +469,10 @@ scripts/in-container.sh "valgrind --leak-check=full product-mini/platforms/linux
 **Solution**:
 ```bash
 # Check container status
-scripts/in-container.sh --status
+docker ps | grep devcontainer
 
 # Verify you're using the wrapper
-# ✅ Correct: scripts/in-container.sh "cd tests/unit && ctest --test-dir build"
+# ✅ Correct: cd tests/unit && ctest --test-dir build
 # ❌ Wrong: cd tests/unit && ctest --test-dir build
 ```
 

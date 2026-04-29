@@ -234,7 +234,7 @@ cd tests/unit && cmake -B build ...
 What: Tests for individual components
 When: Testing specific functions
 Quick example:
-  scripts/in-container.sh "cd tests/unit && ctest --test-dir build"
+  cd tests/unit && ctest --test-dir build
 → See tests/unit/README.md for all commands and options
 
 # tests/unit/README.md
@@ -276,7 +276,7 @@ and custom harnesses (C).
 - Before committing code
 
 ### Quick Example
-scripts/in-container.sh "cd tests/unit && ctest --test-dir build"
+cd tests/unit && ctest --test-dir build
 
 → **See [tests/unit/README.md](../tests/unit/README.md) for complete guide**
 ```
@@ -359,21 +359,19 @@ When referencing information from another doc:
 
 **Bad**:
 ```markdown
-Container usage: all commands must use scripts/in-container.sh wrapper
-because the devcontainer has necessary tools like WASI-SDK.
+Platform requirements: see AGENTS.md for execution patterns
+because specific platforms require devcontainer with tools like WASI-SDK.
 
-See dev-in-container.md for setup instructions:
+Step-by-step setup:
 1. Install Docker
-2. Install VS Code
+2. Install VS Code  
 3. Open in container
 ...
 ```
 
 **Good**:
 ```markdown
-Container usage: all commands must use scripts/in-container.sh wrapper.
-
-See [dev-in-container.md](dev-in-container.md) for container setup.
+Platform requirements: see [AGENTS.md](../AGENTS.md) for execution patterns.
 ```
 
 ### Link Text Best Practices
@@ -570,7 +568,7 @@ WAMR supports debug and release builds with different optimizations.
 - **Release**: Production, performance testing
 
 ### Quick Example
-scripts/in-container.sh "cmake -B build -DCMAKE_BUILD_TYPE=Debug"
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
 
 → See [product-mini/platforms/linux/README.md] for all build options
 ```
@@ -703,7 +701,7 @@ cmake -B build
    ```bash
    # Wrong - platform-specific wrapper in docs
    devcontainer exec --workspace-folder . -- cmake -B build
-   ./scripts/in-container.sh "cmake -B build"
+   ./cmake -B build
    ```
 
 3. ✅ **DO**: Add reference to AGENTS.md at document top

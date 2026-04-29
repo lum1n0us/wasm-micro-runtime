@@ -12,11 +12,11 @@ WAMR consists of two main components:
 
 Before building WAMR:
 
-1. **Read [dev-in-container.md](dev-in-container.md)** for complete devcontainer setup
-2. **Verify container is available**: Run `scripts/in-container.sh --status`
+1. **Read [AGENTS.md](../AGENTS.md)** - Platform-specific execution requirements
+2. **Read [dev-in-container.md](dev-in-container.md)** - Container technical details
 3. All build tools are pre-installed in the devcontainer (CMake, GCC, Clang, LLVM)
 
-**For AI Agents**: ALL build commands MUST run inside the devcontainer using `scripts/in-container.sh "<command>"`.
+> **Note**: All commands in this guide show raw syntax. See [AGENTS.md](../AGENTS.md) for platform-specific execution.
 
 ---
 
@@ -25,7 +25,7 @@ Before building WAMR:
 Get a working iwasm binary in under 60 seconds:
 
 ```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. && cmake --build . -j\$(nproc)"
+cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. && cmake --build . -j\$(nproc)
 ```
 
 Binary location: `product-mini/platforms/linux/build/iwasm`
@@ -53,7 +53,7 @@ WAMR supports different CMake build types that control optimization levels and d
 
 ```bash
 # Debug build
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build . -j\$(nproc)"
+cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build . -j\$(nproc)
 ```
 
 See [product-mini/platforms/linux/README.md](../product-mini/platforms/linux/README.md) for all build type configurations.
@@ -113,13 +113,13 @@ WAMR supports multiple ways to execute WebAssembly code, each with different per
 
 ```bash
 # Fast Interpreter (default)
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_INTERP=1 && cmake --build ."
+cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_INTERP=1 && cmake --build .
 
 # AOT (runtime only - requires wamrc to compile wasm to aot)
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_AOT=1 && cmake --build ."
+cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_AOT=1 && cmake --build .
 
 # LLVM JIT (requires LLVM build first)
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_JIT=1 && cmake --build ."
+cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_JIT=1 && cmake --build .
 ```
 
 See [product-mini/platforms/linux/README.md](../product-mini/platforms/linux/README.md) for detailed mode configurations and examples.
@@ -174,7 +174,7 @@ WAMR uses CMake variables to enable/disable runtime features and WebAssembly pro
 
 ```bash
 # Enable SIMD and bulk memory
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_SIMD=1 -DWAMR_BUILD_BULK_MEMORY=1 && cmake --build ."
+cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_SIMD=1 -DWAMR_BUILD_BULK_MEMORY=1 && cmake --build .
 ```
 
 See [doc/build_wamr.md](build_wamr.md) for complete CMake flag reference (all 100+ options).
@@ -215,7 +215,7 @@ WAMR supports building for multiple platforms and architectures. The build proce
 To build for a different architecture, specify the target:
 
 ```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_TARGET=AARCH64 && cmake --build ."
+cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. -DWAMR_BUILD_TARGET=AARCH64 && cmake --build .
 ```
 
 **Supported architectures**: X86_64, X86_32, AARCH64, ARM, ARMV7, RISCV64, RISCV32, MIPS, XTENSA
@@ -249,16 +249,16 @@ wamrc is WAMR's AOT (Ahead-of-Time) compiler that converts WASM modules to nativ
 
 ```bash
 # Build LLVM (one-time setup)
-scripts/in-container.sh "cd wamr-compiler && ./build_llvm.sh"
+cd wamr-compiler && ./build_llvm.sh
 
 # Build wamrc
-scripts/in-container.sh "cd wamr-compiler && mkdir -p build && cd build && cmake .. && cmake --build . -j\$(nproc)"
+cd wamr-compiler && mkdir -p build && cd build && cmake .. && cmake --build . -j\$(nproc)
 
 # Compile WASM to AOT
-scripts/in-container.sh "wamr-compiler/build/wamrc -o app.aot app.wasm"
+wamr-compiler/build/wamrc -o app.aot app.wasm
 
 # Run AOT file with iwasm
-scripts/in-container.sh "product-mini/platforms/linux/build/iwasm app.aot"
+product-mini/platforms/linux/build/iwasm app.aot
 ```
 
 See [wamr-compiler/README.md](../wamr-compiler/README.md) for complete wamrc documentation and all compiler options.

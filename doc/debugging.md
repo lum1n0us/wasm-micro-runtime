@@ -10,34 +10,27 @@ This guide explains debugging strategies for WAMR and provides guidance on selec
 
 Before debugging WAMR:
 
-1. **Read [dev-in-container.md](dev-in-container.md)** - All debugging runs in the devcontainer
-2. **Read [building.md](building.md)** - Debugging requires debug builds
-3. **Verify container**: Run `scripts/in-container.sh --status`
+1. **Read [AGENTS.md](../AGENTS.md)** - Platform-specific execution requirements
+2. **Read [dev-in-container.md](dev-in-container.md)** - Container technical details
+3. **Read [building.md](building.md)** - Debugging requires debug builds
+
+> **Note**: All commands in this guide show raw syntax. See [AGENTS.md](../AGENTS.md) for platform-specific execution.
 
 **Quick debug build:**
 ```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build . -j\$(nproc)"
+cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build . -j$(nproc)
 ```
 
 ---
 
-## For AI Agents
+## Debugging Tools Overview
 
-**CRITICAL**: All debugging commands MUST run inside the devcontainer using the `scripts/in-container.sh` wrapper script.
-
-**Pattern for all debug commands:**
-```bash
-scripts/in-container.sh "<debug-command>"
-```
-
-The devcontainer provides:
+The devcontainer provides all necessary debugging tools:
 - GDB with Python support
 - Valgrind with all tools (memcheck, callgrind, cachegrind)
 - lldb for WebAssembly source debugging
 - Debug builds of system libraries
 - Proper capabilities (SYS_PTRACE, seccomp=unconfined)
-
-**Never run debugging tools directly on the host.** The container environment is configured specifically for debugging.
 
 ---
 
@@ -115,7 +108,7 @@ GDB is the GNU Debugger for native code. It allows you to debug WAMR's C code: s
 
 **Basic debugging session:**
 ```bash
-scripts/in-container.sh "gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
+gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm
 ```
 
 In GDB:
@@ -130,10 +123,10 @@ In GDB:
 **Crash investigation:**
 ```bash
 # Enable core dumps and run
-scripts/in-container.sh "ulimit -c unlimited && product-mini/platforms/linux/build-debug/iwasm test.wasm"
+ulimit -c unlimited && product-mini/platforms/linux/build-debug/iwasm test.wasm
 
 # Analyze core dump
-scripts/in-container.sh "gdb product-mini/platforms/linux/build-debug/iwasm core"
+gdb product-mini/platforms/linux/build-debug/iwasm core
 ```
 
 In GDB:
@@ -178,10 +171,10 @@ break __assert_fail
 **1. Crash Investigation:**
 ```bash
 # Build with debug symbols
-scripts/in-container.sh "cd product-mini/platforms/linux && cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build build-debug"
+cd product-mini/platforms/linux && cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build build-debug
 
 # Run under GDB
-scripts/in-container.sh "gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm"
+gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm
 ```
 
 **2. Module Loading Issues:**
@@ -245,18 +238,18 @@ Valgrind is a dynamic analysis framework that detects memory errors, leaks, and 
 
 **Memory leak detection:**
 ```bash
-scripts/in-container.sh "valgrind --leak-check=full --show-leak-kinds=all product-mini/platforms/linux/build-debug/iwasm test.wasm"
+valgrind --leak-check=full --show-leak-kinds=all product-mini/platforms/linux/build-debug/iwasm test.wasm
 ```
 
 **Memory error detection:**
 ```bash
-scripts/in-container.sh "valgrind --tool=memcheck --track-origins=yes product-mini/platforms/linux/build-debug/iwasm test.wasm"
+valgrind --tool=memcheck --track-origins=yes product-mini/platforms/linux/build-debug/iwasm test.wasm
 ```
 
 **Performance profiling:**
 ```bash
-scripts/in-container.sh "valgrind --tool=callgrind --callgrind-out-file=callgrind.out product-mini/platforms/linux/build-debug/iwasm test.wasm"
-scripts/in-container.sh "callgrind_annotate callgrind.out | head -50"
+valgrind --tool=callgrind --callgrind-out-file=callgrind.out product-mini/platforms/linux/build-debug/iwasm test.wasm
+callgrind_annotate callgrind.out | head -50
 ```
 
 ### Understanding Valgrind Output
@@ -278,13 +271,13 @@ scripts/in-container.sh "callgrind_annotate callgrind.out | head -50"
 **Memory leak hunting:**
 ```bash
 # 1. Build with memory profiling
-scripts/in-container.sh "cd product-mini/platforms/linux && cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_MEMORY_PROFILING=1 && cmake --build build-debug"
+cd product-mini/platforms/linux && cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_MEMORY_PROFILING=1 && cmake --build build-debug
 
 # 2. Run with Valgrind
-scripts/in-container.sh "valgrind --leak-check=full --track-origins=yes --log-file=leak.log product-mini/platforms/linux/build-debug/iwasm test.wasm"
+valgrind --leak-check=full --track-origins=yes --log-file=leak.log product-mini/platforms/linux/build-debug/iwasm test.wasm
 
 # 3. Analyze report
-scripts/in-container.sh "cat leak.log | grep 'definitely lost' -A 10"
+cat leak.log | grep 'definitely lost' -A 10
 ```
 
 **→ For complete Valgrind options, suppression files, and advanced usage, see:** [Valgrind User Manual](https://valgrind.org/docs/manual/manual.html) (external).
@@ -313,12 +306,12 @@ AddressSanitizer (ASan) is a compiler-based memory error detector. It's faster t
 
 **Build with ASan:**
 ```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && cmake -B build-asan -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS='-fsanitize=address -fno-omit-frame-pointer' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address' && cmake --build build-asan"
+cd product-mini/platforms/linux && cmake -B build-asan -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS='-fsanitize=address -fno-omit-frame-pointer' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address' && cmake --build build-asan
 ```
 
 **Run:**
 ```bash
-scripts/in-container.sh "product-mini/platforms/linux/build-asan/iwasm test.wasm"
+product-mini/platforms/linux/build-asan/iwasm test.wasm
 ```
 
 ASan will automatically print detailed error reports on memory violations.
@@ -349,12 +342,12 @@ Source-level debugging allows you to debug WebAssembly applications at the sourc
 
 1. **WASM module compiled with debug info** (`-g` flag):
 ```bash
-scripts/in-container.sh "/opt/wasi-sdk/bin/clang -g test.c -o test.wasm"
+/opt/wasi-sdk/bin/clang -g test.c -o test.wasm
 ```
 
 2. **Verify debug info** (optional):
 ```bash
-scripts/in-container.sh "llvm-dwarfdump test.wasm"
+llvm-dwarfdump test.wasm
 ```
 
 3. **WAMR built with debug support**:
@@ -381,10 +374,10 @@ scripts/in-container.sh "llvm-dwarfdump test.wasm"
 
 ```bash
 # Terminal 1: Run iwasm with debug engine
-scripts/in-container.sh "product-mini/platforms/linux/build-debug/iwasm -g=127.0.0.1:1234 test.wasm"
+product-mini/platforms/linux/build-debug/iwasm -g=127.0.0.1:1234 test.wasm
 
 # Terminal 2: Connect lldb
-scripts/in-container.sh "lldb"
+lldb
 ```
 
 In lldb:
@@ -433,10 +426,10 @@ Control log verbosity with `WAMR_LOG_LEVEL` environment variable:
 
 ```bash
 # Verbose logging
-scripts/in-container.sh "WAMR_LOG_LEVEL=4 product-mini/platforms/linux/build/iwasm test.wasm"
+WAMR_LOG_LEVEL=4 product-mini/platforms/linux/build/iwasm test.wasm
 
 # Trace level (very verbose)
-scripts/in-container.sh "WAMR_LOG_LEVEL=5 product-mini/platforms/linux/build-debug/iwasm test.wasm"
+WAMR_LOG_LEVEL=5 product-mini/platforms/linux/build-debug/iwasm test.wasm
 ```
 
 **Example output:**
@@ -523,7 +516,7 @@ scripts/in-container.sh "WAMR_LOG_LEVEL=5 product-mini/platforms/linux/build-deb
 **When**: Active development, crash investigation
 
 ```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build build-debug"
+cd product-mini/platforms/linux && cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build build-debug
 ```
 
 **Characteristics**:
@@ -540,7 +533,7 @@ scripts/in-container.sh "cd product-mini/platforms/linux && cmake -B build-debug
 **When**: Performance issues where Debug build is too slow
 
 ```bash
-scripts/in-container.sh "cd product-mini/platforms/linux && cmake -B build-relwithdebinfo -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-relwithdebinfo"
+cd product-mini/platforms/linux && cmake -B build-relwithdebinfo -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-relwithdebinfo
 ```
 
 **Characteristics**:
@@ -561,7 +554,7 @@ scripts/in-container.sh "cd product-mini/platforms/linux && cmake -B build-relwi
 
 **Verify**:
 ```bash
-scripts/in-container.sh "file product-mini/platforms/linux/build-debug/iwasm"
+file product-mini/platforms/linux/build-debug/iwasm
 # Should show "with debug_info, not stripped"
 ```
 
@@ -573,12 +566,12 @@ scripts/in-container.sh "file product-mini/platforms/linux/build-debug/iwasm"
 
 **Generate suppressions**:
 ```bash
-scripts/in-container.sh "valgrind --gen-suppressions=all product-mini/platforms/linux/build-debug/iwasm test.wasm 2>&1 | grep -A 10 '^{' > valgrind.supp"
+valgrind --gen-suppressions=all product-mini/platforms/linux/build-debug/iwasm test.wasm 2>&1 | grep -A 10 '^{' > valgrind.supp
 ```
 
 **Use suppressions**:
 ```bash
-scripts/in-container.sh "valgrind --suppressions=valgrind.supp --leak-check=full product-mini/platforms/linux/build-debug/iwasm test.wasm"
+valgrind --suppressions=valgrind.supp --leak-check=full product-mini/platforms/linux/build-debug/iwasm test.wasm
 ```
 
 ### Core Dump Not Generated
@@ -589,10 +582,10 @@ scripts/in-container.sh "valgrind --suppressions=valgrind.supp --leak-check=full
 
 ```bash
 # Check limit
-scripts/in-container.sh "ulimit -c"
+ulimit -c
 
 # Enable unlimited core dumps
-scripts/in-container.sh "ulimit -c unlimited"
+ulimit -c unlimited
 ```
 
 ### Optimized Variables Are "Optimized Out"
