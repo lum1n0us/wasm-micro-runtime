@@ -422,10 +422,90 @@ Only if needed: loads tests/unit/README.md for 6,400 more tokens
 
 ### Writing for Context Efficiency
 
-- Keep strategy docs under 600 lines
-- Use comparison tables instead of repetitive prose
-- Link to examples instead of including all variations
-- Front-load critical information (first 100 lines should cover 80% of decisions)
+**Core principle**: Minimize repetition, maximize information density.
+
+#### Quantitative Guidelines
+
+- **Strategy docs**: < 600 lines (ideally 300-500)
+- **Entry points** (CLAUDE.md, AGENTS.md): < 200 lines
+- **Concept-to-detail ratio**: First 100 lines should answer 80% of decisions
+- **Duplication tolerance**: Zero - every piece of information documented once
+
+#### Techniques to Reduce Context Usage
+
+1. **Use comparison tables** instead of repetitive prose
+   ```markdown
+   # Bad (repetitive, 20 lines)
+   Google Test is good for feature-level tests. It has rich assertions.
+   Google Test supports fixtures. Google Test is C++.
+   CMocka is good for function-level tests. It supports mocking.
+   CMocka supports stubs. CMocka is pure C.
+   ...
+   
+   # Good (table, 8 lines)
+   | Framework | Best For | Language | Key Features |
+   |-----------|----------|----------|--------------|
+   | Google Test | Feature/module | C++ | Fixtures, assertions |
+   | CMocka | Function-level | C | Mocks, stubs |
+   ```
+
+2. **Link to examples** instead of including all variations
+   ```markdown
+   # Bad (50 lines of examples)
+   ctest --test-dir build -R pattern1
+   ctest --test-dir build -R pattern2
+   ctest --test-dir build -E exclude
+   ...
+   
+   # Good (link, 2 lines)
+   ctest --test-dir build -R <pattern>
+   → See [examples section](#examples) for all patterns
+   ```
+
+3. **Single source for repeated concepts**
+   ```markdown
+   # Bad (repeated in 5 files, 50 lines each = 250 lines total)
+   doc/testing.md: "devcontainer exec usage..."
+   doc/building.md: "devcontainer exec usage..."
+   tests/unit/README.md: "devcontainer exec usage..."
+   ...
+   
+   # Good (once in AGENTS.md, 10 lines total)
+   AGENTS.md: "devcontainer exec usage..."
+   Other docs: "See AGENTS.md for execution"
+   Savings: 240 lines (96% reduction)
+   ```
+
+4. **Progressive disclosure of complexity**
+   ```markdown
+   # Quick example (covers 80% of cases)
+   cmake -B build && cmake --build build
+   
+   # Advanced options (for remaining 20%)
+   → See [Advanced Build Options](#advanced)
+   ```
+
+#### Red Flags (Indicators of Context Waste)
+
+- ⚠️ Same command pattern appears in 3+ files
+- ⚠️ Phrase "as mentioned earlier/above" (should be a link)
+- ⚠️ Strategy doc > 800 lines (split into strategy + operations)
+- ⚠️ Explaining how to use standard tools (devcontainer, docker, git)
+- ⚠️ Multiple files explaining the same workflow
+
+#### Context Budget Monitoring
+
+When reviewing documentation changes:
+
+```bash
+# Check for duplicated content
+git diff main -- '*.md' | grep -o "devcontainer exec" | wc -l
+# Should be: 0-2 (only in AGENTS.md and possibly CLAUDE.md)
+
+# Check documentation size
+wc -l doc/*.md
+# Strategy docs should be < 600 lines each
+```
 
 ---
 
@@ -448,13 +528,29 @@ Only if needed: loads tests/unit/README.md for 6,400 more tokens
 
 Before merging documentation changes:
 
+**Information Architecture**:
 - [ ] No duplicated information across files
 - [ ] Concepts in doc/, operations in component READMEs
+- [ ] Platform-specific execution documented once (AGENTS.md only)
+- [ ] Commands shown in pure form (no devcontainer/wrapper prefixes)
+- [ ] Standard tools not explained (devcontainer, docker, git assumed knowledge)
+
+**Links and References**:
 - [ ] All links work and point to correct sections
+- [ ] Cross-references use consistent format
+- [ ] Top of operational docs reference AGENTS.md for execution
+
+**Content Quality**:
 - [ ] Code examples tested in devcontainer
 - [ ] Strategy docs under 600 lines
 - [ ] Progressive loading pattern followed
-- [ ] Cross-references use consistent format
+- [ ] Comparison tables used instead of repetitive prose
+
+**Context Efficiency**:
+- [ ] No repeated command patterns (check with grep)
+- [ ] Each concept documented exactly once
+- [ ] Links used instead of duplicating content
+- [ ] First 100 lines cover 80% of common decisions
 
 ---
 
@@ -520,6 +616,131 @@ ctest --test-dir build -R pattern
 
 ---
 
+## Platform-Specific Execution Patterns
+
+### Principle: Separate Command from Execution
+
+**Commands should be documented in their pure form.** Platform-specific execution wrappers (like `devcontainer exec`) should be documented centrally, not repeated with every command.
+
+### Single Source of Truth for Execution
+
+**Bad (repetition everywhere)**:
+```markdown
+# tests/unit/README.md
+devcontainer exec --workspace-folder . -- bash -c "cd tests/unit && cmake -B build"
+devcontainer exec --workspace-folder . -- bash -c "cd tests/unit && cmake --build build"
+devcontainer exec --workspace-folder . -- bash -c "cd tests/unit && ctest --test-dir build"
+[50+ commands, all with devcontainer exec prefix]
+
+# doc/testing.md  
+devcontainer exec --workspace-folder . -- bash -c "ctest --test-dir build"
+[More commands with same prefix]
+
+# doc/building.md
+devcontainer exec --workspace-folder . -- bash -c "cmake -B build"
+[More commands with same prefix]
+```
+
+**Result**: 
+- `devcontainer exec` documentation repeated 60+ times
+- Hard to maintain (need to update 60+ places if wrapper changes)
+- Context window waste (same information loaded repeatedly)
+- Poor readability (hard to see the actual command)
+
+**Good (separation of concerns)**:
+```markdown
+# AGENTS.md (single source of truth)
+## Command Execution Pattern
+
+All commands in WAMR documentation show raw command syntax.
+On Linux, prefix with: devcontainer exec --workspace-folder . -- <command>
+
+Examples:
+| Documentation Shows | Execute on Linux |
+|---------------------|------------------|
+| cmake -B build | devcontainer exec --workspace-folder . -- cmake -B build |
+| ctest --test-dir build | devcontainer exec --workspace-folder . -- ctest --test-dir build |
+
+# tests/unit/README.md
+> See AGENTS.md for platform-specific execution requirements
+
+cd tests/unit && cmake -B build
+cd tests/unit && cmake --build build
+cd tests/unit && ctest --test-dir build
+[50+ commands in pure form]
+
+# doc/testing.md
+> See AGENTS.md for platform-specific execution requirements
+
+ctest --test-dir build
+[Commands in pure form]
+
+# doc/building.md
+> See AGENTS.md for platform-specific execution requirements
+
+cmake -B build
+[Commands in pure form]
+```
+
+**Benefits**:
+- **Single source of truth**: Execution pattern documented once in AGENTS.md
+- **Maintainability**: Change execution wrapper in 1 place, not 60+
+- **Context efficiency**: ~200 lines saved across all docs (-8%)
+- **Clarity**: Commands are readable (pure form, no wrapper noise)
+- **Portability**: Commands work on macOS/Windows VS Code directly
+
+### Implementation Guidelines
+
+**When documenting commands**:
+
+1. ✅ **DO**: Write commands in pure form
+   ```bash
+   cmake -B build
+   ctest --test-dir build
+   ```
+
+2. ❌ **DON'T**: Include platform-specific wrappers
+   ```bash
+   # Wrong - platform-specific wrapper in docs
+   devcontainer exec --workspace-folder . -- cmake -B build
+   ./scripts/in-container.sh "cmake -B build"
+   ```
+
+3. ✅ **DO**: Add reference to AGENTS.md at document top
+   ```markdown
+   > **For AI Agents**: All commands show raw syntax. 
+   > See [AGENTS.md](../AGENTS.md) for platform-specific execution.
+   ```
+
+4. ✅ **DO**: Document execution pattern centrally in AGENTS.md
+   - Platform requirements (Linux requires devcontainer)
+   - Command pattern (how to wrap commands)
+   - Examples table (doc command → actual execution)
+   - Shell features (when to use `bash -c`)
+
+### Context Window Impact
+
+**Example: tests/unit/README.md optimization**
+
+Before (with devcontainer exec everywhere):
+```
+devcontainer exec --workspace-folder . -- bash -c "..." 
+Repeated ~50 times = ~2,500 characters = ~600 tokens
+```
+
+After (pure commands):
+```
+Pure commands without wrapper
+Same commands = ~1,000 characters = ~250 tokens
+Savings: ~350 tokens per document
+```
+
+With 5 major documentation files:
+- **Total savings**: ~1,750 tokens (87.5% reduction)
+- **Actual project savings**: 206 lines removed (-8.4% total documentation)
+
+---
+
 ## For AI Agents: Quick Reference
 
 When writing documentation:
@@ -549,6 +770,10 @@ These principles are enforced through:
 
 ---
 
-**Documentation Version**: 1.0.0  
-**Last Updated**: 2026-04-04  
+**Documentation Version**: 2.0.0  
+**Last Updated**: 2026-04-29  
 **Maintained By**: WAMR Development Team
+
+**Changelog**:
+- **v2.0.0** (2026-04-29): Added platform-specific execution patterns, context window efficiency techniques
+- **v1.0.0** (2026-04-04): Initial documentation principles

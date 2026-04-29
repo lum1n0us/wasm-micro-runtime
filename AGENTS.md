@@ -10,48 +10,60 @@ For full project details, see [README.md](./README.md).
 
 ## ⚠️ Development Environment Requirement
 
-**CRITICAL: All build, test, debug, and code quality checks MUST be performed inside the devcontainer.**
+**CRITICAL (Linux Only): On Linux systems, all build, test, debug, and code quality checks MUST be performed inside the devcontainer.**
 
-### For AI Agents
+### Command Execution Pattern
 
-You MUST use the provided wrapper script for all development commands:
+All commands in WAMR documentation show the raw command syntax (e.g., `cmake -B build`, `ctest --test-dir build`). On Linux, you must prefix these with the devcontainer wrapper:
 
 ```bash
-./scripts/in-container.sh "<command>"
+devcontainer exec --workspace-folder . -- <raw-command>
 ```
 
-The script automatically handles container detection and startup.
+**Prerequisites:**
+```bash
+# Install devcontainer CLI if needed
+npm install -g @devcontainers/cli
+```
+
+**Common Examples:**
+
+| Documentation Shows | You Execute on Linux |
+|---------------------|---------------------|
+| `cmake -B build` | `devcontainer exec --workspace-folder . -- cmake -B build` |
+| `ctest --test-dir build` | `devcontainer exec --workspace-folder . -- ctest --test-dir build` |
+| `clang-format-14 -i file.c` | `devcontainer exec --workspace-folder . -- clang-format-14 -i file.c` |
+
+**For commands with shell features (pipes, variables, cd):**
+```bash
+devcontainer exec --workspace-folder . -- bash -c "<command-with-shell-features>"
+```
 
 **Examples:**
 ```bash
-# Building
-./scripts/in-container.sh "cmake -B build"
+# Multiple commands chained
+devcontainer exec --workspace-folder . -- bash -c "cd tests/unit && cmake -S . -B build"
 
-# Testing  
-./scripts/in-container.sh "ctest --test-dir build"
+# Commands with pipes
+devcontainer exec --workspace-folder . -- bash -c "find . -name '*.c' | xargs clang-format-14 -i"
 
-# Debugging
-./scripts/in-container.sh "gdb ./build/iwasm"
-
-# Code formatting
-./scripts/in-container.sh "clang-format-14 --version"
+# Commands with shell variables
+devcontainer exec --workspace-folder . -- bash -c "cmake --build build -j\$(nproc)"
 ```
 
+**Why this pattern?**
+- Documentation focuses on the actual commands (portable, reusable)
+- Platform-specific execution details centralized here
+- Reduces repetition in other docs (smaller context window usage)
+- macOS/Windows developers can use commands directly in VS Code
+
 **Detailed guides:**
-- **Container environment:** [doc/dev-in-container.md](./doc/dev-in-container.md) ⚠️ **READ THIS FIRST**
+- **Container details:** [doc/dev-in-container.md](./doc/dev-in-container.md)
 - **Building:** [doc/building.md](./doc/building.md)
 - **Testing:** [doc/testing.md](./doc/testing.md)
 - **Debugging:** [doc/debugging.md](./doc/debugging.md)
 - **Code quality:** [doc/code-quality.md](./doc/code-quality.md)
 - **Pre-commit checks:** [doc/linting.md](./doc/linting.md) ⚠️ **RUN BEFORE COMMITTING**
-
-### For Human Developers
-
-1. Open this project in VS Code
-2. Click "Reopen in Container" when prompted
-3. All commands run directly inside container
-
-See [doc/dev-in-container.md](./doc/dev-in-container.md) for details.
 
 ## What AI Agents Can Help With
 

@@ -8,20 +8,22 @@ AGENTS.md is your primary guide. It contains:
 - Container environment requirements and usage
 - Project architecture and workflows
 
-## Two Hard Rules
+## Critical Rule: Linux Development Must Use Devcontainer
 
-### 1. ALL commands MUST use the container wrapper
+**On Linux systems ONLY**, all build, test, debug, and development activities MUST be performed inside the devcontainer:
 
 ```bash
-# ✅ CORRECT
-./scripts/in-container.sh "cmake -B build"
-./scripts/in-container.sh "ctest --test-dir build"
+# ✅ CORRECT - On Linux
+devcontainer exec --workspace-folder . -- cmake -B build
+devcontainer exec --workspace-folder . -- ctest --test-dir build
 
-# ❌ WRONG - Missing toolchain
+# ❌ WRONG - On Linux, missing required toolchain
 cmake -B build
 ```
 
-Why: WAMR requires WASI-SDK, WABT, and other toolchains only available in the devcontainer.
+Why: WAMR requires WASI-SDK, WABT, and other specialized toolchains only available in the devcontainer.
+
+**Note**: macOS and Windows developers may have different workflows. See [AGENTS.md](./AGENTS.md) for platform-specific guidance.
 
 ### 2. Run pre-commit checks before committing
 

@@ -2,6 +2,8 @@
 
 This guide provides comprehensive instructions for contributors on creating, running, and maintaining unit tests for WAMR. It covers everything from setting up your environment to writing new test suites and generating coverage reports.
 
+> **For AI Agents**: All commands in this guide show the raw command syntax. See [AGENTS.md](../../AGENTS.md) for platform-specific execution requirements (e.g., devcontainer on Linux).
+
 **Table of Contents:**
 - [Development Environment](#development-environment)
 - [Quick Start: Your First Unit Test](#quick-start-your-first-unit-test)
@@ -20,48 +22,100 @@ This guide provides comprehensive instructions for contributors on creating, run
 
 ## Development Environment
 
-### Critical Requirement: Use the Devcontainer
+### Prerequisites
 
-**ALL unit test commands MUST run inside the devcontainer.** The devcontainer provides:
+The WAMR devcontainer provides all necessary tools:
 - Consistent toolchain (compilers, CMake, CTest)
 - Pre-installed dependencies (googletest, WASI SDK, LLVM)
 - Correct library versions
 - Pre-configured build environment
 
-### For AI Agents
-
-Wrap EVERY cmake, ctest, or build command with the container wrapper:
-
-```bash
-./scripts/in-container.sh "<command>"
-```
-
-**Examples:**
-```bash
-# Configure tests
-./scripts/in-container.sh "cd tests/unit && cmake -S . -B build"
-
-# Build tests
-./scripts/in-container.sh "cd tests/unit && cmake --build build -j\$(nproc)"
-
-# Run tests
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build --output-on-failure"
-```
-
-**Never run these commands directly on the host system.** The wrapper automatically detects or starts the devcontainer.
-
-### For Human Developers
-
-1. Open WAMR in VS Code
-2. Click "Reopen in Container" when prompted
-3. Run all commands directly in the integrated terminal (no wrapper needed)
-
-### Prerequisites
+**For platform-specific setup and command execution requirements, see [AGENTS.md](../../AGENTS.md) and [doc/dev-in-container.md](../../doc/dev-in-container.md).**
 
 Before writing unit tests:
-1. Read [doc/dev-in-container.md](../../doc/dev-in-container.md) for devcontainer setup
-2. Verify container status: `./scripts/in-container.sh --status` (for AI agents)
-3. Familiarize yourself with existing tests in `tests/unit/`
+1. Read [AGENTS.md](../../AGENTS.md) for environment setup requirements
+2. Familiarize yourself with existing tests in `tests/unit/`
+3. Choose the appropriate test framework for your needs (see below)
+
+### Choosing a Unit Test Framework
+
+WAMR supports two unit testing approaches. Choose the one that best fits your testing needs:
+
+#### Google Test (Recommended for Most Cases)
+
+**Best for:**
+- Comprehensive test coverage similar to spec tests
+- Testing complete features or modules
+- Integration-style unit tests
+- Testing across multiple functions
+
+**Characteristics:**
+- C++ test framework with rich assertion library
+- Test fixtures for setup/teardown
+- Parameterized tests for testing multiple inputs
+- Better for testing behavior and workflows
+- Examples: Most tests in `tests/unit/`
+
+**Example:**
+```cpp
+#include "gtest/gtest.h#include "wasm_runtime.h
+TEST(InterpreterTest, ExecutesI32AddCorrectly) {
+    wasm_module_t module = load_module("add.wasm");
+    EXPECT_NE(nullptr, module);
+    int result = call_function(module, "add", 2, 3);
+    EXPECT_EQ(5, result);
+}
+```
+
+#### CMocka (For Fine-Grained Testing)
+
+**Best for:**
+- Function-level unit tests
+- Tests requiring stubs and mocks
+- Precise control over test environment
+- Testing individual functions in isolation
+
+**Characteristics:**
+- C test framework with mocking support
+- Built-in function stubbing and mocking
+- Fine-grained control over test execution
+- Better for testing internal implementation details
+- Examples: `tests/unit/mem-alloc/`
+
+**Example:**
+```c
+#include <stdarg.h>
+#include <stddef.h>
+#include <setjmp.h>
+#include <cmocka.h>
+
+// Mock function
+void* __wrap_malloc(size_t size) {
+    check_expected(size);
+    return mock_ptr_type(void*);
+}
+
+// Test with mock
+static void test_allocation_with_mock(void **state) {
+    expect_value(__wrap_malloc, size, 1024);
+    will_return(__wrap_malloc, test_buffer);
+    
+    void *result = my_allocate_function(1024);
+    assert_ptr_equal(result, test_buffer);
+}
+```
+
+**Choosing Guidelines:**
+
+| Criteria | Google Test | CMocka |
+|----------|-------------|--------|
+| Testing scope | Feature/module level | Function level |
+| Mock/stub needs | Not required | Frequently needed |
+| Language | C++ (tests can test C code) | Pure C |
+| Learning curve | Moderate | Moderate |
+| WAMR usage | Majority of tests | mem-alloc, specific internals |
+
+**When in doubt, start with Google Test.** It's more flexible for most testing scenarios and matches the testing style used throughout WAMR.
 
 ---
 
@@ -73,7 +127,7 @@ Follow these steps to create and run a simple unit test:
 
 ```bash
 # Create test directory
-./scripts/in-container.sh "mkdir -p tests/unit/my-feature"
+mkdir -p tests/unit/my-feature
 
 # Your test directory should contain:
 # my-feature/
@@ -89,9 +143,7 @@ Follow these steps to create and run a simple unit test:
 Create `my_feature_test.cc`:
 
 ```cpp
-#include "gtest/gtest.h"
-#include "wasm_runtime.h"
-
+#include "gtest/gtest.h#include "wasm_runtime.h
 // Test fixture for setup/teardown
 class MyFeatureTest : public ::testing::Test {
 protected:
@@ -136,13 +188,13 @@ add_test(NAME my_feature_test COMMAND my_feature_test)
 
 ```bash
 # Configure build
-./scripts/in-container.sh "cd tests/unit && cmake -S . -B build"
+cd tests/unit && cmake -S . -B build
 
 # Build tests
-./scripts/in-container.sh "cd tests/unit && cmake --build build"
+cd tests/unit && cmake --build build
 
 # Run your test
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -R my_feature --output-on-failure"
+cd tests/unit && ctest --test-dir build -R my_feature --output-on-failure
 ```
 
 **Expected output:**
@@ -193,8 +245,7 @@ tests/unit/
 **Example of reusing fixtures:**
 ```cpp
 // Reuse existing RuntimeTest fixture from common/test_helper.h
-#include "test_helper.h"
-
+#include "test_helper.h
 class MyFeatureTest : public RuntimeTest {
     // Inherits SetUp() and TearDown() that initialize/cleanup WAMR
 protected:
@@ -491,8 +542,7 @@ add_custom_command(
     COMMAND wat2wasm ${CMAKE_CURRENT_SOURCE_DIR}/hand_written.wat
                      -o ${CMAKE_CURRENT_BINARY_DIR}/hand_written.wasm
     DEPENDS hand_written.wat
-    COMMENT "Converting WAT to WASM"
-)
+    COMMENT "Converting WAT to WASM)
 add_custom_target(hand_written_wasm ALL 
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/hand_written.wasm
 )
@@ -548,8 +598,7 @@ TEST_F(MyFeatureTest, LoadWASM) {
     const char *wasm_path = "wasm-apps/simple.wasm";
     
     // Or use absolute path constructed at compile time
-    #define WASM_APPS_DIR "${CMAKE_CURRENT_BINARY_DIR}/wasm-apps"
-    
+    #define WASM_APPS_DIR "${CMAKE_CURRENT_BINARY_DIR}/wasm-apps    
     // Load the WASM module
     FILE *file = fopen(wasm_path, "rb");
     ASSERT_NE(file, nullptr) << "Failed to open " << wasm_path;
@@ -563,8 +612,7 @@ TEST_F(MyFeatureTest, LoadWASM) {
 ```cmake
 # In CMakeLists.txt
 target_compile_definitions(my_feature_test PRIVATE
-    WASM_APPS_DIR="${CMAKE_CURRENT_BINARY_DIR}/wasm-apps"
-)
+    WASM_APPS_DIR="${CMAKE_CURRENT_BINARY_DIR}/wasm-apps)
 ```
 
 ```cpp
@@ -624,8 +672,7 @@ Create `wasm-apps/minimal.wat`:
 After building, check the output:
 
 ```bash
-./scripts/in-container.sh "ls -la tests/unit/build/my-feature/wasm-apps/"
-```
+ls -la tests/unit/build/my-feature/wasm-apps/```
 
 **Expected output:**
 ```
@@ -640,8 +687,7 @@ hand_written.wasm
 
 **Solution:** Check build directory structure:
 ```bash
-./scripts/in-container.sh "find tests/unit/build -name '*.wasm'"
-```
+find tests/unit/build -name '*.wasm'```
 
 **Problem:** WASI SDK not found
 
@@ -654,7 +700,7 @@ export WASI_SDK_DIR=/opt/wasi-sdk
 
 **Solution:** Install WABT tools (pre-installed in devcontainer):
 ```bash
-./scripts/in-container.sh "which wat2wasm"  # Should print path
+which wat2wasm"  # Should print path
 ```
 
 ---
@@ -689,8 +735,7 @@ Generate CMake build configuration:
 
 ```bash
 # For AI agents
-./scripts/in-container.sh "cd tests/unit && cmake -S . -B build"
-
+cd tests/unit && cmake -S . -B build
 # For humans in VS Code devcontainer
 cd tests/unit && cmake -S . -B build
 ```
@@ -708,8 +753,7 @@ cd tests/unit && cmake -S . -B build
 
 **Example with options:**
 ```bash
-./scripts/in-container.sh "cd tests/unit && cmake -S . -B build -DFULL_TEST=ON -DCOLLECT_CODE_COVERAGE=1"
-```
+cd tests/unit && cmake -S . -B build -DFULL_TEST=ON -DCOLLECT_CODE_COVERAGE=1```
 
 #### Step 2: Build Tests
 
@@ -717,8 +761,7 @@ Compile all test executables:
 
 ```bash
 # For AI agents
-./scripts/in-container.sh "cd tests/unit && cmake --build build -j\$(nproc)"
-
+cd tests/unit && cmake --build build -j\$(nproc)
 # For humans in VS Code devcontainer
 cd tests/unit && cmake --build build -j$(nproc)
 ```
@@ -746,8 +789,7 @@ Execute all tests with CTest:
 
 ```bash
 # For AI agents
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build --output-on-failure"
-
+cd tests/unit && ctest --test-dir build --output-on-failure
 # For humans in VS Code devcontainer
 cd tests/unit && ctest --test-dir build --output-on-failure
 ```
@@ -778,8 +820,7 @@ Total Test time (real) =   2.45 sec
 See all test names:
 
 ```bash
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -N"
-```
+cd tests/unit && ctest --test-dir build -N```
 
 **Example output:**
 ```
@@ -800,14 +841,10 @@ Use `-R` (regex pattern) to filter tests:
 
 ```bash
 # Run single test by exact name
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -R interpreter_test --output-on-failure"
-
-# Run all tests containing "memory"
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -R memory --output-on-failure"
-
+cd tests/unit && ctest --test-dir build -R interpreter_test --output-on-failure
+# Run all tests containing "memorycd tests/unit && ctest --test-dir build -R memory --output-on-failure
 # Run AOT-related tests
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -R 'aot|compilation' --output-on-failure"
-```
+cd tests/unit && ctest --test-dir build -R 'aot|compilation' --output-on-failure```
 
 **Pattern matching examples:**
 - `interpreter` → matches `interpreter_test`
@@ -819,8 +856,7 @@ Use `-R` (regex pattern) to filter tests:
 Show all test output, even for passing tests:
 
 ```bash
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -R my_test --verbose"
-```
+cd tests/unit && ctest --test-dir build -R my_test --verbose```
 
 **When to use verbose mode:**
 - Debugging test failures
@@ -833,11 +869,9 @@ Speed up test runs by running multiple tests simultaneously:
 
 ```bash
 # Use all CPU cores
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build --output-on-failure -j\$(nproc)"
-
+cd tests/unit && ctest --test-dir build --output-on-failure -j\$(nproc)
 # Use specific number of parallel jobs
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build --output-on-failure -j8"
-```
+cd tests/unit && ctest --test-dir build --output-on-failure -j8```
 
 **Benefits:**
 - Significantly faster on multi-core systems
@@ -856,11 +890,9 @@ Run all tests EXCEPT specific ones:
 
 ```bash
 # Exclude slow tests
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -E 'llm-enhanced' --output-on-failure"
-
+cd tests/unit && ctest --test-dir build -E 'llm-enhanced' --output-on-failure
 # Exclude multiple patterns
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -E 'gc|memory64' --output-on-failure"
-```
+cd tests/unit && ctest --test-dir build -E 'gc|memory64' --output-on-failure```
 
 #### Run Specific Test Range
 
@@ -868,11 +900,9 @@ Run tests by number:
 
 ```bash
 # Run tests 1-10
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -I 1,10 --output-on-failure"
-
+cd tests/unit && ctest --test-dir build -I 1,10 --output-on-failure
 # Run test #5 only
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -I 5,5 --output-on-failure"
-```
+cd tests/unit && ctest --test-dir build -I 5,5 --output-on-failure```
 
 #### Repeat Tests
 
@@ -880,11 +910,9 @@ Test for flakiness by repeating tests:
 
 ```bash
 # Repeat test 10 times, stop on first failure
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -R my_test --repeat until-fail:10"
-
+cd tests/unit && ctest --test-dir build -R my_test --repeat until-fail:10
 # Repeat test 10 times, run all iterations
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -R my_test --repeat after-timeout:10"
-```
+cd tests/unit && ctest --test-dir build -R my_test --repeat after-timeout:10```
 
 **Use cases:**
 - Detecting race conditions
@@ -897,11 +925,9 @@ After a test run with failures, quickly rerun only the failed tests:
 
 ```bash
 # First run (some tests fail)
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build --output-on-failure"
-
+cd tests/unit && ctest --test-dir build --output-on-failure
 # Rerun only failed tests
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build --rerun-failed --output-on-failure"
-```
+cd tests/unit && ctest --test-dir build --rerun-failed --output-on-failure```
 
 ### Clean and Rebuild
 
@@ -909,11 +935,9 @@ If tests behave strangely, try a clean rebuild:
 
 ```bash
 # Remove build directory completely
-./scripts/in-container.sh "cd tests/unit && rm -rf build && cmake -S . -B build && cmake --build build -j\$(nproc)"
-
+cd tests/unit && rm -rf build && cmake -S . -B build && cmake --build build -j\$(nproc)
 # Or clean within build directory
-./scripts/in-container.sh "cd tests/unit/build && cmake --build . --target clean && cmake --build . -j\$(nproc)"
-```
+cd tests/unit/build && cmake --build . --target clean && cmake --build . -j\$(nproc)```
 
 **When to clean rebuild:**
 - After modifying CMakeLists.txt
@@ -942,8 +966,7 @@ Enable coverage flags during CMake configuration:
 
 ```bash
 # For AI agents
-./scripts/in-container.sh "cd tests/unit && cmake -S . -B build -DCOLLECT_CODE_COVERAGE=1"
-
+cd tests/unit && cmake -S . -B build -DCOLLECT_CODE_COVERAGE=1
 # For humans in VS Code devcontainer
 cd tests/unit && cmake -S . -B build -DCOLLECT_CODE_COVERAGE=1
 ```
@@ -960,8 +983,7 @@ cd tests/unit && cmake -S . -B build -DCOLLECT_CODE_COVERAGE=1
 Compile with coverage instrumentation:
 
 ```bash
-./scripts/in-container.sh "cd tests/unit && cmake --build build -j\$(nproc)"
-```
+cd tests/unit && cmake --build build -j\$(nproc)```
 
 **Build artifacts:**
 - `.gcno` files: Coverage notes (created at compile time)
@@ -972,8 +994,7 @@ Compile with coverage instrumentation:
 Execute tests to generate coverage data:
 
 ```bash
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build --output-on-failure"
-```
+cd tests/unit && ctest --test-dir build --output-on-failure```
 
 **What this creates:**
 - `.gcda` files in build directories (one per source file)
@@ -983,16 +1004,14 @@ Execute tests to generate coverage data:
 
 ```bash
 # Coverage for interpreter only
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -R interpreter"
-```
+cd tests/unit && ctest --test-dir build -R interpreter```
 
 #### Step 4: Collect Coverage Data
 
 Use `lcov` to gather coverage information from `.gcda` files:
 
 ```bash
-./scripts/in-container.sh "cd tests/unit && lcov --capture --directory build --output-file coverage.all.info"
-```
+cd tests/unit && lcov --capture --directory build --output-file coverage.all.info```
 
 **What this does:**
 - Scans build directory for `.gcda` files
@@ -1014,8 +1033,7 @@ Summary coverage rate:
 Extract only WAMR source code coverage (exclude test code and system headers):
 
 ```bash
-./scripts/in-container.sh "cd tests/unit && lcov --extract coverage.all.info '*/core/iwasm/*' '*/core/shared/*' --output-file coverage.info"
-```
+cd tests/unit && lcov --extract coverage.all.info '*/core/iwasm/*' '*/core/shared/*' --output-file coverage.info```
 
 **What this does:**
 - Filters out test code from coverage report
@@ -1043,8 +1061,7 @@ Summary coverage rate:
 Create browsable HTML coverage report:
 
 ```bash
-./scripts/in-container.sh "cd tests/unit && genhtml coverage.info --output-directory coverage-report"
-```
+cd tests/unit && genhtml coverage.info --output-directory coverage-report```
 
 **What this creates:**
 - `coverage-report/` directory with HTML files
@@ -1070,8 +1087,7 @@ Open the report in your browser:
 open tests/unit/coverage-report/index.html
 
 # Or start a simple HTTP server
-./scripts/in-container.sh "cd tests/unit/coverage-report && python3 -m http.server 8000"
-# Then visit http://localhost:8000 in your browser
+cd tests/unit/coverage-report && python3 -m http.server 8000# Then visit http://localhost:8000 in your browser
 ```
 
 **Report features:**
@@ -1086,8 +1102,7 @@ open tests/unit/coverage-report/index.html
 Get a text summary without generating HTML:
 
 ```bash
-./scripts/in-container.sh "cd tests/unit && lcov --summary coverage.info"
-```
+cd tests/unit && lcov --summary coverage.info```
 
 **Example output:**
 ```
@@ -1103,17 +1118,13 @@ Generate coverage for a specific test:
 
 ```bash
 # Build with coverage
-./scripts/in-container.sh "cd tests/unit && cmake -S . -B build -DCOLLECT_CODE_COVERAGE=1 && cmake --build build"
-
+cd tests/unit && cmake -S . -B build -DCOLLECT_CODE_COVERAGE=1 && cmake --build build
 # Run specific test
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build -R interpreter_test"
-
+cd tests/unit && ctest --test-dir build -R interpreter_test
 # Generate coverage for that test only
-./scripts/in-container.sh "cd tests/unit && lcov --capture --directory build/interpreter --output-file interpreter_coverage.info"
-
+cd tests/unit && lcov --capture --directory build/interpreter --output-file interpreter_coverage.info
 # View summary
-./scripts/in-container.sh "cd tests/unit && lcov --summary interpreter_coverage.info"
-```
+cd tests/unit && lcov --summary interpreter_coverage.info```
 
 ### Resetting Coverage Data
 
@@ -1121,11 +1132,9 @@ Clear coverage data between test runs:
 
 ```bash
 # Remove all .gcda files
-./scripts/in-container.sh "cd tests/unit && find build -name '*.gcda' -delete"
-
+cd tests/unit && find build -name '*.gcda' -delete
 # Or use lcov
-./scripts/in-container.sh "cd tests/unit && lcov --zerocounters --directory build"
-```
+cd tests/unit && lcov --zerocounters --directory build```
 
 **When to reset:**
 - Before running a different set of tests
@@ -1152,24 +1161,21 @@ Clear coverage data between test runs:
 
 **Solution:** Verify coverage flags are enabled:
 ```bash
-./scripts/in-container.sh "cd tests/unit/build && cmake -LA | grep COVERAGE"
-```
+cd tests/unit/build && cmake -LA | grep COVERAGE```
 Should show: `COLLECT_CODE_COVERAGE:BOOL=ON`
 
 **Problem:** `lcov` reports 0% coverage
 
 **Solution:** Tests may not have run. Check test output:
 ```bash
-./scripts/in-container.sh "cd tests/unit && ctest --test-dir build --verbose"
-```
+cd tests/unit && ctest --test-dir build --verbose```
 
 **Problem:** Coverage report shows system headers
 
 **Solution:** Check your filter pattern in step 5:
 ```bash
 # Be more specific
-./scripts/in-container.sh "cd tests/unit && lcov --extract coverage.all.info '*/wasm-micro-runtime/core/*' --output-file coverage.info"
-```
+cd tests/unit && lcov --extract coverage.all.info '*/wasm-micro-runtime/core/*' --output-file coverage.info```
 
 **Problem:** Coverage percentage seems too low
 
@@ -1503,11 +1509,9 @@ Common issues when working with unit tests and their solutions.
 **Solution:** Ensure you're at the correct directory level:
 ```bash
 # WRONG: In a subdirectory
-./scripts/in-container.sh "cd tests/unit/my-feature && cmake -S . -B build"
-
+cd tests/unit/my-feature && cmake -S . -B build
 # RIGHT: At tests/unit level
-./scripts/in-container.sh "cd tests/unit && cmake -S . -B build"
-```
+cd tests/unit && cmake -S . -B build```
 
 **Problem:** Undefined references to WAMR functions
 
@@ -1521,7 +1525,7 @@ target_sources(my_test PRIVATE ${WAMR_RUNTIME_LIB_SOURCE})
 
 **Solution:** The devcontainer has WASI SDK pre-installed. Verify:
 ```bash
-./scripts/in-container.sh "echo \$WASI_SDK_DIR"  # Should print path
+echo \$WASI_SDK_DIR"  # Should print path
 ```
 
 ### Test Execution Issues
@@ -1530,8 +1534,7 @@ target_sources(my_test PRIVATE ${WAMR_RUNTIME_LIB_SOURCE})
 
 **Solution:** Check the file path and ensure WASM apps were built:
 ```bash
-./scripts/in-container.sh "find tests/unit/build -name '*.wasm'"
-```
+find tests/unit/build -name '*.wasm'```
 
 Update test to use correct path:
 ```cpp
@@ -1553,8 +1556,7 @@ const char *wasm_path = WASM_APPS_DIR "/simple.wasm";
 - Check for infinite loops in test code
 - Use gdb to debug where it's stuck:
 ```bash
-./scripts/in-container.sh "cd tests/unit/build && timeout 10 gdb --batch -ex 'run' -ex 'bt' ./my_test"
-```
+cd tests/unit/build && timeout 10 gdb --batch -ex 'run' -ex 'bt' ./my_test```
 
 ### Coverage Issues
 
@@ -1563,11 +1565,9 @@ const char *wasm_path = WASM_APPS_DIR "/simple.wasm";
 **Solution:** Verify coverage was enabled and tests ran:
 ```bash
 # Check coverage flags
-./scripts/in-container.sh "cd tests/unit/build && cmake -LA | grep COVERAGE"
-
+cd tests/unit/build && cmake -LA | grep COVERAGE
 # Check .gcda files were created
-./scripts/in-container.sh "find tests/unit/build -name '*.gcda' | wc -l"
-```
+find tests/unit/build -name '*.gcda' | wc -l```
 
 **Problem:** Coverage excludes my test
 
@@ -1579,14 +1579,9 @@ lcov --extract coverage.all.info "*/core/iwasm/*" "*/core/shared/*" --output-fil
 
 ### Container Issues
 
-**Problem:** `in-container.sh` script fails
+**Problem:** Commands fail with container-related errors
 
-**Solution:** Check container status:
-```bash
-./scripts/in-container.sh --status
-```
-
-See [doc/dev-in-container.md](../../doc/dev-in-container.md#troubleshooting) for detailed container troubleshooting.
+**Solution:** See [AGENTS.md](../../AGENTS.md) for platform-specific execution requirements and [doc/dev-in-container.md](../../doc/dev-in-container.md#troubleshooting) for detailed container troubleshooting.
 
 **Problem:** Permission denied errors
 
