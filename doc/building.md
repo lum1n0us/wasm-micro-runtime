@@ -1,22 +1,16 @@
 # Building WAMR
 
-This guide explains WAMR's build system architecture, when to use different build configurations, and how to make build decisions. For detailed commands and all build options, see the platform-specific operational guides.
+This guide explains WAMR's build system architecture, when to use different build configurations, and how to make build decisions. For detailed commands and all build options, see platform-specific operational guides.
+
+**Prerequisites**:
+1. [AGENTS.md](../AGENTS.md) - Execution patterns
+2. [doc/dev-in-container.md](./dev-in-container.md) - Container setup
+
+> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
 
 WAMR consists of two main components:
 - **iwasm** - The WebAssembly runtime that executes WASM/AOT modules
 - **wamrc** - The AOT (Ahead-of-Time) compiler that compiles WASM to native code
-
----
-
-## Prerequisites
-
-Before building WAMR:
-
-1. **Read [AGENTS.md](../AGENTS.md)** - Platform-specific execution requirements
-2. **Read [dev-in-container.md](dev-in-container.md)** - Container technical details
-3. All build tools are pre-installed in the devcontainer (CMake, GCC, Clang, LLVM)
-
-> **Note**: All commands in this guide show raw syntax. See [AGENTS.md](../AGENTS.md) for platform-specific execution.
 
 ---
 
@@ -36,11 +30,7 @@ See [product-mini/platforms/linux/README.md](../product-mini/platforms/linux/REA
 
 ## Build Types
 
-### What Are Build Types?
-
 WAMR supports different CMake build types that control optimization levels and debug information.
-
-### Build Types Explained
 
 | Build Type | Purpose | When to Use |
 |------------|---------|-------------|
@@ -62,11 +52,7 @@ See [product-mini/platforms/linux/README.md](../product-mini/platforms/linux/REA
 
 ## Execution Modes
 
-### What Are Execution Modes?
-
 WAMR supports multiple ways to execute WebAssembly code, each with different performance and startup characteristics.
-
-### Execution Modes Comparison
 
 | Mode | Startup Speed | Peak Performance | Memory Usage | Build Complexity |
 |------|---------------|------------------|--------------|------------------|
@@ -128,11 +114,7 @@ See [product-mini/platforms/linux/README.md](../product-mini/platforms/linux/REA
 
 ## Feature Flags
 
-### What Are Feature Flags?
-
 WAMR uses CMake variables to enable/disable runtime features and WebAssembly proposals. Features are organized into categories.
-
-### Feature Categories
 
 **Core Execution** (mode selection):
 - `WAMR_BUILD_INTERP` - Classic/Fast interpreter
@@ -227,8 +209,6 @@ See platform-specific READMEs for detailed instructions:
 ---
 
 ## Building wamrc AOT Compiler
-
-### What is wamrc?
 
 wamrc is WAMR's AOT (Ahead-of-Time) compiler that converts WASM modules to native machine code for maximum runtime performance.
 
