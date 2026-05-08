@@ -1,12 +1,12 @@
 # WAMR Architecture Overview
 
-This document provides AI agents and developers with a mental model of WAMR's structure, component relationships, key abstractions, and design patterns. Understanding this architecture is essential for effective bug fixing, feature development, and code review.
+This guide explains WAMR's core components, concepts, and design principles. It serves as the single source of truth for architectural concepts referenced throughout WAMR documentation.
 
-**Related documentation:**
+**Prerequisites**:
+1. [AGENTS.md](../AGENTS.md) - Project navigation
+2. [README.md](../README.md) - Project overview
 
-- [README.md](../README.md) - Project overview and features
-- [doc/build_wamr.md](./build_wamr.md) - Build system details
-- [doc/embed_wamr.md](./embed_wamr.md) - Embedding API guide
+> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
 
 ---
 
@@ -344,15 +344,7 @@ When Wasm code calls a host-registered native function:
 5. Runtime marshals return value back to Wasm
 6. Execution continues in Wasm
 
-Registration example:
-
-```c
-static NativeSymbol native_symbols[] = {
-    {"print_string", print_string, "(i)i", NULL}
-};
-
-wasm_runtime_register_natives("env", native_symbols, 1);
-```
+Registration: Use `wasm_runtime_register_natives()` to expose host functions to Wasm modules.
 
 Location: `core/iwasm/common/wasm_native.c`
 
@@ -421,21 +413,6 @@ This script is included by host applications to pull WAMR runtime into their bui
 - `WAMR_BUILD_SHARED_MEMORY=1` - Shared memory between threads
 - `WAMR_BUILD_MEMORY_PROFILING=1` - Memory usage profiling
 
-**Example configuration:**
-
-```cmake
-set(WAMR_BUILD_PLATFORM "linux")
-set(WAMR_BUILD_TARGET "X86_64")
-set(WAMR_BUILD_INTERP 1)
-set(WAMR_BUILD_FAST_INTERP 1)
-set(WAMR_BUILD_AOT 1)
-set(WAMR_BUILD_LIBC_BUILTIN 1)
-set(WAMR_BUILD_LIBC_WASI 1)
-
-include(${WAMR_ROOT_DIR}/build-scripts/runtime_lib.cmake)
-add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
-```
-
 **Reference:** See [doc/build_wamr.md](./build_wamr.md) for comprehensive build configuration details.
 
 ## Design Patterns & Conventions
@@ -473,6 +450,4 @@ add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
 
 ---
 
-**Last updated:** 2026-03-31 (Phase 1 - Foundation)
-
-**Next steps:** After implementing Phase 1, observe AI agent usage patterns to identify gaps for Phase 3 (dev-workflows.md) and Phase 4 (testing-guide.md).
+**Related**: See [AGENTS.md § Navigation](../AGENTS.md#documentation-navigation) for complete workflow guides.
