@@ -1,36 +1,13 @@
 # Debugging WAMR
 
-This guide explains debugging strategies for WAMR and provides guidance on selecting the right debugging tools. It covers both WAMR runtime debugging (native code) and WebAssembly application debugging (source-level).
+This guide explains debugging strategies for WAMR development, when to use different debugging approaches, and how to troubleshoot issues effectively.
 
-**Philosophy**: Different debugging scenarios require different tools. Understanding which tool to use and when is key to efficient debugging.
+**Prerequisites**:
+1. [AGENTS.md](../AGENTS.md) - Execution patterns
+2. [building.md](./building.md) - Build types for debugging
+3. [testing.md](./testing.md) - Test-driven debugging
 
----
-
-## Prerequisites
-
-Before debugging WAMR:
-
-1. **Read [AGENTS.md](../AGENTS.md)** - Platform-specific execution requirements
-2. **Read [dev-in-container.md](dev-in-container.md)** - Container technical details
-3. **Read [building.md](building.md)** - Debugging requires debug builds
-
-> **Note**: All commands in this guide show raw syntax. See [AGENTS.md](../AGENTS.md) for platform-specific execution.
-
-**Quick debug build:**
-```bash
-cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build . -j$(nproc)
-```
-
----
-
-## Debugging Tools Overview
-
-The devcontainer provides all necessary debugging tools:
-- GDB with Python support
-- Valgrind with all tools (memcheck, callgrind, cachegrind)
-- lldb for WebAssembly source debugging
-- Debug builds of system libraries
-- Proper capabilities (SYS_PTRACE, seccomp=unconfined)
+> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
 
 ---
 
@@ -75,9 +52,7 @@ WAMR supports multiple debugging approaches depending on what you're debugging:
 
 ## GDB Debugging
 
-### What Is GDB?
-
-GDB is the GNU Debugger for native code. It allows you to debug WAMR's C code: set breakpoints, inspect variables, examine stack traces, and step through execution.
+GDB is the GNU Debugger for debugging WAMR's native C code.
 
 ### When to Use GDB
 
@@ -96,119 +71,57 @@ GDB is the GNU Debugger for native code. It allows you to debug WAMR's C code: s
 
 ### Debug Build Requirements
 
+Use Debug build type for debugging WAMR. See [building.md § Build Types](./building.md#build-types) for how to create Debug builds and when to use different build types.
+
+**WAMR-specific debugging options:**
+
 | Build Option | Effect | Needed For |
 |--------------|--------|------------|
-| `CMAKE_BUILD_TYPE=Debug` | Enables `-g`, disables `-O2` | All debugging |
 | `WAMR_BUILD_DEBUG_INTERP=1` | Debug interpreter internals | Interpreter debugging |
 | `WAMR_BUILD_DEBUG_AOT=1` | Debug AOT compilation | AOT debugging |
 | `WAMR_BUILD_DUMP_CALL_STACK=1` | Print stack on errors | Crash investigation |
 | `WAMR_BUILD_MEMORY_PROFILING=1` | Track memory allocations | Memory leak hunting |
 
-### Quick Examples
+### Essential GDB Commands
 
-**Basic debugging session:**
+**1. Start debugging:**
 ```bash
 gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm
 ```
 
-In GDB:
+**2. Set breakpoint and inspect:**
 ```gdb
 (gdb) break wasm_runtime_instantiate
 (gdb) run
 (gdb) backtrace
 (gdb) print *module
-(gdb) continue
 ```
 
-**Crash investigation:**
+**3. Analyze crash (core dump):**
 ```bash
-# Enable core dumps and run
 ulimit -c unlimited && product-mini/platforms/linux/build-debug/iwasm test.wasm
-
-# Analyze core dump
 gdb product-mini/platforms/linux/build-debug/iwasm core
 ```
-
-In GDB:
 ```gdb
 (gdb) backtrace full
-(gdb) frame 0
-(gdb) info registers
-(gdb) list
 ```
 
-### Common Breakpoints
+### WAMR-Specific Breakpoints
 
-**Module loading:**
-```gdb
-break wasm_load
-break load_from_sections
-break wasm_loader_prepare_bytecode
-```
+**Common debugging entry points:**
+- `wasm_load` - Module loading
+- `wasm_runtime_instantiate` - Module instantiation
+- `wasm_runtime_call_wasm` - Function execution
+- `wasm_set_exception` - Error handling
+- `__assert_fail` - Assertion failures
 
-**Execution:**
-```gdb
-break wasm_runtime_call_wasm
-break wasm_interp_call_wasm
-break aot_call_function
-```
-
-**Memory operations:**
-```gdb
-break wasm_runtime_malloc
-break wasm_runtime_free
-break wasm_runtime_validate_app_addr
-```
-
-**Errors:**
-```gdb
-break wasm_set_exception
-break __assert_fail
-```
-
-### GDB Workflows
-
-**1. Crash Investigation:**
-```bash
-# Build with debug symbols
-cd product-mini/platforms/linux && cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build build-debug
-
-# Run under GDB
-gdb --args product-mini/platforms/linux/build-debug/iwasm test.wasm
-```
-
-**2. Module Loading Issues:**
-```gdb
-(gdb) break wasm_load
-(gdb) break wasm_set_exception
-(gdb) commands 2
-> print (char*)exception_buf
-> backtrace
-> continue
-> end
-(gdb) run
-```
-
-**3. Execution Tracing:**
-```gdb
-(gdb) break wasm_runtime_call_wasm
-(gdb) commands
-> silent
-> printf "Calling function: %s\n", function->func_name
-> continue
-> end
-(gdb) run
-```
-
-**→ For complete GDB reference, command examples, and troubleshooting, see:** [GDB Debugging Guide](https://sourceware.org/gdb/documentation/) (external) and WAMR-specific breakpoints above.
+**→ For complete GDB reference:** [GDB Documentation](https://sourceware.org/gdb/documentation/)
 
 ---
 
 ## Memory Debugging with Valgrind
 
-### What Is Valgrind?
-
-Valgrind is a dynamic analysis framework that detects memory errors, leaks, and can profile performance. It runs your program in a virtual environment that tracks all memory operations.
+Valgrind is a dynamic analysis framework for detecting memory errors, leaks, and profiling performance.
 
 ### When to Use Valgrind
 
@@ -254,17 +167,9 @@ callgrind_annotate callgrind.out | head -50
 
 ### Understanding Valgrind Output
 
-**Leak types:**
-- **Definitely lost**: Real leak, must fix
-- **Indirectly lost**: Leaked memory referenced by definitely lost blocks
-- **Possibly lost**: Pointer to block interior, may or may not be leak
-- **Still reachable**: Memory still pointed to at exit (usually OK for cleanup)
+**Leak types**: Definitely lost (must fix), Indirectly lost, Possibly lost, Still reachable (usually OK)
 
-**Common errors:**
-- **Invalid read/write**: Buffer overflow or out-of-bounds access
-- **Use of uninitialized value**: Variable used before initialization
-- **Invalid free**: Double free or freeing invalid pointer
-- **Mismatched free**: Using wrong free function (malloc/new mismatch)
+**Common errors**: Invalid read/write, Use of uninitialized value, Invalid free, Mismatched free
 
 ### Valgrind Workflow
 
@@ -286,9 +191,7 @@ cat leak.log | grep 'definitely lost' -A 10
 
 ## AddressSanitizer
 
-### What Is AddressSanitizer?
-
-AddressSanitizer (ASan) is a compiler-based memory error detector. It's faster than Valgrind and detects similar memory bugs by instrumenting code at compile time.
+AddressSanitizer (ASan) is a compiler-based memory error detector. Faster than Valgrind (2x vs 10-50x slowdown).
 
 ### When to Use AddressSanitizer
 
@@ -322,9 +225,7 @@ ASan will automatically print detailed error reports on memory violations.
 
 ## Source-Level Debugging (WASM Applications)
 
-### What Is Source-Level Debugging?
-
-Source-level debugging allows you to debug WebAssembly applications at the source code level (C, Rust, etc.) using lldb. You can set breakpoints in your WASM source, step through code, and inspect variables.
+Debug WebAssembly applications at the source code level (C, Rust, etc.) using lldb.
 
 ### When to Use Source-Level Debugging
 
@@ -370,24 +271,6 @@ llvm-dwarfdump test.wasm
 
 **→ See [source_debugging_aot.md](source_debugging_aot.md) for complete guide**
 
-### Quick Example (Interpreter)
-
-```bash
-# Terminal 1: Run iwasm with debug engine
-product-mini/platforms/linux/build-debug/iwasm -g=127.0.0.1:1234 test.wasm
-
-# Terminal 2: Connect lldb
-lldb
-```
-
-In lldb:
-```
-(lldb) process connect -p wasm connect://127.0.0.1:1234
-(lldb) b main
-(lldb) continue
-(lldb) step
-```
-
 **→ For complete setup, lldb commands, and troubleshooting:**
 - **[source_debugging_interpreter.md](source_debugging_interpreter.md)** - Interpreter mode
 - **[source_debugging_aot.md](source_debugging_aot.md)** - AOT mode
@@ -397,9 +280,7 @@ In lldb:
 
 ## Debug Logging
 
-### What Is Debug Logging?
-
-WAMR provides runtime logging for diagnostics without a debugger. Log levels control verbosity from fatal errors only to trace-level debugging.
+WAMR provides runtime logging for diagnostics without a debugger.
 
 ### When to Use Logging
 
@@ -509,38 +390,10 @@ WAMR_LOG_LEVEL=5 product-mini/platforms/linux/build-debug/iwasm test.wasm
 
 ## Build Types for Debugging
 
-### Debug Build
-
-**Purpose**: Full debugging with symbols, no optimizations
-
-**When**: Active development, crash investigation
-
-```bash
-cd product-mini/platforms/linux && cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug -DWAMR_BUILD_DUMP_CALL_STACK=1 && cmake --build build-debug
-```
-
-**Characteristics**:
-- Debug symbols (`-g`)
-- No optimization (`-O0`)
-- Assertions enabled
-- Easy to step through
-- Slower execution
-
-### RelWithDebInfo Build
-
-**Purpose**: Debugging with some optimizations
-
-**When**: Performance issues where Debug build is too slow
-
-```bash
-cd product-mini/platforms/linux && cmake -B build-relwithdebinfo -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-relwithdebinfo
-```
-
-**Characteristics**:
-- Debug symbols (`-g`)
-- Optimizations enabled (`-O2`)
-- Better performance
-- Harder to step through (optimized code)
+Use Debug build type for debugging WAMR. See [building.md § Build Types](./building.md#build-types) for:
+- How to create Debug builds
+- When to use Debug vs RelWithDebInfo
+- Build characteristics and trade-offs
 
 ---
 
