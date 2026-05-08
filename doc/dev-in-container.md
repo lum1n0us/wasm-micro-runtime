@@ -1,10 +1,14 @@
 # Development in Devcontainer
 
+This guide covers WAMR's devcontainer technical details, VS Code integration, and container troubleshooting.
+
+**For basic command execution**: See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern)
+
+---
+
 ## Overview
 
-The WAMR project uses Docker-based development containers (devcontainers) to provide a consistent, reproducible build environment. This document covers technical details about the devcontainer setup.
-
-> **For command execution requirements and workflows, see [AGENTS.md](../AGENTS.md).**
+The WAMR project uses Docker-based development containers (devcontainers) to provide a consistent, reproducible build environment with all required toolchains.
 
 ### Pre-installed Tools
 
@@ -99,24 +103,6 @@ docker stop <container-name>
 docker rm <container-name>
 ```
 
-### Interactive Development Workflow
-
-Once inside the container (via VS Code or `docker exec`):
-
-```bash
-# Configure build
-cmake -B build -DWAMR_BUILD_INTERP=1 -DWAMR_BUILD_AOT=1
-
-# Build
-cmake --build build -j$(nproc)
-
-# Test
-cd build && ctest --output-on-failure
-
-# Install locally (inside container)
-cmake --install build --prefix /tmp/wamr-install
-```
-
 ## Workspace Layout
 
 ### Path Mapping
@@ -152,21 +138,15 @@ This means:
 
 ### Container Won't Start
 
-**Solutions**:
 ```bash
 # Check Docker is running
 docker ps
 
-# Check for conflicting containers
+# Remove conflicting containers
 docker ps -a | grep devcontainer
 docker rm -f <old-container-name>
 
-# Try manual start via VS Code
-# Open project in VS Code → F1 → "Reopen in Container"
-
-# Check Docker daemon
-systemctl status docker  # Linux
-# or check Docker Desktop status on Mac/Windows
+# Or use VS Code: F1 → "Reopen in Container"
 
 # Clean up and retry
 docker system prune -a
@@ -174,148 +154,94 @@ docker system prune -a
 
 ### Permission Errors
 
-**Symptom**: "Permission denied" when building or writing files
+"Permission denied" when building or writing files:
 
-**Solutions**:
 ```bash
-# 1. Check file ownership on host
-ls -la build/
-
-# 2. Fix ownership (run on host)
+# Fix ownership (run on host)
 sudo chown -R $USER:$USER build/
 
-# 3. Ensure container user matches host
-# This should be automatic but verify:
+# Verify container user matches host
 docker exec <container> id
-# Should show uid matching your host uid
 
-# 4. For persistent issues, rebuild container
-# In VS Code: F1 → "Dev Containers: Rebuild Container"
+# Rebuild container if needed
+# VS Code: F1 → "Dev Containers: Rebuild Container"
 ```
 
 ### Container Is Slow
 
-**Symptom**: Builds are slower in container than on host
+Builds are slower in container than on host:
 
-**Solutions**:
-1. **Enable Docker BuildKit** (faster builds):
-   ```bash
-   export DOCKER_BUILDKIT=1
-   ```
+1. **Enable Docker BuildKit**: `export DOCKER_BUILDKIT=1`
+2. **Use ccache**: `cmake -B build -DCMAKE_CXX_COMPILER_LAUNCHER=ccache`
+3. **Increase Docker resources**: Docker Desktop → Settings → Resources (4+ CPUs, 8+ GB RAM)
+4. **Use named volumes**: Modify `.devcontainer/devcontainer.json` to cache `build/` directory
 
-2. **Use ccache** (already installed):
-   ```bash
-   cmake -B build -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-   ```
+### Container Not Found After Restart
 
-3. **Adjust Docker resources**:
-   - Docker Desktop → Settings → Resources
-   - Increase CPU cores and RAM allocation
-   - Recommended: 4+ CPUs, 8+ GB RAM
-
-4. **Use named volumes for build cache**:
-   - Modify `.devcontainer/devcontainer.json`
-   - Add volume mounts for `build/` directory
-
-### "Container Not Found" After System Restart
-
-**Solutions**:
 ```bash
-# Restart via VS Code
-# F1 → "Dev Containers: Reopen in Container"
-
-# Or check container status
-docker ps -a | grep devcontainer
-docker start <container-name>
+# Restart via VS Code: F1 → "Reopen in Container"
+# Or manually: docker ps -a | grep devcontainer && docker start <container-name>
 ```
 
 ### Changes Not Appearing
 
-**Symptom**: File changes on host don't appear in container
+File changes on host don't appear in container:
 
-**Solutions**:
 ```bash
-# Check Docker volume mounts
-docker inspect <container-name> | grep Mounts -A 20
-
 # Restart container
 docker restart <container-name>
 
-# If using Docker Desktop on Mac/Windows, check file sharing settings
-# Docker Desktop → Settings → Resources → File Sharing
-# Ensure your project path is allowed
+# Docker Desktop (Mac/Windows): Check file sharing
+# Settings → Resources → File Sharing → Ensure project path allowed
 ```
 
 ### Build Fails with "Tool Not Found"
 
-**Symptom**: cmake, gcc, or other tool not found
+cmake, gcc, or other tool not found:
 
-**Solutions**:
 ```bash
-# Rebuild container to ensure fresh install
-# In VS Code: F1 → "Dev Containers: Rebuild Container"
-
+# Rebuild container: F1 → "Dev Containers: Rebuild Container"
 # Or check .devcontainer/finalize.sh for tool installation
 ```
 
 ### Out of Disk Space
 
-**Symptom**: "No space left on device" during build
+"No space left on device" during build:
 
-**Solutions**:
 ```bash
 # Clean Docker resources
 docker system df  # Check usage
 docker system prune -a  # Clean up
 
-# Remove unused containers
-docker ps -a
+# Remove unused containers and images
 docker rm $(docker ps -aq -f status=exited)
-
-# Remove unused images
-docker images
 docker rmi $(docker images -q -f dangling=true)
 ```
 
 ## Related Documentation
 
-- **[building.md](building.md)** - Complete build instructions for WAMR (to be created)
-- **[testing.md](testing.md)** - Test suite documentation and guidelines (to be created)
-- **[debugging.md](debugging.md)** - Debugging WAMR with GDB and Valgrind (to be created)
-- **[code-quality.md](code-quality.md)** - Code formatting and quality standards (to be created)
-- **[devcontainer.md](devcontainer.md)** - Basic devcontainer overview for VS Code users
-- **[AGENTS.md](../AGENTS.md)** - Complete AI agent development guide (to be updated)
+- **[AGENTS.md](../AGENTS.md)** - AI agent development guide with command execution patterns
+- **[linting.md](linting.md)** - Code formatting and quality standards
 
 ## Reference
 
-### External Documentation
-
-- [Development Containers Specification](https://containers.dev/)
-- [VS Code Dev Containers Documentation](https://code.visualstudio.com/docs/devcontainers/containers)
-- [Docker Documentation](https://docs.docker.com/)
-- [devcontainer CLI Reference](https://github.com/devcontainers/cli)
-
 ### Container Configuration
 
-**Base Image**: `mcr.microsoft.com/devcontainers/cpp:debian-12`
-
-**Capabilities**:
-- `SYS_PTRACE` enabled (required for GDB debugging)
-- `seccomp=unconfined` (allows all system calls for Valgrind)
-
-**User**: `vscode` (non-root, uid mapped to host)
-
-**Workspace**: `/workspaces/ai-thoughts`
+- **Base Image**: `mcr.microsoft.com/devcontainers/cpp:debian-12`
+- **User**: `vscode` (non-root, uid mapped to host)
+- **Workspace**: `/workspaces/ai-thoughts`
+- **Capabilities**: `SYS_PTRACE` enabled, `seccomp=unconfined`
 
 ### Tool Versions
 
-Exact versions are pinned in `.devcontainer/Dockerfile`:
+Pinned in `.devcontainer/Dockerfile`:
 - WASI SDK: 25.0
 - WABT: 1.0.37
 - Base OS: Debian 12 (Bookworm)
 - clang-format: 14
 
+### External Documentation
 
-**Documentation Version**: 1.0.0  
-**Last Updated**: 2026-04-03  
-**Maintained By**: WAMR Development Team
+- [Development Containers Specification](https://containers.dev/)
+- [VS Code Dev Containers](https://code.visualstudio.com/docs/devcontainers/containers)
+- [devcontainer CLI](https://github.com/devcontainers/cli)
