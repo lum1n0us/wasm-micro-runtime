@@ -817,6 +817,135 @@ When reading documentation:
 
 ---
 
+## Periodic Documentation Audit Checklist
+
+**Purpose**: To be run by AI tools (Claude Code, custom scripts) on a regular schedule (monthly/quarterly) to detect accumulated documentation debt.
+
+**Usage Pattern**:
+```bash
+# AI agent invocation
+claude-code audit-docs --checklist=documentation-principles.md
+```
+
+### Audit Checklist
+
+**Category 1: Zero Duplication (Critical)**
+
+- [ ] **A1.1 Concept Duplication Scan**
+  - Search for key concepts (AOT, JIT, WASI, devcontainer, etc.) across all .md files
+  - Verify each concept is explained in exactly ONE file
+  - Action: List all files where concept X appears, flag if > 1 has full explanation
+
+- [ ] **A1.2 Command Duplication Scan**
+  - Extract all command examples from all .md files
+  - Identify identical commands (same tool + same flags)
+  - Action: Flag any command that appears in > 2 files with full syntax
+
+- [ ] **A1.3 Execution Pattern Duplication**
+  - Search for `devcontainer exec`, container execution instructions
+  - Should only appear in AGENTS.md § Command Execution Pattern
+  - Action: Flag any other file with > 5 lines about container execution
+
+- [ ] **A1.4 Navigation Duplication**
+  - Search for "when to read", "read this if", workflow guidance
+  - Should primarily be in AGENTS.md § Navigation
+  - Action: Flag excessive navigation guidance in other files
+
+**Category 2: Information Architecture (Important)**
+
+- [ ] **A2.1 Layer Boundary Check**
+  - CLAUDE.md: Verify < 40 lines, only tool-specific rules
+  - AGENTS.md: Verify 100-200 lines, only navigation + critical constraints
+  - doc/*.md: Verify 300-600 lines, concept + decision + minimal examples
+  - Action: Flag files exceeding line limits
+
+- [ ] **A2.2 Single Source of Truth Validation**
+  - For each entry in SSOT Registry, verify:
+    - Authoritative source contains the information
+    - Other mentions link to authoritative source
+    - No other file provides the same level of detail
+  - Action: Report violations with file:line references
+
+- [ ] **A2.3 Cross-Reference Integrity**
+  - Extract all markdown links
+  - Verify all links point to valid files and sections
+  - Verify linked sections actually contain the referenced information
+  - Action: Report broken or misleading links
+
+- [ ] **A2.4 Orphaned Information**
+  - Identify information not linked from AGENTS.md navigation
+  - Check if information exists but is not discoverable
+  - Action: Report orphaned docs that should be in navigation
+
+**Category 3: Content Quality (Important)**
+
+- [ ] **A3.1 Command Form Consistency**
+  - All commands in doc/*.md should be in pure form (no platform wrappers)
+  - All doc/*.md should have "See AGENTS.md for execution" at top
+  - Action: Flag files with `devcontainer exec` in examples
+
+- [ ] **A3.2 Decision-Level Command Pattern**
+  - doc/*.md should have max 1-3 command examples per concept
+  - Full command references should be in component READMEs
+  - Action: Flag doc/*.md sections with > 5 command variations
+
+- [ ] **A3.3 Link Phrase Quality**
+  - Links should describe what they point to
+  - Avoid "click here", "see more", prefer "See [tests/unit/README.md] for all commands"
+  - Action: Flag vague link phrases
+
+**Category 4: Maintenance (Advisory)**
+
+- [ ] **A4.1 Outdated Content Detection**
+  - Compare doc mentions of versions, tools with current project state
+  - Look for "TODO", "TBD", "FIXME" markers
+  - Action: Report potentially stale content
+
+- [ ] **A4.2 Documentation Coverage**
+  - Check if major components (core/iwasm/*, product-mini/platforms/*) have READMEs
+  - Verify AGENTS.md navigation references all major workflows
+  - Action: Report missing documentation
+
+- [ ] **A4.3 Consistency Check**
+  - Terminology consistency (do we say "AOT compiler" or "wamrc" consistently?)
+  - Heading format consistency (## vs ###)
+  - Action: Report inconsistencies
+
+### Audit Output Format
+
+```markdown
+# WAMR Documentation Audit Report
+**Date**: YYYY-MM-DD
+**Auditor**: [AI Tool Name]
+**Files Scanned**: X markdown files
+
+## Critical Issues (Zero Duplication Violations)
+
+### A1.2 Command Duplication
+- Command `ctest --test-dir build --output-on-failure` found in:
+  - doc/testing.md:77
+  - tests/unit/README.md:45
+  - AGENTS.md:113
+  **Recommendation**: Keep full syntax only in tests/unit/README.md
+
+## Important Issues (Architecture Violations)
+
+### A2.1 Layer Boundary Check
+- CLAUDE.md: 45 lines (limit: 40) - exceeds by 5 lines
+  **Recommendation**: Remove redundant content
+
+## Advisory Items
+
+### A4.1 Outdated Content
+- doc/build_wamr.md mentions "LLVM 10.0" but .devcontainer uses LLVM 17
+  **Recommendation**: Update version references
+
+---
+**Summary**: X critical, Y important, Z advisory issues found.
+```
+
+---
+
 ## Enforcement
 
 These principles are enforced through:
