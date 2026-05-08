@@ -75,6 +75,14 @@ Each piece of information should have a single authoritative location. Other doc
 | Debug concepts & decisions | doc/debugging.md | Link with "See debugging.md" |
 | Core concepts (AOT, JIT, WASI) | doc/architecture-overview.md | Link with "See architecture-overview.md" |
 | Component-specific commands | component/*/README.md | Link to specific README |
+| Embedding API concepts | doc/embed_wamr.md | Link to embed_wamr.md |
+| Native API registration | doc/export_native_api.md | Link to export_native_api.md |
+| CMake flags (complete reference) | doc/build_wamr.md | Link to build_wamr.md for complete list |
+| Performance tuning strategy | doc/perf_tune.md | Link to perf_tune.md |
+| Memory optimization | doc/memory_tune.md | Link to memory_tune.md |
+| GDB debugging workflow | doc/debugging.md | Link to debugging.md |
+| Code quality standards | doc/code-quality.md | Link to code-quality.md |
+| Pre-commit checklist | doc/linting.md | Link to linting.md |
 
 ---
 
