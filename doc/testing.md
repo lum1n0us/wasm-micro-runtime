@@ -4,29 +4,11 @@ This guide provides a strategic overview of testing approaches for WAMR. It expl
 
 **Philosophy**: WAMR uses multiple test layers to ensure correctness, spec compliance, and stability. Understanding which test to run or write for your use case is key to effective development.
 
----
+**Prerequisites**:
+1. [AGENTS.md](../AGENTS.md) - Navigation and execution patterns
+2. [building.md](./building.md) - Tests require iwasm and sometimes wamrc
 
-## Prerequisites
-
-Before running tests:
-
-1. **Read [AGENTS.md](../AGENTS.md)** - Platform-specific execution requirements
-2. **Read [dev-in-container.md](dev-in-container.md)** - Container technical details  
-3. **Read [building.md](building.md)** - Tests require iwasm and sometimes wamrc
-
-> **Note**: All commands in this guide show raw syntax. See [AGENTS.md](../AGENTS.md) for platform-specific execution.
-
----
-
-## Test Types Overview
-```bash
-if cd tests/unit/build && ctest; then
-    echo "Tests passed"
-else
-    echo "Tests failed"
-    exit 1
-fi
-```
+> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
 
 ---
 
@@ -76,9 +58,6 @@ Located in: `tests/unit/`
 ```bash
 # Build and run all unit tests
 cd tests/unit && cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure
-
-# Run specific test category
-cd tests/unit && ctest --test-dir build -R interpreter --output-on-failure
 ```
 
 ### Test Categories
@@ -136,12 +115,6 @@ Located in: `tests/wamr-test-suites/`
 ```bash
 # Run core spec tests with fast interpreter
 cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -b
-
-# Run spec tests with AOT compilation
-cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -b
-
-# Test with SIMD enabled
-cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -S -b
 ```
 
 ### Test Coverage
@@ -209,14 +182,8 @@ Located in: `tests/regression/`
 ### Quick Example
 
 ```bash
-# Build WAMR variants for regression testing
-cd tests/regression/ba-issues && ./build_wamr.sh
-
 # Run all regression tests
 cd tests/regression/ba-issues && ./run.py
-
-# Test specific issue
-cd tests/regression/ba-issues && ./run.py --issues 2833
 ```
 
 ### Test Organization
@@ -275,12 +242,6 @@ Located in: `samples/`
 ```bash
 # Test basic WAMR usage
 cd samples/basic && mkdir -p build && cd build && cmake .. && cmake --build . && ./basic
-
-# Test multi-threading
-cd samples/multi-thread && mkdir -p build && cd build && cmake .. && cmake --build . && ctest
-
-# Test WASM C API
-cd samples/wasm-c-api && mkdir -p build && cd build && cmake .. && cmake --build . && ctest
 ```
 
 ### Available Sample Tests
@@ -315,57 +276,19 @@ Is this a bug fix?
         └─ → Create integration test (samples/)
 ```
 
-**Common scenarios:**
-
-| Scenario | Test Type | Example |
-|----------|-----------|---------|
-| Implementing GC proposal | Spec tests | Add GC spec tests to wamr-test-suites |
-| Optimizing interpreter | Unit tests | Test interpreter functions in tests/unit/interpreter/ |
-| Fixing crash from issue #3022 | Regression test | Add to tests/regression/ba-issues/ |
-| Adding new WAMR API | Integration test | Create sample in samples/ showing API usage |
-| Fixing Memory64 instruction | Spec + unit tests | Both spec conformance and unit-level verification |
-
-**Best practice**: Most significant changes benefit from multiple test types. For example, implementing a new proposal should include:
-1. Spec tests (validate conformance)
-2. Unit tests (test component implementation)
-3. Integration test (show real-world usage)
+**Best practice**: Most significant changes benefit from multiple test types.
 
 ---
 
 ## Pre-Commit Testing
 
-Before committing or creating a PR, run these tests locally:
-
-### Minimum (Fast - ~2 minutes)
+Before committing or creating a PR, run appropriate tests locally. Start with unit tests, add spec tests for runtime changes, and include regression tests for bug fixes.
 
 ```bash
-# Build iwasm
-cd product-mini/platforms/linux && mkdir -p build && cd build && cmake .. && cmake --build . -j\$(nproc)
-
-# Unit tests only
-cd tests/unit && cmake -S . -B build && cmake --build build -j\$(nproc) && ctest --test-dir build --output-on-failure
-```
-
-### Recommended (Moderate - ~10 minutes)
-
-```bash
-# Unit tests + core spec tests
+# Example: Unit + spec + regression tests
 cd tests/unit && cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure
 cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -b
-
-# Regression tests
-cd tests/regression/ba-issues && ./build_wamr.sh && ./run.py
-```
-
-### Thorough (Complete - ~30 minutes)
-
-```bash
-# All of the above plus multiple execution modes
-cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -b
-cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -b
-
-# Feature-specific tests if applicable
-cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -S  # SIMD
+cd tests/regression/ba-issues && ./run.py
 ```
 
 **Also see**: [code-quality.md](code-quality.md) for linting and formatting checks.
@@ -398,15 +321,7 @@ WAMR uses GitHub Actions to automatically test every pull request.
 
 ### Reproducing CI Failures Locally
 
-CI uses the same test scripts and devcontainer as local development:
-
-```bash
-# Example: Reproduce "spec-test-aot" CI job
-cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t aot -b
-
-# Example: Reproduce "unit-tests" CI job
-cd tests/unit && cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure
-```
+CI uses the same test scripts as local development. Run the corresponding test command from the sections above.
 
 ---
 
@@ -443,11 +358,8 @@ Valgrind detects memory leaks, use-after-free, buffer overflows, and other memor
 ### Quick Example
 
 ```bash
-# Build debug version of iwasm
-cd product-mini/platforms/linux && mkdir -p build-debug && cd build-debug && cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build .
-
 # Run with memory leak detection
-valgrind --leak-check=full product-mini/platforms/linux/build-debug/iwasm test.wasm
+valgrind --leak-check=full iwasm test.wasm
 ```
 
 **When to use Valgrind:**
@@ -466,17 +378,7 @@ valgrind --leak-check=full product-mini/platforms/linux/build-debug/iwasm test.w
 
 **Problem**: Container or environment issues.
 
-**Solution**:
-```bash
-# Check container status
-docker ps | grep devcontainer
-
-# Verify you're using the wrapper
-# ✅ Correct: cd tests/unit && ctest --test-dir build
-# ❌ Wrong: cd tests/unit && ctest --test-dir build
-```
-
-See [dev-in-container.md](dev-in-container.md#troubleshooting) for container troubleshooting.
+**Solution**: See [AGENTS.md](../AGENTS.md) for execution patterns and environment setup.
 
 ### Test-Specific Issues
 
@@ -486,47 +388,12 @@ Each test type has specific troubleshooting:
 - **Spec test issues** → See [tests/wamr-test-suites/README.md](../tests/wamr-test-suites/README.md#troubleshooting)
 - **Regression test issues** → See [tests/regression/ba-issues/README.md](../tests/regression/ba-issues/README.md#troubleshooting)
 
-### Common Issues Across All Tests
+### Common Issues
 
-**Tests pass locally but fail in CI:**
-- Ensure you're using the container wrapper locally
-- Check if tests depend on specific environment state
-- Verify file paths are relative, not absolute
-
-**Tests are flaky:**
-- Check for race conditions (run with `--repeat until-fail:10`)
-- Look for uninitialized variables (run under Valgrind)
-- Verify tests are independent (don't share state)
-
-**Build failures:**
-- Clean build directory: `rm -rf build`
-- Rebuild iwasm: See [building.md](building.md)
-- Check compiler and dependency versions (should match container)
+- **Tests pass locally but fail in CI**: Check execution patterns in [AGENTS.md](../AGENTS.md)
+- **Tests are flaky**: Check for race conditions, uninitialized variables, shared state
+- **Build failures**: Clean build directory, rebuild iwasm (see [building.md](building.md))
 
 ---
 
-## Related Documentation
-
-### Core Documentation
-- **[building.md](building.md)** - Building iwasm and wamrc
-- **[dev-in-container.md](dev-in-container.md)** - Devcontainer setup and usage
-- **[code-quality.md](code-quality.md)** - Linting, formatting, and code standards
-- **[debugging.md](debugging.md)** - Debugging WAMR with GDB and other tools
-
-### Test Documentation
-- **[tests/unit/README.md](../tests/unit/README.md)** - Complete unit testing guide
-- **[tests/wamr-test-suites/README.md](../tests/wamr-test-suites/README.md)** - Spec test suite guide
-- **[tests/regression/README.md](../tests/regression/README.md)** - Regression testing overview
-- **[tests/regression/ba-issues/README.md](../tests/regression/ba-issues/README.md)** - BA issues test details
-
-### External Resources
-- [WebAssembly Specification](https://webassembly.github.io/spec/)
-- [WebAssembly Test Suite](https://github.com/WebAssembly/testsuite)
-- [Google Test Documentation](https://google.github.io/googletest/)
-- [CMake CTest Documentation](https://cmake.org/cmake/help/latest/manual/ctest.1.html)
-
----
-
-**Documentation Version**: 2.0.0  
-**Last Updated**: 2026-04-04  
-**Maintained By**: WAMR Development Team
+**Related**: See [AGENTS.md § Navigation](../AGENTS.md#documentation-navigation) for complete workflow guides.
