@@ -1,60 +1,41 @@
-# Code Quality in WAMR
+# Code Quality Standards
 
-This guide explains WAMR's code quality standards, what they mean, why they matter, and when to apply them. For operational pre-commit checklists and detailed commands, see [linting.md](linting.md).
+This guide defines WAMR's code quality standards and principles. For the execution checklist, see [linting.md](./linting.md).
 
-**Philosophy**: High code quality prevents bugs, improves maintainability, and enables confident refactoring. WAMR enforces quality through automated tools, clear standards, and continuous integration.
+**Boundary with linting.md**:
+- **code-quality.md** (this doc): Standards and principles (WHY)
+- **linting.md**: Execution checklist (WHAT to run)
 
----
+**Prerequisites**:
+1. [AGENTS.md](../AGENTS.md) - Execution patterns
 
-## Prerequisites
-
-All code quality tools are pre-installed in the devcontainer:
-
-1. **Read [AGENTS.md](../AGENTS.md)** - Platform-specific execution requirements
-2. **Read [dev-in-container.md](dev-in-container.md)** - Container technical details
-
-> **Note**: All commands in this guide show raw syntax. See [AGENTS.md](../AGENTS.md) for platform-specific execution.
-
-**Before claiming work complete:**
-1. Format check passes (`clang-format-14 --dry-run --Werror`)
-2. Build succeeds with no warnings
-3. Relevant tests pass
-
-**→ See [linting.md](linting.md) for complete pre-commit workflow**
+> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
 
 ---
 
-## Code Quality Standards Overview
+## Philosophy
 
-WAMR maintains multiple quality gates to ensure correctness, consistency, and maintainability:
+High code quality prevents bugs, improves maintainability, and enables confident refactoring. WAMR enforces quality through automated tools, clear standards, and continuous integration.
 
-| Standard | Purpose | When Enforced | Tool | Documentation |
-|----------|---------|---------------|------|---------------|
-| **Code Formatting** | Consistent visual style | Every commit | clang-format-14 | [linting.md](linting.md) |
-| **Compiler Warnings** | Catch potential bugs | Every build | gcc/clang -Wall -Werror | [linting.md](linting.md) |
-| **Static Analysis** | Find logic errors | Critical changes | scan-build, clang-tidy | This doc + [linting.md](linting.md) |
-| **Python Linting** | Script quality | When changing Python | pylint | [linting.md](linting.md) |
-| **Shell Linting** | Script safety | When changing shell | shellcheck | [linting.md](linting.md) |
-| **Pre-commit Checks** | Quality gate | Before every commit | Multiple tools | [linting.md](linting.md) |
-| **CI Enforcement** | Automated validation | Every PR | GitHub Actions | [linting.md](linting.md) |
+**Quality Gates**: Formatting, compiler warnings, static analysis, Python/shell linting, pre-commit checks, CI enforcement.
+
+**→ See [linting.md § Pre-Commit Checklist](./linting.md) for complete workflow**
 
 ---
 
-## Code Formatting Standards
+## Code Formatting
 
-### What is Code Formatting?
+### What and Why
 
-WAMR uses **clang-format-14** to enforce consistent visual style based on K&R coding conventions with Mozilla customizations. Configuration lives in `.clang-format` at project root.
+WAMR uses **clang-format-14** to enforce consistent visual style based on K&R coding conventions with Mozilla customizations.
 
-### Why Enforce Formatting?
-
-**Benefits**:
+**Why enforce formatting**:
 - **Readability**: Consistent style makes code easier to scan
 - **Cleaner diffs**: Only functional changes appear, not whitespace
 - **Eliminates debates**: Tool decides, not personal preference
 - **Zero effort**: Automated formatting
 
-**Without enforcement**: Diffs mix style and logic, reviews waste time on formatting, merge conflicts from whitespace.
+**Without enforcement**: Diffs mix style and logic, reviews waste time, merge conflicts from whitespace.
 
 ### Key Style Rules
 
@@ -71,71 +52,54 @@ void function()
 char *ptr;
 ```
 
-### When Enforced
+### When Required
 
 **Required**: Before every commit, PR, merge to main
 **CI fails if**: Files don't match clang-format-14 rules
 
-### Quick Example
-
-```bash
-# Check formatting
-clang-format-14 --dry-run --Werror file.c
-
-# Auto-fix
-clang-format-14 -i file.c
-```
-
-**→ See [linting.md](linting.md) for complete formatting workflow**
+**→ See [linting.md § Code Formatting](./linting.md) for execution checklist**
 
 ---
 
 ## Compiler Warnings
 
-### What Are Compiler Warnings?
+### What and Why
 
 Compiler warnings alert you to potential bugs and questionable code patterns. WAMR builds with strict flags: `-Wall -Wextra -Werror`
 
-### Why Treat Warnings as Errors?
-
-**Catches bugs like**:
-- Uninitialized variables
-- Unused variables (dead code)
-- Missing headers (implicit declarations)
-- Type mismatches
+**Why treat warnings as errors**:
+- Catches uninitialized variables
+- Detects unused variables (dead code)
+- Finds missing headers (implicit declarations)
+- Prevents type mismatches
 
 **Result**: Warning-free builds = safer, more maintainable code
 
-### When Enforced
+### When Required
 
 **Always**: Local builds, CI/CD, pre-commit checks
 **Build fails if**: Any warning generated
 
-### Quick Example
-
-```bash
-cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build
-```
-
-**→ See [linting.md](linting.md) for fixing common warnings**
+**→ See [linting.md § Compiler Warnings](./linting.md) for fixing common warnings**
 
 ---
 
 ## Static Analysis
 
-### What is Static Analysis?
+### What and Why
 
 Static analysis examines code without executing it, finding bugs through deep inspection of code paths, data flow, and logic. Catches bugs that compilers and tests miss.
 
-**Tools**: scan-build (memory/logic), clang-tidy (C++ practices), cppcheck (portability)
+**Available tools**:
+- **scan-build**: Memory safety, leaks
+- **clang-tidy**: C++ practices, readability
+- **cppcheck**: Portability, bug patterns
 
-### Why Use Static Analysis?
-
-**Finds bugs like**:
-- Memory leaks, use-after-free, null dereferences
-- Resource leaks (files, sockets)
-- Dead code, logic errors
-- Race conditions
+**Why use static analysis**:
+- Finds memory leaks, use-after-free, null dereferences
+- Detects resource leaks (files, sockets)
+- Catches dead code, logic errors
+- Identifies race conditions
 
 ### When to Run
 
@@ -143,22 +107,7 @@ Static analysis examines code without executing it, finding bugs through deep in
 **Recommended**: New features, complex code paths
 **Skip**: Documentation, simple config changes
 
-### Available Tools
-
-| Tool | Checks | When to Use |
-|------|--------|-------------|
-| scan-build | Memory safety, leaks | Memory changes, critical fixes |
-| clang-tidy | C++ practices, readability | C++ code, performance |
-| cppcheck | Portability, bug patterns | Cross-platform, embedded |
-
-### Quick Example
-
-```bash
-# Analyze build
-scan-build cmake --build build
-```
-
-**→ See [linting.md](linting.md) for detailed analysis workflows**
+**→ See [linting.md § Static Analysis](./linting.md) for detailed workflows**
 
 ---
 
@@ -166,23 +115,17 @@ scan-build cmake --build build
 
 ### Standards
 
-WAMR Python scripts follow PEP 8 using **pylint** for style compliance and bug detection.
+WAMR Python scripts follow **PEP 8** using **pylint** for style compliance and bug detection.
+
+**Why lint Python**: Prevents bugs (undefined variables), ensures consistency, maintains readable code.
 
 **Checks**: PEP 8 style, unused imports, missing docstrings, potential bugs
-
-### Why Lint Python?
-
-Prevents bugs (undefined variables), ensures consistency (PEP 8), maintains readable code.
 
 ### When Required
 
 Before committing changes to `ci/`, `tests/`, or new Python utilities.
 
-```bash
-pylint ci/coding_guidelines_check.py
-```
-
-**→ See [linting.md](linting.md) for complete workflow**
+**→ See [linting.md § Python Linting](./linting.md) for complete workflow**
 
 ---
 
@@ -192,11 +135,9 @@ pylint ci/coding_guidelines_check.py
 
 Shell scripts use **shellcheck** for static analysis.
 
+**Why lint shell scripts**: Prevents critical bugs (word splitting from unquoted variables, deleting wrong directories from unchecked `cd` failures, missing error handling).
+
 **Checks**: Unquoted variables, missing error handling, unreachable code, portability issues
-
-### Why Lint Shell Scripts?
-
-Prevents critical bugs: word splitting from unquoted variables, deleting wrong directories from unchecked `cd` failures, missing error handling.
 
 ### Best Practices
 
@@ -206,13 +147,9 @@ Prevents critical bugs: word splitting from unquoted variables, deleting wrong d
 
 ### When Required
 
-Before committing: build scripts, test scripts, `devcontainer exec`, new utilities.
+Before committing: build scripts, test scripts, new utilities.
 
-```bash
-shellcheck devcontainer exec
-```
-
-**→ See [linting.md](linting.md) for complete workflow**
+**→ See [linting.md § Shell Script Linting](./linting.md) for complete workflow**
 
 ---
 
@@ -257,62 +194,7 @@ if (error) { free(buf); return -1; }
 
 ---
 
-## Code Quality Decision Guide
-
-Use this guide to determine which quality checks to run:
-
-### Before Committing (Always)
-
-```
-All changes:
-  ├─ Format check (clang-format-14)
-  ├─ Build successfully
-  └─ No compiler warnings
-
-Python changes:
-  └─ pylint passes
-
-Shell changes:
-  └─ shellcheck passes
-```
-
-**→ [linting.md](linting.md) has complete pre-commit checklist**
-
-### For Different Change Types
-
-**Small bug fix (< 50 lines)**:
-- Formatting check ✓
-- Build check ✓
-- Unit tests (if available) ✓
-- Regression test added ✓
-
-**Feature addition**:
-- Formatting check ✓
-- Build check ✓
-- Unit tests ✓
-- Integration tests ✓
-- Documentation updated ✓
-
-**Refactoring (no behavior change)**:
-- Formatting check ✓
-- Build check ✓
-- All tests pass ✓
-- Static analysis recommended
-
-**Memory management changes**:
-- Formatting check ✓
-- Build check ✓
-- Unit tests ✓
-- **Static analysis required** ✓
-- Valgrind recommended
-
-**Security fix**:
-- Formatting check ✓
-- Build check ✓
-- All tests ✓
-- **Static analysis required** ✓
-- Regression test required ✓
-- Security review required ✓
+## Decision Guide
 
 ### When to Use Each Tool
 
@@ -327,17 +209,15 @@ Shell changes:
 | Security fixes | All tools | Maximum assurance |
 | Documentation | None | No code changes |
 
----
+### Change Type Requirements
 
-## Pre-Commit Quality Workflow
+**Small bug fix**: Format, build, unit tests, regression test
+**Feature addition**: Format, build, tests, documentation
+**Refactoring**: Format, build, all tests, static analysis (recommended)
+**Memory changes**: Format, build, tests, **static analysis required**, Valgrind
+**Security fix**: Format, build, tests, **static analysis required**, regression test, security review
 
-Before every commit:
-
-1. **Format check** - `clang-format-14 --dry-run --Werror` (auto-fix with `-i`)
-2. **Build check** - `cmake --build build` with `-Wall -Werror`
-3. **Test check** - Run relevant tests (unit, spec, regression)
-
-**→ See [linting.md](linting.md) for complete step-by-step workflow**
+**→ See [linting.md § Pre-Commit Checklist](./linting.md) for complete workflow**
 
 ---
 
@@ -345,18 +225,18 @@ Before every commit:
 
 ### Development Workflow
 
-**During**: Format regularly, build with warnings, run tests frequently, fix immediately
+**During development**: Format regularly, build with warnings, run tests frequently, fix immediately
 **Before commit**: Pre-commit checklist, self-review, tests pass, docs updated
 **Before push**: Rebase on main, verify CI locally, full test suite for critical changes
 
 ### Quality Mindset
 
 **Do**: Trust tools, fix root causes, add tests for bugs, small focused commits
-**Don't**: Disable warnings, commit failing tests, mix formatting and logic, skip checks, ignore analyzer
+**Don't**: Disable warnings, commit failing tests, mix formatting and logic, skip checks
 
 ### Continuous Improvement
 
-Learn from mistakes: Why didn't tests catch it? Why didn't local checks catch it? Add regression tests. Document gotchas.
+Learn from failures: Why didn't tests catch it? Why didn't local checks catch it? Add regression tests. Document gotchas.
 
 ---
 
@@ -371,15 +251,7 @@ Every PR runs: formatting, build (multiple configs), warnings check, unit tests,
 **Benefits**: Catches issues pre-merge, maintains quality bar, prevents regressions, enables safe refactoring
 **Failures indicate**: Didn't meet standards, local checks skipped, needs revision
 
-### Reproducing Failures
-
-1. Check CI logs for failing command
-2. Run same command via `devcontainer exec`
-3. Fix issue, verify, push
-
-**Devcontainer ensures local = CI environment.**
-
-**→ See [linting.md](linting.md) for reproducing specific failures**
+**→ See [linting.md § Reproducing CI Failures](./linting.md) for detailed troubleshooting**
 
 ---
 
@@ -389,68 +261,14 @@ Every PR runs: formatting, build (multiple configs), warnings check, unit tests,
 **Build warnings**: Read message, fix root cause, rebuild
 **Static analysis warnings**: Determine true/false positive, fix or document
 
-**→ See [linting.md](linting.md) for detailed troubleshooting**
-
----
-
-## Quick Reference
-
-### Essential Commands
-
-```bash
-# Format check (dry run)
-clang-format-14 --dry-run --Werror <file>
-
-# Auto-fix formatting
-clang-format-14 -i <file>
-
-# Build with strict warnings
-cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build
-
-# Check shell script
-shellcheck <script.sh>
-
-# Lint Python
-pylint <script.py>
-
-# Static analysis
-scan-build cmake --build build
-```
-
-### Quality Standards Summary
-
-| Check | Tool | Enforced | Purpose |
-|-------|------|----------|---------|
-| Format | clang-format-14 | Every commit | Visual consistency |
-| Warnings | -Wall -Werror | Every build | Catch bugs |
-| Python | pylint | Python changes | Script quality |
-| Shell | shellcheck | Shell changes | Script safety |
-| Analysis | scan-build | Critical changes | Deep bug finding |
+**→ See [linting.md § Troubleshooting](./linting.md) for detailed solutions**
 
 ---
 
 ## Related Documentation
 
 - **[linting.md](linting.md)** - Complete pre-commit checklist and operational guide
-- **[dev-in-container.md](dev-in-container.md)** - Container setup and usage
 - **[building.md](building.md)** - Build configuration and options
 - **[testing.md](testing.md)** - Testing strategy and test types
 - **[debugging.md](debugging.md)** - Debugging with GDB and Valgrind
-- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Contribution guidelines
-- **[AGENTS.md](../AGENTS.md)** - AI agent development guide
-
----
-
-## External Resources
-
-- [clang-format Documentation](https://clang.llvm.org/docs/ClangFormat.html)
-- [Clang Static Analyzer](https://clang-analyzer.llvm.org/)
-- [ShellCheck Wiki](https://github.com/koalaman/shellcheck/wiki)
-- [Pylint Documentation](https://pylint.pycqa.org/)
-- [C Coding Standards (Linux Kernel)](https://www.kernel.org/doc/html/latest/process/coding-style.html)
-
----
-
-**Documentation Version**: 2.0.0  
-**Last Updated**: 2026-04-04  
-**Maintained By**: WAMR Development Team
+- **[AGENTS.md](../AGENTS.md)** - Execution patterns
