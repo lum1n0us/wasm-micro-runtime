@@ -1,192 +1,107 @@
 # AI Agent Guide for WAMR Development
 
-**WebAssembly Micro Runtime (WAMR)** is a lightweight standalone WebAssembly runtime with small footprint, high performance, and highly configurable features. It includes:
+## Project Overview
 
-- **VMcore** (core/iwasm/, core/shared) - Runtime libraries for loading and running Wasm modules and platform abstraction
-- **iwasm** (product-mini/platforms) - Executable binary with WASI support
-- **wamrc** (wamr-compiler/) - AOT compiler for compiling Wasm to native code
+WebAssembly Micro Runtime (WAMR) is a lightweight standalone WebAssembly runtime with small footprint, high performance, and highly configurable features.
 
-For full project details, see [README.md](./README.md).
+**Core Components**:
+- **VMcore** (core/iwasm/, core/shared) - Runtime engine
+- **iwasm** (product-mini/platforms) - CLI executable  
+- **wamrc** (wamr-compiler/) - AOT compiler
 
-## ⚠️ Development Environment Requirement
+For full details: [README.md](./README.md)
 
-**CRITICAL (Linux Only): On Linux systems, all build, test, debug, and code quality checks MUST be performed inside the devcontainer.**
+---
 
-### Command Execution Pattern
+## Project Structure
 
-All commands in WAMR documentation show the raw command syntax (e.g., `cmake -B build`, `ctest --test-dir build`). On Linux, you must prefix these with the devcontainer wrapper:
-
-```bash
-devcontainer exec --workspace-folder . -- <raw-command>
+```
+wasm-micro-runtime/
+├── core/              # Runtime engine
+├── product-mini/      # iwasm builds
+├── wamr-compiler/     # wamrc AOT compiler
+├── tests/             # Test suites
+├── samples/           # Integration examples
+└── doc/               # Strategy documentation
 ```
 
-**Prerequisites:**
+---
+
+## Command Execution Pattern
+
+**CRITICAL (Linux Only)**: All commands must run inside the devcontainer on Linux systems.
+
+**Pattern**: All documentation shows pure command syntax. On Linux, prefix with:
+
 ```bash
-# Install devcontainer CLI if needed
-npm install -g @devcontainers/cli
+devcontainer exec --workspace-folder . -- <command>
 ```
 
-**Common Examples:**
+**Examples**:
 
-| Documentation Shows | You Execute on Linux |
-|---------------------|---------------------|
+| Documentation Shows | Execute on Linux |
+|---------------------|------------------|
 | `cmake -B build` | `devcontainer exec --workspace-folder . -- cmake -B build` |
 | `ctest --test-dir build` | `devcontainer exec --workspace-folder . -- ctest --test-dir build` |
-| `clang-format-14 -i file.c` | `devcontainer exec --workspace-folder . -- clang-format-14 -i file.c` |
 
-**For commands with shell features (pipes, variables, cd):**
+**For shell features** (pipes, variables, cd):
 ```bash
-devcontainer exec --workspace-folder . -- bash -c "<command-with-shell-features>"
+devcontainer exec --workspace-folder . -- bash -c "<command>"
 ```
 
-**Examples:**
-```bash
-# Multiple commands chained
-devcontainer exec --workspace-folder . -- bash -c "cd tests/unit && cmake -S . -B build"
+**Why**: WAMR requires WASI-SDK, WABT, LLVM - only available in devcontainer.
 
-# Commands with pipes
-devcontainer exec --workspace-folder . -- bash -c "find . -name '*.c' | xargs clang-format-14 -i"
+**Details**: [doc/dev-in-container.md](./doc/dev-in-container.md)
 
-# Commands with shell variables
-devcontainer exec --workspace-folder . -- bash -c "cmake --build build -j\$(nproc)"
-```
+---
 
-**Why this pattern?**
-- Documentation focuses on the actual commands (portable, reusable)
-- Platform-specific execution details centralized here
-- Reduces repetition in other docs (smaller context window usage)
-- macOS/Windows developers can use commands directly in VS Code
+## Documentation Navigation
 
-**Detailed guides:**
-- **Container details:** [doc/dev-in-container.md](./doc/dev-in-container.md)
-- **Building:** [doc/building.md](./doc/building.md)
-- **Testing:** [doc/testing.md](./doc/testing.md)
-- **Debugging:** [doc/debugging.md](./doc/debugging.md)
-- **Code quality:** [doc/code-quality.md](./doc/code-quality.md)
-- **Pre-commit checks:** [doc/linting.md](./doc/linting.md) ⚠️ **RUN BEFORE COMMITTING**
+**Documentation follows lazy loading**: Read high-level docs first, drill down only when needed.
 
-## What AI Agents Can Help With
+**Architecture**: [doc/documentation-principles.md](./doc/documentation-principles.md)
 
-AI agents can effectively assist with these WAMR development activities:
+### By Task Type
 
-- **Bug fixes and debugging** - Understanding code paths, identifying root causes, implementing fixes
-- **PR reviews and code quality** - Convention compliance, architectural consistency, performance implications
-- **Writing and maintaining tests** - Unit tests, integration tests, following project test patterns
-- **Code refactoring and optimization** - Code cleanup while maintaining architectural integrity
-- **Documentation improvements** - Following progressive loading and "Think once, document once" principles
+#### Bug Fixes
+1. [doc/architecture-overview.md](./doc/architecture-overview.md) - Component relationships
+2. [doc/building.md](./doc/building.md) - Build with debug flags
+3. [doc/debugging.md](./doc/debugging.md) - Debug workflow
+4. [doc/testing.md](./doc/testing.md) - Verify the fix
+5. [doc/linting.md](./doc/linting.md) - Pre-commit checks ⚠️
 
-## Documentation Organization
+#### Adding Features
+1. [doc/architecture-overview.md](./doc/architecture-overview.md) - Where feature fits
+2. [doc/building.md](./doc/building.md) - Configure build
+3. [doc/embed_wamr.md](./doc/embed_wamr.md) - API patterns (if adding API)
+4. [doc/export_native_api.md](./doc/export_native_api.md) - Native functions (if exposing)
+5. [doc/testing.md](./doc/testing.md) - Write tests
+6. [doc/linting.md](./doc/linting.md) - Pre-commit checks ⚠️
 
-**IMPORTANT**: WAMR documentation follows progressive loading principles to optimize context window usage.
+#### PR Reviews
+1. [doc/architecture-overview.md](./doc/architecture-overview.md) - Verify architecture fit
+2. [doc/testing.md](./doc/testing.md) - Check test coverage
+3. [doc/code-quality.md](./doc/code-quality.md) - Verify code quality
 
-- **Strategy Layer** (doc/*.md) - Concepts, decisions, when/why to use features
-- **Operations Layer** (component READMEs) - Detailed commands, all options, troubleshooting
+#### Test Writing
+1. [doc/testing.md](./doc/testing.md) - Test strategy
+2. [tests/unit/README.md](./tests/unit/README.md) - Unit test details
+3. [tests/wamr-test-suites/README.md](./tests/wamr-test-suites/README.md) - Spec test details
 
-**Read [doc/documentation-principles.md](./doc/documentation-principles.md) if you need to**:
-- Write or improve documentation
-- Understand the documentation hierarchy
-- Learn the "Think once, document once" principle
+#### Refactoring
+1. [doc/architecture-overview.md](./doc/architecture-overview.md) - Maintain principles
+2. [doc/perf_tune.md](./doc/perf_tune.md) - Performance implications
+3. [doc/memory_tune.md](./doc/memory_tune.md) - Memory implications
 
-This ensures efficient context loading: read strategy docs for concepts, drill down to operational details only when needed.
-
-## Getting Started: Read This First
-
-When you start working with WAMR, follow this sequence:
-
-1. **Read this entire AGENTS.md** to understand navigation and workflows
-2. **Read [doc/architecture-overview.md](./doc/architecture-overview.md)** for the mental model of WAMR's structure
-3. **Read task-specific docs** based on what you're trying to accomplish (see Navigation section below)
-
-## Navigation: When to Read What
-
-This section tells you which documentation to read based on your task. Follow the recommended order within each task type.
-
-### For Bug Fixes
-
-When fixing a bug, read in this order:
-
-0. **[doc/dev-in-container.md](./doc/dev-in-container.md)** - ⚠️ Container environment setup
-1. **[doc/architecture-overview.md](./doc/architecture-overview.md)** - Understand component relationships
-2. **[doc/building.md](./doc/building.md)** - Build with necessary features
-3. **[doc/debugging.md](./doc/debugging.md)** - Debug the issue
-4. **[doc/testing.md](./doc/testing.md)** - Write tests to verify the fix
-5. **[doc/linting.md](./doc/linting.md)** - ⚠️ Run all pre-commit checks
-
-### For Adding Features
-
-When implementing new functionality:
-
-0. **[doc/dev-in-container.md](./doc/dev-in-container.md)** - ⚠️ Container environment setup
-1. **[doc/architecture-overview.md](./doc/architecture-overview.md)** - Understand where feature fits
-2. **[doc/building.md](./doc/building.md)** - Configure build for your feature
-3. **[doc/embed_wamr.md](./doc/embed_wamr.md)** - If adding API, understand embedding patterns
-4. **[doc/export_native_api.md](./doc/export_native_api.md)** - If exposing native functions
-5. **[doc/testing.md](./doc/testing.md)** - Write comprehensive tests
-6. **[doc/code-quality.md](./doc/code-quality.md)** - Check code formatting
-7. **[doc/linting.md](./doc/linting.md)** - ⚠️ Run all pre-commit checks
-
-### For PR Reviews
-
-When reviewing pull requests:
-
-1. **[doc/architecture-overview.md](./doc/architecture-overview.md)** - Verify architectural consistency
-2. **[doc/dev-workflows.md](./doc/dev-workflows.md)** _(Phase 3)_ - Check convention compliance
-3. **[doc/testing-guide.md](./doc/testing-guide.md)** _(Phase 4)_ - Verify adequate test coverage
-
-### For Test Writing
-
-When writing tests:
-
-0. **[doc/dev-in-container.md](./doc/dev-in-container.md)** - ⚠️ Container environment setup
-1. **[doc/testing.md](./doc/testing.md)** - Comprehensive testing strategy
-2. **[tests/unit/README.md](./tests/unit/README.md)** - Unit test patterns
-3. **[tests/wamr-test-suites/](./tests/wamr-test-suites/)** - Wasm spec tests
-4. **[samples/README.md](./samples/README.md)** - Integration examples
-
-### For Refactoring
-
-When refactoring code:
-
-1. **[doc/architecture-overview.md](./doc/architecture-overview.md)** - Maintain architectural principles
-2. **[doc/dev-workflows.md](./doc/dev-workflows.md)** _(Phase 3)_ - Follow coding conventions
-3. **[doc/perf_tune.md](./doc/perf_tune.md)** - Understand performance implications
-4. **[doc/memory_tune.md](./doc/memory_tune.md)** - Understand memory usage implications
+---
 
 ## Quick Reference
 
-Frequently accessed documentation:
+**Most Frequently Used**:
+- [README.md](./README.md) - Project overview
+- [doc/building.md](./doc/building.md) - Build guide
+- [doc/testing.md](./doc/testing.md) - Testing guide
+- [doc/debugging.md](./doc/debugging.md) - Debug guide
+- [doc/linting.md](./doc/linting.md) - Pre-commit checklist ⚠️
 
-**Core Documentation:**
-
-- [README.md](./README.md) - Project overview, features, getting started
-- [doc/build_wamr.md](./doc/build_wamr.md) - Build instructions and configuration flags
-- [doc/embed_wamr.md](./doc/embed_wamr.md) - Embedding WAMR into applications
-- [doc/export_native_api.md](./doc/export_native_api.md) - Registering native functions
-- [doc/architecture-overview.md](./doc/architecture-overview.md) - Component structure and design
-
-**Development Workflows:**
-
-- [doc/dev-in-container.md](./doc/dev-in-container.md) - Development in devcontainer
-- [doc/building.md](./doc/building.md) - Building WAMR
-- [doc/testing.md](./doc/testing.md) - Testing strategy and practices
-- [doc/debugging.md](./doc/debugging.md) - Debugging guide
-- [doc/code-quality.md](./doc/code-quality.md) - Code formatting and quality
-- [doc/linting.md](./doc/linting.md) - Pre-commit checklist
-- [doc/documentation-principles.md](./doc/documentation-principles.md) - Documentation organization and best practices
-- [doc/source_debugging.md](./doc/source_debugging.md) - Debugging WAMR applications
-- [doc/build_wasm_app.md](./doc/build_wasm_app.md) - Building Wasm applications
-- [doc/port_wamr.md](./doc/port_wamr.md) - Porting to new platforms
-
-**Performance & Memory:**
-
-- [doc/perf_tune.md](./doc/perf_tune.md) - Performance tuning guide
-- [doc/memory_tune.md](./doc/memory_tune.md) - Memory usage optimization
-
-**Testing & Examples:**
-
-- [tests/unit/](./tests/unit/) - Unit test suite
-- [tests/wamr-test-suites/](./tests/wamr-test-suites/) - Wasm-spec test suites
-- [samples/](./samples/) - Example applications and use cases
-
-**All Documentation:**
-Browse the [doc/](./doc/) directory for comprehensive documentation.
+**All Documentation**: Browse [doc/](./doc/) directory.
