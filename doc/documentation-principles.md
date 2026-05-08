@@ -18,6 +18,66 @@ Each piece of information should have a single authoritative location. Other doc
 
 ---
 
+## Zero Duplication Rules
+
+**Principle: Every piece of information has exactly ONE authoritative location.**
+
+### Duplication Detection
+
+**What counts as duplication:**
+
+1. **Concept Duplication**
+   - Explaining the same concept (e.g., "what is AOT") in multiple files
+   - ❌ Bad: Both building.md and architecture-overview.md explain AOT
+   - ✅ Good: architecture-overview.md explains AOT, building.md links to it
+
+2. **Command Duplication**
+   - Showing the same command syntax in multiple places
+   - ❌ Bad: `devcontainer exec --workspace-folder . -- cmake -B build` appears in 5 files
+   - ✅ Good: Shown once in AGENTS.md, other files use pure syntax `cmake -B build`
+
+3. **Instruction Duplication**
+   - Repeating the same "how to do X" steps
+   - ❌ Bad: Multiple files explain "how to run tests in container"
+   - ✅ Good: AGENTS.md explains execution pattern once
+
+4. **Decision Guidance Duplication**
+   - Same "when to use X vs Y" advice in multiple places
+   - ❌ Bad: Both testing.md and debugging.md explain when to use Debug build
+   - ✅ Good: building.md owns "build type decisions", others link to it
+
+**What is NOT duplication:**
+
+1. **Naming without explaining**
+   - Mentioning "AOT mode" without explaining what it is → OK, link to definition
+   
+2. **Context-specific examples**
+   - testing.md shows `ctest --test-dir build` for testing context
+   - building.md shows `cmake --build build` for building context
+   - Different commands for different purposes → OK
+
+3. **Layer-appropriate detail levels**
+   - AGENTS.md: "Use devcontainer for Linux" (rule statement)
+   - dev-in-container.md: Complete devcontainer technical details
+   - Same topic, different depth → OK if no overlap in actual content
+
+### Single Source of Truth Registry
+
+| Information Type | Authoritative Source | All Others Must |
+|-----------------|---------------------|-----------------|
+| Claude Code tool usage | CLAUDE.md | Link with "See CLAUDE.md" |
+| Platform execution patterns | AGENTS.md § Command Execution Pattern | Link with "See AGENTS.md for execution" |
+| Task → Docs navigation | AGENTS.md § Navigation | Link with "See AGENTS.md for workflow" |
+| Project structure overview | AGENTS.md § Project Structure | Link with "See AGENTS.md" |
+| Container technical details | doc/dev-in-container.md | Link with "See dev-in-container.md" |
+| Build concepts & decisions | doc/building.md | Link with "See building.md" |
+| Testing concepts & decisions | doc/testing.md | Link with "See testing.md" |
+| Debug concepts & decisions | doc/debugging.md | Link with "See debugging.md" |
+| Core concepts (AOT, JIT, WASI) | doc/architecture-overview.md | Link with "See architecture-overview.md" |
+| Component-specific commands | component/*/README.md | Link to specific README |
+
+---
+
 ## Documentation Hierarchy
 
 WAMR documentation follows a hierarchical structure with progressive loading:
