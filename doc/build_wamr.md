@@ -1,11 +1,18 @@
 # Build WAMR vmcore
 
-WAMR vmcore is the runtime library set that loads and runs Wasm modules. This guide walks you through building the WAMR vmcore.
+This document is the complete reference for WAMR vmcore CMake configuration flags. The vmcore is the runtime library that loads and runs Wasm modules.
 
-References:
+**Prerequisites**:
+1. [AGENTS.md](../AGENTS.md) - command execution patterns
+2. [building.md](./building.md) - high-level build decisions and platform-specific setup
 
-- [how to build iwasm](../product-mini/README.md): build for Linux, Windows, macOS, and more
-- [Blog: Introduction to WAMR running modes](https://bytecodealliance.github.io/wamr.dev/blog/introduction-to-wamr-running-modes/)
+> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
+
+**References**:
+- [product-mini README](../product-mini/README.md) - iwasm builds for Linux, Windows, macOS
+- [WAMR running modes](https://bytecodealliance.github.io/wamr.dev/blog/introduction-to-wamr-running-modes/)
+
+---
 
 ## building configurations
 
@@ -130,14 +137,18 @@ Above compilation flags map to macros in `config.h`. For example, `WAMR_BUILD_AO
 
 ### **Configure platform and architecture**
 
-- **WAMR_BUILD_PLATFORM**: set the target platform. Match the platform folder name under [core/shared/platform](../core/shared/platform).
+- **WAMR_BUILD_PLATFORM**: target platform (match folder name in [core/shared/platform](../core/shared/platform))
+- **WAMR_BUILD_TARGET**: target CPU architecture
 
-- **WAMR_BUILD_TARGET**: set the target CPU architecture. Supported targets: X86_64, X86_32, AARCH64, ARM, THUMB, XTENSA, ARC, RISCV32, RISCV64, and MIPS.
-  - For ARM and THUMB, use `<arch>[<sub-arch>][_VFP]`. `<sub-arch>` is the ARM sub-architecture. `_VFP` means arguments and returns use VFP coprocessor registers s0-s15 (d0-d7). Both are optional, for example ARMV7, ARMV7_VFP, THUMBV7, or THUMBV7_VFP.
-  - For AARCH64, use `<arch>[<sub-arch>]`. VFP is on by default. `<sub-arch>` is optional, for example AARCH64, AARCH64V8, or AARCH64V8.1.
-  - For RISCV64, use `<arch>[_abi]`. `_abi` is optional. Supported: RISCV64, RISCV64_LP64D, and RISCV64_LP64. RISCV64 and RISCV64_LP64D both use [LP64D](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc#named-abis) (LP64 with hardware floating-point for FLEN=64). RISCV64_LP64 uses [LP64](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc#named-abis) (integer calling convention only; no hardware floating-point calling convention).
-  - For RISCV32, use `<arch>[_abi]`. `_abi` is optional. Supported: RISCV32, RISCV32_ILP32D, RISCV32_ILP32F, and RISCV32_ILP32. RISCV32 and RISCV32_ILP32D both use [ILP32D](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc#named-abis) (ILP32 with hardware floating-point for FLEN=64). RISCV32_ILP32F uses [ILP32F](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc#named-abis) (ILP32 with hardware floating-point for FLEN=32). RISCV32_ILP32 uses [ILP32](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc#named-abis) (integer calling convention only).
+**Supported architectures**: X86_64, X86_32, AARCH64, ARM, THUMB, XTENSA, ARC, RISCV32, RISCV64, MIPS
 
+**Architecture-specific formats**:
+- ARM/THUMB: `<arch>[<sub-arch>][_VFP]` (e.g., ARMV7, ARMV7_VFP, THUMBV7, THUMBV7_VFP)
+- AARCH64: `<arch>[<sub-arch>]` (e.g., AARCH64, AARCH64V8, AARCH64V8.1)
+- RISCV64: `<arch>[_abi]` (e.g., RISCV64, RISCV64_LP64D, RISCV64_LP64)
+- RISCV32: `<arch>[_abi]` (e.g., RISCV32, RISCV32_ILP32D, RISCV32_ILP32F, RISCV32_ILP32)
+
+Example:
 ```bash
 cmake -DWAMR_BUILD_PLATFORM=linux -DWAMR_BUILD_TARGET=ARM
 ```
@@ -631,8 +642,6 @@ SIMDE (SIMD Everywhere) implements SIMD operations in fast interpreter mode.
 > [!NOTE]
 > Enabling this feature allows the runtime to utilize branch hints for better performance during aot/jit execution.
 
-## **Combination of configurations:**
-
 ### **Invoke general FFI**
 
 - **WAMR_BUILD_INVOKE_NATIVE_GENERAL**=1/0, default to off.
@@ -695,39 +704,23 @@ It is used to test garbage collection related APIs and features. Refer to [iwasm
 
 It is used to cache loaded wasm modules in memory to speed up module instantiation only in wasm-c-api.
 
-## **Combination of configurations**
+## Combination of configurations
 
-You can mix settings. For example, to disable the interpreter, enable AOT and WASI, run:
+Example combinations:
 
-```Bash
-cmake .. -DWAMR_BUILD_INTERP=0 -DWAMR_BUILD_AOT=1 -DWAMR_BUILD_LIBC_WASI=1 -DWAMR_BUILD_PLATFORM=linux
-```
+```bash
+# AOT + WASI, no interpreter
+cmake -DWAMR_BUILD_INTERP=0 -DWAMR_BUILD_AOT=1 -DWAMR_BUILD_LIBC_WASI=1 -DWAMR_BUILD_PLATFORM=linux
 
-To enable the interpreter, disable AOT and WASI, and target X86_32, run:
+# Interpreter only, X86_32 target
+cmake -DWAMR_BUILD_INTERP=1 -DWAMR_BUILD_AOT=0 -DWAMR_BUILD_LIBC_WASI=0 -DWAMR_BUILD_TARGET=X86_32
 
-```Bash
-cmake .. -DWAMR_BUILD_INTERP=1 -DWAMR_BUILD_AOT=0 -DWAMR_BUILD_LIBC_WASI=0 -DWAMR_BUILD_TARGET=X86_32
-```
+# Fast interpreter with SIMD
+cmake -DWAMR_BUILD_INTERP=1 -DWAMR_BUILD_FAST_INTERP=1 -DWAMR_BUILD_SIMD=1 -DWAMR_BUILD_LIB_SIMDE=1
 
-When enabling SIMD for fast interpreter mode, turn on both SIMD and the SIMDe library:
+# Valgrind compatibility
+cmake -DCMAKE_BUILD_TYPE=Debug -DWAMR_DISABLE_HW_BOUND_CHECK=0 -DWAMR_DISABLE_WRITE_GS_BASE=0
 
-```Bash
-
-cmake .. -DWAMR_BUILD_INTERP=1 -DWAMR_BUILD_FAST_INTERP=1 -DWAMR_BUILD_SIMD=1 -DWAMR_BUILD_LIB_SIMDE=1
-```
-
-For Valgrind, start with these and add more as needed:
-
-```Bash
-  #...
-  -DCMAKE_BUILD_TYPE=Debug \
-  -DWAMR_DISABLE_HW_BOUND_CHECK=0 \
-  -DWAMR_DISABLE_WRITE_GS_BASE=0
-  #...
-```
-
-To enable the minimal Lime1 feature set, turn off features that are on by default such as bulk memory and reference types:
-
-```Bash
-cmake .. -DWAMR_BUILD_LIME1=1 -DWAMR_BUILD_BULK_MEMORY=0 -DWAMR_BUILD_REF_TYPES=0 -DDWAMR_BUILD_SIMD=0
+# Minimal Lime1 feature set
+cmake -DWAMR_BUILD_LIME1=1 -DWAMR_BUILD_BULK_MEMORY=0 -DWAMR_BUILD_REF_TYPES=0 -DWAMR_BUILD_SIMD=0
 ```

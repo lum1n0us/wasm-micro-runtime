@@ -1,37 +1,38 @@
-Embedding WAMR guideline
-=====================================
+# Embedding WAMR
 
-**Note**: This document is about how to embed WAMR into C/C++ host applications, for other languages, please refer to: [Embed WAMR into Python](../language-bindings/python), [Embed WAMR into Go](../language-bindings/go).
+This document defines how to embed WAMR into C/C++ host applications using the runtime embedding API. For other languages: [Python](../language-bindings/python), [Go](../language-bindings/go).
 
-All the embedding APIs supported by the runtime are defined under folder [core/iwasm/include](../core/iwasm/include). The API details are available in the header files.
+**Prerequisites**:
+1. [AGENTS.md](../AGENTS.md) - command execution patterns
+2. [build_wamr.md](./build_wamr.md) - CMake configuration reference
+
+> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
+
+**API Reference**: All embedding APIs are defined in [core/iwasm/include](../core/iwasm/include).
+
+---
 
 ## Embed WAMR into developer's project
 
-WAMR is designed to be easy embeddable in any project, a typical way of building WAMR is to use cmake, developer can configure features by setting cmake variables and then include the script `runtime_lib.cmake` under folder [build-scripts](../build-scripts) in his CMakeList.txt, for example:
-``` cmake
+Include `runtime_lib.cmake` from [build-scripts](../build-scripts) in your CMakeLists.txt:
+
+```cmake
 set (WAMR_BUILD_PLATFORM "linux")
 set (WAMR_BUILD_TARGET "X86_64")
 set (WAMR_BUILD_INTERP 1)
-set (WAMR_BUILD_FAST_INTERP 1)
 set (WAMR_BUILD_AOT 1)
-set (WAMR_BUILD_LIBC_BUILTIN 1)
-set (WAMR_BUILD_LIBC_WASI 1)
-set (WAMR_BUILD_SIMD 1)
 set (WAMR_ROOT_DIR path/to/wamr/root)
 
 include (${WAMR_ROOT_DIR}/build-scripts/runtime_lib.cmake)
 add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
-
-# include bh_read_file.h
-include (${SHARED_DIR}/utils/uncommon/shared_uncommon.cmake)
-
-add_executable (your_project main.c ${UNCOMMON_SHARED_SOURCE})
-
 target_link_libraries (your_project vmlib -lm)
 ```
-Examples can be found in [CMakeLists.txt of linux platform](../product-mini/platforms/linux/CMakeLists.txt) and [other platforms](../product-mini/platforms). The available features to configure can be found in [Build WAMR vmcore](./build_wamr.md#wamr-vmcore-cmake-building-configurations).
 
-Developer can also use Makefile to embed WAMR, by defining macros and including directories, and adding the source files, examples can be found in [makefile of alios-things platform](../product-mini/platforms/alios-things/aos.mk) and [makefile of nuttx platform](../product-mini/platforms/nuttx/wamr.mk).
+**Examples**:
+- CMake: [linux platform CMakeLists.txt](../product-mini/platforms/linux/CMakeLists.txt), [other platforms](../product-mini/platforms)
+- Makefile: [alios-things](../product-mini/platforms/alios-things/aos.mk), [nuttx](../product-mini/platforms/nuttx/wamr.mk)
+
+**Configuration**: See [build_wamr.md](./build_wamr.md) for all available CMake flags.
 
 ## The runtime initialization
 
@@ -302,34 +303,26 @@ them.
 
 * To share memory among threads, you need to build your WASM application with shared memory
 
-  For example, it can be done with `--shared-memory` and `-pthread`.
+  For example, with `--shared-memory` and `-pthread`:
 
   ```bash
-    /opt/wasi-sdk/bin/clang -o test.wasm test.c -nostdlib -pthread    \
-      -Wl,--shared-memory,--max-memory=131072                         \
-      -Wl,--no-entry,--export=__heap_base,--export=__data_end         \
-      -Wl,--export=__wasm_call_ctors,--export=${your_func_name}
+  /opt/wasi-sdk/bin/clang -o test.wasm test.c -nostdlib -pthread \
+    -Wl,--shared-memory,--max-memory=131072 \
+    -Wl,--no-entry,--export=__heap_base,--export=__data_end
   ```
 
-* The corresponding threading feature should be enabled while building the runtime
+* Enable the corresponding threading feature when building the runtime:
 
-  - WAMR lib-pthread (legacy)
-
-    ```bash
-    cmake .. -DWAMR_BUILD_LIB_PTHREAD=1
-    ```
-
-  - wasi-threads
-
-    ```bash
-    cmake .. -DWAMR_BUILD_LIB_WASI_THREADS=1
-    ```
-
-  - `wasm_runtime_spawn_exec_env` and `wasm_runtime_spawn_thread`
-
-    ```bash
-    cmake .. -DWAMR_BUILD_THREAD_MGR=1 -DWAMR_BUILD_SHARED_MEMORY=1
-    ```
+  ```bash
+  # lib-pthread (legacy)
+  cmake -DWAMR_BUILD_LIB_PTHREAD=1
+  
+  # wasi-threads
+  cmake -DWAMR_BUILD_LIB_WASI_THREADS=1
+  
+  # spawn APIs
+  cmake -DWAMR_BUILD_THREAD_MGR=1 -DWAMR_BUILD_SHARED_MEMORY=1
+  ```
 
 ## The deinitialization procedure
 

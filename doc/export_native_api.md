@@ -1,11 +1,16 @@
+# Export native API to WASM application
 
-Export native API to WASM application
-=======================================================
+This document defines how to register and export native C functions so WASM modules can call them. This is the single source of truth for native API registration patterns.
 
+**Prerequisites**:
+1. [AGENTS.md](../AGENTS.md) - command execution patterns
+2. [embed_wamr.md](./embed_wamr.md) - embedding API basics
 
+> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
 
-Exporting native API steps
---------------------------
+---
+
+## Exporting native API steps
 
 #### Step 1: Declare the function interface in WASM app
 
@@ -96,14 +101,11 @@ Each letter in the "()" represents a parameter type, and the one following after
 
 The signature can defined as NULL, then all function parameters are assumed as i32 data type.
 
-**Use EXPORT_WASM_API_WITH_SIG**
-
-The `NativeSymbol` element for `foo2 ` above can be also defined with macro EXPORT_WASM_API_WITH_SIG. This macro can be used when the native function name is the same as the WASM symbol name.
+**Use EXPORT_WASM_API_WITH_SIG**: When the native function name matches the WASM symbol name:
 
 ```c
-static NativeSymbol native_symbols[] =
-{
-	EXPORT_WASM_API_WITH_SIG(foo2, "($*~)")   // wasm symbol name will be "foo2"
+static NativeSymbol native_symbols[] = {
+    EXPORT_WASM_API_WITH_SIG(foo2, "($*~)")
 };
 ```
 
@@ -129,14 +131,15 @@ int main(int argc, char **argv)
 }
 ```
 
-## Build native lib into shared library and register it with `iwasm` application
+## Build native lib into shared library and register it with `iwasm`
 
-Developer can also build the native library into a shared library and register it with iwasm application:
+Build the native library as a shared library and register it:
+
 ```bash
 iwasm --native-lib=<lib file> <wasm file>
 ```
 
-Refer to [native lib sample](../samples/native-lib) for more details.
+See [native lib sample](../samples/native-lib) for details.
 
 
 ## Buffer address conversion and boundary check
