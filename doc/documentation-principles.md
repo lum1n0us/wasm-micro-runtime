@@ -954,6 +954,114 @@ claude-code audit-docs --checklist=documentation-principles.md
 
 ---
 
+## Periodic Documentation Audit Process
+
+**Purpose**: Ensure documentation quality remains high and duplication stays at zero over time.
+
+**Frequency**:
+- **Monthly**: Quick audit (Critical + Important items only) - ~15 minutes
+- **Quarterly**: Full audit (all 14 items) - ~30-45 minutes
+- **Major release**: Full audit before release
+- **After large doc changes**: Targeted audit of affected areas
+
+**Who Runs Audits**:
+- AI agents (recommended): Use the checklist systematically
+- Human reviewers: For architectural decisions and strategy validation
+- Automation: CI checks for basic issues (broken links, line limits)
+
+**Audit Workflow**:
+
+1. **Create audit document**: `docs/audits/YYYY-MM-DD-<type>-audit.md`
+   - `<type>` = monthly / quarterly / pre-release / post-change
+
+2. **Run checklist systematically**:
+   - Work through each item in order
+   - Document findings: PASS ✅ or issues found
+   - Record metrics (line counts, duplication patterns)
+
+3. **Fix critical issues immediately**:
+   - A1.1-A1.4 (duplication) must be zero
+   - A2.1-A2.2 (line limits, SSOT) must pass
+
+4. **Plan fixes for other issues**:
+   - A3.x (content quality): Fix within 1-2 weeks
+   - A4.x (user experience): Prioritize based on impact
+
+5. **Commit audit report**:
+   - Save findings to `docs/audits/`
+   - Reference in commit message
+   - Track trends over time
+
+**Audit Report Template**:
+
+````markdown
+# [Type] Documentation Audit - YYYY-MM-DD
+
+**Scope**: [What was audited]
+**Duration**: [Time taken]
+**Auditor**: [Human/AI]
+
+## Critical Items (A1.x)
+
+### A1.1 Concept Duplication
+- Status: PASS ✅ / FAIL ❌
+- Findings: [List any issues]
+
+[Repeat for A1.2, A1.3, A1.4]
+
+## Important Items (A2.x)
+
+[Same structure]
+
+## Advisory Items (A3.x, A4.x)
+
+[Same structure]
+
+## Summary
+
+**Critical Issues**: X found, Y fixed
+**Important Issues**: X found, Y fixed
+**Total Line Count**: [Current vs. previous audit]
+**Duplication Score**: [0 = perfect, >0 = needs work]
+
+## Action Items
+
+1. [Issue → Fix → Owner → Due date]
+2. [...]
+
+## Trends
+
+- Line count: [Direction and magnitude]
+- Duplication: [Better / same / worse]
+- Link health: [Stats]
+````
+
+**Integration with Development**:
+
+- **Pre-commit hook suggestion**: Check line limits automatically
+- **CI integration**: Run A4.1 (broken links) on every PR
+- **Documentation PRs**: Reviewer uses checklist
+- **Release process**: Full audit required before tagging
+
+**Success Metrics**:
+
+- **Zero duplication**: A1.1-A1.4 always pass
+- **Line limit compliance**: 95%+ of docs within limits
+- **Link health**: 99%+ links working
+- **Audit completion**: Monthly audits done on schedule
+
+**Historical Audits**:
+
+All audit reports are preserved in `docs/audits/`:
+- `2026-05-08-baseline-audit.md` - Pre-optimization baseline
+- `2026-05-10-phase2-audit.md` - After Phase 2
+- `2026-05-13-phase3-audit.md` - After Phase 3
+- [Future audits will be added here]
+
+These historical records help track documentation quality trends over time.
+
+---
+
 ## Enforcement
 
 These principles are enforced through:
