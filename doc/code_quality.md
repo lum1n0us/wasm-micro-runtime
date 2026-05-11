@@ -102,8 +102,8 @@ For comprehensive code review guidelines, see **[code_review.md](code_review.md)
 | Every build    | -Wall -Werror      | Yes         |
 | Python changes | pylint             | Yes         |
 | Shell changes  | shellcheck         | Yes         |
-| Memory changes | scan-build         | Yes         |
-| Large refactor | scan-build + tests | Recommended |
+| Memory changes | clang-tidy         | Yes         |
+| Large refactor | clang-tidy + tests | Recommended |
 | Security fixes | All tools          | Yes         |
 | Documentation  | None               | N/A         |
 

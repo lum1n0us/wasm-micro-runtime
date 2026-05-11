@@ -96,9 +96,9 @@ This is the execution checklist for pre-commit quality checks. For standards and
 
 ## 6. Static Analysis (Optional)
 
-**Run**: `cmake -B build-analyze -DCMAKE_C_COMPILER=clang && cd build-analyze && scan-build -o ../analysis-results make -j$(nproc)`
+**Run**: `cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && clang-tidy -p build --checks='*' <file.c>`
 
-**Expected**: Reports generated in `analysis-results/` directory.
+**Expected**: No warnings or errors reported.
 
 **When**: Recommended for memory management changes, complex logic, or security-sensitive code.
 
