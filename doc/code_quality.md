@@ -86,28 +86,9 @@ This guide defines WAMR's code quality standards. For the execution checklist, s
 
 ---
 
-## Code Review Standards
+## Code Review
 
-**Automatic checks** (CI-enforced): Formatting, warnings, tests pass
-
-**Manual review focus**:
-
-- Correctness: Logic handles edge cases, errors checked, resources cleaned
-- Testing: New tests added, error paths covered, regression tests for bugs
-- Code quality: No duplication, appropriate abstractions
-- Documentation: Public APIs documented, complex logic explained
-
-**Common issues**:
-
-```c
-// ❌ Leak in error path
-char *buf = malloc(1024);
-if (error) return -1;  // Forgot free()
-
-// ✅ Cleanup all paths
-char *buf = malloc(1024);
-if (error) { free(buf); return -1; }
-```
+For comprehensive code review guidelines, see **[code_review.md](code_review.md)**.
 
 ---
 
@@ -159,6 +140,7 @@ if (error) { free(buf); return -1; }
 ## Related Documentation
 
 - **[linting.md](linting.md)** - Complete pre-commit checklist
+- **[code_review.md](code_review.md)** - Code review guidelines
 - **[building.md](building.md)** - Build configuration
 - **[testing.md](testing.md)** - Testing strategy
 - **[debugging.md](debugging.md)** - Debugging with GDB and Valgrind

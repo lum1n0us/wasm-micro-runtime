@@ -88,9 +88,10 @@ devcontainer exec --workspace-folder . -- bash -c "<command>"
 
 #### PR Reviews
 
-1. [doc/architecture_overview.md](./doc/architecture_overview.md) - Verify architecture fit
-2. [doc/testing.md](./doc/testing.md) - Check test coverage
-3. [doc/code_quality.md](./doc/code_quality.md) - Verify code quality
+1. [doc/code_review.md](./doc/code_review.md) - Review principles and checklist
+2. [doc/architecture_overview.md](./doc/architecture_overview.md) - Verify architecture fit
+3. [doc/testing.md](./doc/testing.md) - Check test coverage
+4. [doc/code_quality.md](./doc/code_quality.md) - Quality standards
 
 #### Test Writing
 
