@@ -5,8 +5,9 @@
 WebAssembly Micro Runtime (WAMR) is a lightweight standalone WebAssembly runtime with small footprint, high performance, and highly configurable features.
 
 **Core Components**:
+
 - **VMcore** (core/iwasm/, core/shared) - Runtime engine
-- **iwasm** (product-mini/platforms) - CLI executable  
+- **iwasm** (product-mini/platforms) - CLI executable
 - **wamrc** (wamr-compiler/) - AOT compiler
 
 For full details: [README.md](./README.md)
@@ -17,12 +18,16 @@ For full details: [README.md](./README.md)
 
 ```
 wasm-micro-runtime/
-├── core/              # Runtime engine
-├── product-mini/      # iwasm builds
-├── wamr-compiler/     # wamrc AOT compiler
-├── tests/             # Test suites
-├── samples/           # Integration examples
-└── doc/               # Strategy documentation
+├── .github/                # CI/CD workflows
+├── build-scripts/          # CMake build configuration
+├── core/                   # Runtime engine
+│   └── deps/              # Dependencies (skip analysis)
+├── doc/                    # Strategy documentation
+├── product-mini/           # iwasm builds
+├── samples/                # Integration examples
+│   └── workloads/         # Sample workloads (skip analysis)
+├── tests/                  # Test suites
+└── wamr-compiler/          # wamrc AOT compiler
 ```
 
 ---
@@ -39,19 +44,20 @@ devcontainer exec --workspace-folder . -- <command>
 
 **Examples**:
 
-| Documentation Shows | Execute on Linux |
-|---------------------|------------------|
-| `cmake -B build` | `devcontainer exec --workspace-folder . -- cmake -B build` |
+| Documentation Shows      | Execute on Linux                                                   |
+| ------------------------ | ------------------------------------------------------------------ |
+| `cmake -B build`         | `devcontainer exec --workspace-folder . -- cmake -B build`         |
 | `ctest --test-dir build` | `devcontainer exec --workspace-folder . -- ctest --test-dir build` |
 
 **For shell features** (pipes, variables, cd):
+
 ```bash
 devcontainer exec --workspace-folder . -- bash -c "<command>"
 ```
 
 **Why**: WAMR requires WASI-SDK, WABT, LLVM - only available in devcontainer.
 
-**Details**: [doc/dev-in-container.md](./doc/dev-in-container.md)
+**Details**: [doc/dev_in_container.md](./doc/dev_in_container.md)
 
 ---
 
@@ -59,19 +65,21 @@ devcontainer exec --workspace-folder . -- bash -c "<command>"
 
 **Documentation follows lazy loading**: Read high-level docs first, drill down only when needed.
 
-**Architecture**: [doc/documentation-principles.md](./doc/documentation-principles.md)
+**Architecture**: [doc/documentation_principles.md](./doc/documentation_principles.md)
 
 ### By Task Type
 
 #### Bug Fixes
-1. [doc/architecture-overview.md](./doc/architecture-overview.md) - Component relationships
+
+1. [doc/architecture_overview.md](./doc/architecture_overview.md) - Component relationships
 2. [doc/building.md](./doc/building.md) - Build with debug flags
 3. [doc/debugging.md](./doc/debugging.md) - Debug workflow
 4. [doc/testing.md](./doc/testing.md) - Verify the fix
 5. [doc/linting.md](./doc/linting.md) - Pre-commit checks ⚠️
 
 #### Adding Features
-1. [doc/architecture-overview.md](./doc/architecture-overview.md) - Where feature fits
+
+1. [doc/architecture_overview.md](./doc/architecture_overview.md) - Where feature fits
 2. [doc/building.md](./doc/building.md) - Configure build
 3. [doc/embed_wamr.md](./doc/embed_wamr.md) - API patterns (if adding API)
 4. [doc/export_native_api.md](./doc/export_native_api.md) - Native functions (if exposing)
@@ -79,17 +87,20 @@ devcontainer exec --workspace-folder . -- bash -c "<command>"
 6. [doc/linting.md](./doc/linting.md) - Pre-commit checks ⚠️
 
 #### PR Reviews
-1. [doc/architecture-overview.md](./doc/architecture-overview.md) - Verify architecture fit
+
+1. [doc/architecture_overview.md](./doc/architecture_overview.md) - Verify architecture fit
 2. [doc/testing.md](./doc/testing.md) - Check test coverage
-3. [doc/code-quality.md](./doc/code-quality.md) - Verify code quality
+3. [doc/code_quality.md](./doc/code_quality.md) - Verify code quality
 
 #### Test Writing
+
 1. [doc/testing.md](./doc/testing.md) - Test strategy
 2. [tests/unit/README.md](./tests/unit/README.md) - Unit test details
 3. [tests/wamr-test-suites/README.md](./tests/wamr-test-suites/README.md) - Spec test details
 
 #### Refactoring
-1. [doc/architecture-overview.md](./doc/architecture-overview.md) - Maintain principles
+
+1. [doc/architecture_overview.md](./doc/architecture_overview.md) - Maintain principles
 2. [doc/perf_tune.md](./doc/perf_tune.md) - Performance implications
 3. [doc/memory_tune.md](./doc/memory_tune.md) - Memory implications
 
@@ -98,6 +109,7 @@ devcontainer exec --workspace-folder . -- bash -c "<command>"
 ## Quick Reference
 
 **Most Frequently Used**:
+
 - [README.md](./README.md) - Project overview
 - [doc/building.md](./doc/building.md) - Build guide
 - [doc/testing.md](./doc/testing.md) - Testing guide

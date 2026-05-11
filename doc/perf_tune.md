@@ -3,11 +3,8 @@
 SSOT for performance tuning strategy.
 
 **Prerequisites**:
-1. [AGENTS.md](../AGENTS.md) - Command execution patterns
 2. [build_wamr.md](./build_wamr.md) - Build configuration (SSOT)
-3. [architecture-overview.md](./architecture-overview.md) - Runtime modes (SSOT)
-
-> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
+3. [architecture_overview.md](./architecture_overview.md) - Runtime modes (SSOT)
 
 ## Strategy Overview
 

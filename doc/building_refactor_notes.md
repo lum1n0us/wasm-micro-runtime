@@ -168,7 +168,7 @@ The following detailed operational content was removed and should be relocated:
 - Build fails with "undefined reference to..." (full solution with examples)
 - Binary too large (full solution with MinSizeRel example)
 - Slow build times (full solution with ccache)
-- Container not found (delegated to dev-in-container.md)
+- Container not found (delegated to dev_in_container.md)
 - Permission errors (full solution with ownership commands)
 
 **Should go to**: `product-mini/platforms/linux/README.md` (to be created)
@@ -198,7 +198,7 @@ The following detailed operational content was removed and should be relocated:
 - Parallel compilation
 
 ### Platform Issues
-- Container issues (→ dev-in-container.md)
+- Container issues (→ dev_in_container.md)
 - Permission errors
 - Cross-compilation issues
 ```

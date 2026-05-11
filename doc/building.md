@@ -2,12 +2,6 @@
 
 This guide explains WAMR's build system architecture, when to use different build configurations, and how to make build decisions. For detailed commands and all build options, see platform-specific operational guides.
 
-**Prerequisites**:
-1. [AGENTS.md](../AGENTS.md) - Execution patterns
-2. [doc/dev-in-container.md](./dev-in-container.md) - Container setup
-
-> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
-
 WAMR consists of two main components:
 - **iwasm** - The WebAssembly runtime that executes WASM/AOT modules
 - **wamrc** - The AOT (Ahead-of-Time) compiler that compiles WASM to native code
@@ -319,7 +313,7 @@ See [product-mini/platforms/linux/README.md](../product-mini/platforms/linux/REA
 - [product-mini/README.md](../product-mini/README.md) - Platform build instructions
 - [product-mini/platforms/linux/README.md](../product-mini/platforms/linux/README.md) - Linux operational guide (to be created)
 - [wamr-compiler/README.md](../wamr-compiler/README.md) - AOT compiler details
-- [dev-in-container.md](dev-in-container.md) - Devcontainer setup
+- [dev_in_container.md](dev_in_container.md) - Devcontainer setup
 
 ### Build Locations
 

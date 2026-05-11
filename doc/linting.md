@@ -1,21 +1,20 @@
 # Pre-Commit Linting Checklist
 
-This is the execution checklist for pre-commit quality checks. For standards and principles, see [code-quality.md](./code-quality.md).
+This is the execution checklist for pre-commit quality checks. For standards and principles, see [code_quality.md](./code_quality.md).
 
 **Purpose**: Quick checklist of all checks to run before committing code.
 
-**Boundary with code-quality.md**:
+**Boundary with code_quality.md**:
 - **linting.md** (this doc): Execution checklist (WHAT to run)
-- **code-quality.md**: Standards and principles (WHY)
+- **code_quality.md**: Standards and principles (WHY)
 
-> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
 
 ---
 
 ## Prerequisites
 
-- Read [AGENTS.md](../AGENTS.md) for platform-specific execution
-- Read [dev-in-container.md](dev-in-container.md) for container setup
+
+- Read [dev_in_container.md](dev_in_container.md) for container setup
 - All commands must run inside devcontainer on Linux
 
 ---
@@ -39,13 +38,13 @@ This is the execution checklist for pre-commit quality checks. For standards and
 
 ## 1. Code Format Check
 
-**Run**: `git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 --dry-run --Werror`
+**Run**: `git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-12 --style file --dry-run --Werror`
 
 **Expected**: No output means all staged files formatted correctly.
 
-**Auto-fix**: `git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 -i`
+**Auto-fix**: `git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-12 --style file -i`
 
-**Details**: See [code-quality.md § Formatting Standards](./code-quality.md#formatting-standards) for style guide.
+**Note**: Uses `.clang-format` configuration at repository root.
 
 ---
 
@@ -55,7 +54,7 @@ This is the execution checklist for pre-commit quality checks. For standards and
 
 **Expected**: Build succeeds with exit code 0, no warnings or errors.
 
-**Details**: See [code-quality.md § Compiler Warnings](./code-quality.md#compiler-warnings) for standards.
+**Details**: See [code_quality.md § Compiler Warnings](./code_quality.md#compiler-warnings) for standards.
 
 ---
 
@@ -103,7 +102,7 @@ This is the execution checklist for pre-commit quality checks. For standards and
 
 **When**: Recommended for memory management changes, complex logic, or security-sensitive code.
 
-**Details**: See [code-quality.md § Static Analysis](./code-quality.md#static-analysis) for interpreting results.
+**Details**: See [code_quality.md § Static Analysis](./code_quality.md#static-analysis) for interpreting results.
 
 ---
 
@@ -166,14 +165,13 @@ All checks documented here run in CI. To reproduce CI failures locally:
 - Regression tests
 - Platform-specific builds
 
-**Details**: See [AGENTS.md § CI Integration](../AGENTS.md#ci-integration) for workflows.
 
 ---
 
 ## Troubleshooting
 
 **Format check fails but no visible diff:**
-- Use `clang-format-14 file.c | diff -u file.c -` to see actual diff
+- Use `clang-format-12 --style file file.c | diff -u file.c -` to see actual diff
 - Check for tabs vs spaces with `cat -A file.c`
 
 **Tests pass locally but fail in CI:**
@@ -187,7 +185,7 @@ All checks documented here run in CI. To reproduce CI failures locally:
 **Regression test infrastructure missing:**
 - Run `cd tests/regression/ba-issues && ./build_wamr.sh` first
 
-**Details**: See [dev-in-container.md § Troubleshooting](./dev-in-container.md#troubleshooting) for container issues.
+**Details**: See [dev_in_container.md § Troubleshooting](./dev_in_container.md#troubleshooting) for container issues.
 
 ---
 
@@ -223,8 +221,8 @@ All checks documented here run in CI. To reproduce CI failures locally:
 
 **Format:**
 ```bash
-git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 --dry-run --Werror
-git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 -i
+git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-12 --style file --dry-run --Werror
+git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-12 --style file -i
 ```
 
 **Build:**
@@ -243,9 +241,8 @@ cd tests/regression/ba-issues && ./build_wamr.sh && ./run.py
 
 ## Related Documentation
 
-- [code-quality.md](./code-quality.md) - Standards and principles
+- [code_quality.md](./code_quality.md) - Standards and principles
 - [testing.md](./testing.md) - Complete testing guide
-- [dev-in-container.md](./dev-in-container.md) - Container environment
+- [dev_in_container.md](./dev_in_container.md) - Container environment
 - [debugging.md](./debugging.md) - GDB and Valgrind
 - [tests/regression/README.md](../tests/regression/README.md) - Regression tests
-- [AGENTS.md](../AGENTS.md) - Development workflows

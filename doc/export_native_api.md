@@ -2,12 +2,6 @@
 
 This document defines how to register and export native C functions so WASM modules can call them. This is the single source of truth for native API registration patterns.
 
-**Prerequisites**:
-1. [AGENTS.md](../AGENTS.md) - command execution patterns
-2. [embed_wamr.md](./embed_wamr.md) - embedding API basics
-
-> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
-
 ---
 
 ## Exporting native API steps

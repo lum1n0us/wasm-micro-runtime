@@ -4,12 +4,6 @@ This guide provides a strategic overview of testing approaches for WAMR. It expl
 
 **Philosophy**: WAMR uses multiple test layers to ensure correctness, spec compliance, and stability. Understanding which test to run or write for your use case is key to effective development.
 
-**Prerequisites**:
-1. [AGENTS.md](../AGENTS.md) - Navigation and execution patterns
-2. [building.md](./building.md) - Tests require iwasm and sometimes wamrc
-
-> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
-
 ---
 
 ## Test Types Overview
@@ -291,7 +285,7 @@ cd tests/wamr-test-suites && ./test_wamr.sh -s spec -t fast-interp -b
 cd tests/regression/ba-issues && ./run.py
 ```
 
-**Also see**: [code-quality.md](code-quality.md) for linting and formatting checks.
+**Also see**: [code_quality.md](code_quality.md) for linting and formatting checks.
 
 ---
 
@@ -378,7 +372,6 @@ valgrind --leak-check=full iwasm test.wasm
 
 **Problem**: Container or environment issues.
 
-**Solution**: See [AGENTS.md](../AGENTS.md) for execution patterns and environment setup.
 
 ### Test-Specific Issues
 
@@ -390,10 +383,8 @@ Each test type has specific troubleshooting:
 
 ### Common Issues
 
-- **Tests pass locally but fail in CI**: Check execution patterns in [AGENTS.md](../AGENTS.md)
 - **Tests are flaky**: Check for race conditions, uninitialized variables, shared state
 - **Build failures**: Clean build directory, rebuild iwasm (see [building.md](building.md))
 
 ---
 
-**Related**: See [AGENTS.md § Navigation](../AGENTS.md#documentation-navigation) for complete workflow guides.

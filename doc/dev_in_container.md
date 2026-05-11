@@ -2,7 +2,6 @@
 
 This guide covers WAMR's devcontainer technical details, VS Code integration, and container troubleshooting.
 
-**For basic command execution**: See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern)
 
 ---
 
@@ -220,7 +219,6 @@ docker rmi $(docker images -q -f dangling=true)
 
 ## Related Documentation
 
-- **[AGENTS.md](../AGENTS.md)** - AI agent development guide with command execution patterns
 - **[linting.md](linting.md)** - Code formatting and quality standards
 
 ## Reference

@@ -28,8 +28,8 @@ Each piece of information should have a single authoritative location. Other doc
 
 1. **Concept Duplication**
    - Explaining the same concept (e.g., "what is AOT") in multiple files
-   - ❌ Bad: Both building.md and architecture-overview.md explain AOT
-   - ✅ Good: architecture-overview.md explains AOT, building.md links to it
+   - ❌ Bad: Both building.md and architecture_overview.md explain AOT
+   - ✅ Good: architecture_overview.md explains AOT, building.md links to it
 
 2. **Command Duplication**
    - Showing the same command syntax in multiple places
@@ -58,7 +58,7 @@ Each piece of information should have a single authoritative location. Other doc
 
 3. **Layer-appropriate detail levels**
    - AGENTS.md: "Use devcontainer for Linux" (rule statement)
-   - dev-in-container.md: Complete devcontainer technical details
+   - dev_in_container.md: Complete devcontainer technical details
    - Same topic, different depth → OK if no overlap in actual content
 
 ### Single Source of Truth Registry
@@ -66,14 +66,11 @@ Each piece of information should have a single authoritative location. Other doc
 | Information Type | Authoritative Source | All Others Must |
 |-----------------|---------------------|-----------------|
 | Claude Code tool usage | CLAUDE.md | Link with "See CLAUDE.md" |
-| Platform execution patterns | AGENTS.md § Command Execution Pattern | Link with "See AGENTS.md for execution" |
-| Task → Docs navigation | AGENTS.md § Navigation | Link with "See AGENTS.md for workflow" |
-| Project structure overview | AGENTS.md § Project Structure | Link with "See AGENTS.md" |
-| Container technical details | doc/dev-in-container.md | Link with "See dev-in-container.md" |
+| Container technical details | doc/dev_in_container.md | Link with "See dev_in_container.md" |
 | Build concepts & decisions | doc/building.md | Link with "See building.md" |
 | Testing concepts & decisions | doc/testing.md | Link with "See testing.md" |
 | Debug concepts & decisions | doc/debugging.md | Link with "See debugging.md" |
-| Core concepts (AOT, JIT, WASI) | doc/architecture-overview.md | Link with "See architecture-overview.md" |
+| Core concepts (AOT, JIT, WASI) | doc/architecture_overview.md | Link with "See architecture_overview.md" |
 | Component-specific commands | component/*/README.md | Link to specific README |
 | Embedding API concepts | doc/embed_wamr.md | Link to embed_wamr.md |
 | Native API registration | doc/export_native_api.md | Link to export_native_api.md |
@@ -81,7 +78,7 @@ Each piece of information should have a single authoritative location. Other doc
 | Performance tuning strategy | doc/perf_tune.md | Link to perf_tune.md |
 | Memory optimization | doc/memory_tune.md | Link to memory_tune.md |
 | GDB debugging workflow | doc/debugging.md | Link to debugging.md |
-| Code quality standards | doc/code-quality.md | Link to code-quality.md |
+| Code quality standards | doc/code_quality.md | Link to code_quality.md |
 | Pre-commit checklist | doc/linting.md | Link to linting.md |
 
 ---
@@ -198,7 +195,7 @@ component/*/detailed-guide.md  [Deep dives - advanced topics]
 **DO NOT include**:
 - Conceptual explanations (link to doc/ instead)
 - Cross-component strategy (that's in doc/)
-- General WAMR architecture (that's in doc/architecture-overview.md)
+- General WAMR architecture (that's in doc/architecture_overview.md)
 
 ### Level 4: Deep Dives (optional)
 
@@ -439,7 +436,6 @@ Step-by-step setup:
 
 **Good**:
 ```markdown
-Platform requirements: see [AGENTS.md](../AGENTS.md) for execution patterns.
 ```
 
 ### Link Text Best Practices
@@ -538,7 +534,6 @@ Only if needed: loads tests/unit/README.md for 6,400 more tokens
    
    # Good (once in AGENTS.md, 10 lines total)
    AGENTS.md: "devcontainer exec usage..."
-   Other docs: "See AGENTS.md for execution"
    Savings: 240 lines (96% reduction)
    ```
 
@@ -728,7 +723,6 @@ Examples:
 | ctest --test-dir build | devcontainer exec --workspace-folder . -- ctest --test-dir build |
 
 # tests/unit/README.md
-> See AGENTS.md for platform-specific execution requirements
 
 cd tests/unit && cmake -B build
 cd tests/unit && cmake --build build
@@ -736,13 +730,11 @@ cd tests/unit && ctest --test-dir build
 [50+ commands in pure form]
 
 # doc/testing.md
-> See AGENTS.md for platform-specific execution requirements
 
 ctest --test-dir build
 [Commands in pure form]
 
 # doc/building.md
-> See AGENTS.md for platform-specific execution requirements
 
 cmake -B build
 [Commands in pure form]
@@ -775,7 +767,6 @@ cmake -B build
 3. ✅ **DO**: Add reference to AGENTS.md at document top
    ```markdown
    > **For AI Agents**: All commands show raw syntax. 
-   > See [AGENTS.md](../AGENTS.md) for platform-specific execution.
    ```
 
 4. ✅ **DO**: Document execution pattern centrally in AGENTS.md
@@ -832,7 +823,7 @@ When reading documentation:
 **Usage Pattern**:
 ```bash
 # AI agent invocation
-claude-code audit-docs --checklist=documentation-principles.md
+claude-code audit-docs --checklist=documentation_principles.md
 ```
 
 ### Audit Checklist
@@ -889,7 +880,6 @@ claude-code audit-docs --checklist=documentation-principles.md
 
 - [ ] **A3.1 Command Form Consistency**
   - All commands in doc/*.md should be in pure form (no platform wrappers)
-  - All doc/*.md should have "See AGENTS.md for execution" at top
   - Action: Flag files with `devcontainer exec` in examples
 
 - [ ] **A3.2 Decision-Level Command Pattern**

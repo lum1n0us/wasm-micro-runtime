@@ -19,7 +19,7 @@ Before committing, run the checklist in [doc/linting.md](./doc/linting.md).
 
 ### 3. Follow Documentation Principles
 
-When writing or updating docs, follow [doc/documentation-principles.md](./doc/documentation-principles.md).
+When writing or updating docs, follow [doc/documentation_principles.md](./doc/documentation_principles.md).
 
 ---
 

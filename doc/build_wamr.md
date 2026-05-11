@@ -3,10 +3,8 @@
 This document is the complete reference for WAMR vmcore CMake configuration flags. The vmcore is the runtime library that loads and runs Wasm modules.
 
 **Prerequisites**:
-1. [AGENTS.md](../AGENTS.md) - command execution patterns
 2. [building.md](./building.md) - high-level build decisions and platform-specific setup
 
-> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
 
 **References**:
 - [product-mini README](../product-mini/README.md) - iwasm builds for Linux, Windows, macOS

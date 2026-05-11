@@ -3,11 +3,9 @@
 SSOT for memory optimization.
 
 **Prerequisites**:
-1. [AGENTS.md](../AGENTS.md) - Command execution patterns
-2. [architecture-overview.md](./architecture-overview.md) - Memory model overview (SSOT)
+2. [architecture_overview.md](./architecture_overview.md) - Memory model overview (SSOT)
 3. [embed_wamr.md](./embed_wamr.md) - Runtime initialization (SSOT)
 
-> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
 
 **External Resources**:
 - [Blog: Understand WAMR heap](https://bytecodealliance.github.io/wamr.dev/blog/understand-the-wamr-heaps/)

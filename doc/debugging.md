@@ -3,11 +3,8 @@
 This guide explains debugging strategies for WAMR development, when to use different debugging approaches, and how to troubleshoot issues effectively.
 
 **Prerequisites**:
-1. [AGENTS.md](../AGENTS.md) - Execution patterns
 2. [building.md](./building.md) - Build types for debugging
 3. [testing.md](./testing.md) - Test-driven debugging
-
-> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
 
 ---
 

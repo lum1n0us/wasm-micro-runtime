@@ -3,10 +3,8 @@
 This guide explains WAMR's core components, concepts, and design principles. It serves as the single source of truth for architectural concepts referenced throughout WAMR documentation.
 
 **Prerequisites**:
-1. [AGENTS.md](../AGENTS.md) - Project navigation
 2. [README.md](../README.md) - Project overview
 
-> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
 
 ---
 
@@ -450,4 +448,3 @@ This script is included by host applications to pull WAMR runtime into their bui
 
 ---
 
-**Related**: See [AGENTS.md § Navigation](../AGENTS.md#documentation-navigation) for complete workflow guides.

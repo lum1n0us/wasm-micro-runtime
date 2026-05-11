@@ -2,12 +2,6 @@
 
 This document defines how to embed WAMR into C/C++ host applications using the runtime embedding API. For other languages: [Python](../language-bindings/python), [Go](../language-bindings/go).
 
-**Prerequisites**:
-1. [AGENTS.md](../AGENTS.md) - command execution patterns
-2. [build_wamr.md](./build_wamr.md) - CMake configuration reference
-
-> **Execution**: Commands in pure form. See [AGENTS.md § Command Execution Pattern](../AGENTS.md#command-execution-pattern).
-
 **API Reference**: All embedding APIs are defined in [core/iwasm/include](../core/iwasm/include).
 
 ---
