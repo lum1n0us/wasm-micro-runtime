@@ -12,11 +12,12 @@ This guide defines WAMR's code quality standards. For the execution checklist, s
 
 ## Code Formatting
 
-- **Tool**: `clang-format-12 --style file`
+- **Tool**: `ci/coding_guidelines_check.py`
+- **Includes**: clang-format-14 (code style) + file/directory naming checks
 - **Config**: `.clang-format` at repository root
 - **Style**: K&R with Mozilla customizations
 - **When required**: Before every commit, PR, merge to main
-- **CI enforcement**: Build fails if files don't match format
+- **CI enforcement**: Build fails if files don't match format or naming rules
 
 **→ See [linting.md § Code Formatting](./linting.md) for execution**
 
@@ -98,7 +99,7 @@ For comprehensive code review guidelines, see **[code_review.md](code_review.md)
 
 | Situation      | Tool               | Required    |
 | -------------- | ------------------ | ----------- |
-| Every commit   | clang-format       | Yes         |
+| Every commit   | coding_guidelines_check.py | Yes |
 | Every build    | -Wall -Werror      | Yes         |
 | Python changes | pylint             | Yes         |
 | Shell changes  | shellcheck         | Yes         |

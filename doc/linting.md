@@ -38,13 +38,16 @@ This is the execution checklist for pre-commit quality checks. For standards and
 
 ## 1. Code Format Check
 
-**Run**: `git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-12 --style file --dry-run --Werror`
+**Run**: `python3 ci/coding_guidelines_check.py`
 
-**Expected**: No output means all staged files formatted correctly.
+**Expected**: No output means all changes meet coding guidelines.
 
-**Auto-fix**: `git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-12 --style file -i`
+**What it checks**:
+- Code formatting (clang-format-14 with `.clang-format` config)
+- File naming: must use underscores, not hyphens (e.g., `my_file.c` not `my-file.c`)
+- Directory naming: must use hyphens, not underscores (e.g., `my-dir/` not `my_dir/`)
 
-**Note**: Uses `.clang-format` configuration at repository root.
+**Auto-fix formatting only**: `git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 -i`
 
 ---
 
@@ -171,8 +174,12 @@ All checks documented here run in CI. To reproduce CI failures locally:
 ## Troubleshooting
 
 **Format check fails but no visible diff:**
-- Use `clang-format-12 --style file file.c | diff -u file.c -` to see actual diff
+- Use `clang-format-14 file.c | diff -u file.c -` to see actual diff
 - Check for tabs vs spaces with `cat -A file.c`
+
+**Naming check fails:**
+- File names must use underscores: `my_file.c` not `my-file.c`
+- Directory names must use hyphens: `my-dir/` not `my_dir/`
 
 **Tests pass locally but fail in CI:**
 - Verify using devcontainer (not host)
@@ -221,8 +228,11 @@ All checks documented here run in CI. To reproduce CI failures locally:
 
 **Format:**
 ```bash
-git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-12 --style file --dry-run --Werror
-git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-12 --style file -i
+# Check all guidelines (format + naming)
+python3 ci/coding_guidelines_check.py
+
+# Auto-fix formatting only
+git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' | xargs -r clang-format-14 -i
 ```
 
 **Build:**
