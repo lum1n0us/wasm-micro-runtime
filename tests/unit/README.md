@@ -2,7 +2,6 @@
 
 This guide provides comprehensive instructions for contributors on creating, running, and maintaining unit tests for WAMR. It covers everything from setting up your environment to writing new test suites and generating coverage reports.
 
-> **For AI Agents**: All commands in this guide show the raw command syntax. See [AGENTS.md](../../AGENTS.md) for platform-specific execution requirements (e.g., devcontainer on Linux).
 
 **Table of Contents:**
 - [Development Environment](#development-environment)
@@ -16,7 +15,6 @@ This guide provides comprehensive instructions for contributors on creating, run
 - [Example Directory Structure](#example-directory-structure)
 - [Best Practices](#additional-notes)
 - [Troubleshooting](#troubleshooting)
-- [Related Documentation](#related-documentation)
 
 ---
 
@@ -30,10 +28,8 @@ The WAMR devcontainer provides all necessary tools:
 - Correct library versions
 - Pre-configured build environment
 
-**For platform-specific setup and command execution requirements, see [AGENTS.md](../../AGENTS.md) and [doc/dev-in-container.md](../../doc/dev-in-container.md).**
 
 Before writing unit tests:
-1. Read [AGENTS.md](../../AGENTS.md) for environment setup requirements
 2. Familiarize yourself with existing tests in `tests/unit/`
 3. Choose the appropriate test framework for your needs (see below)
 
@@ -1581,7 +1577,7 @@ lcov --extract coverage.all.info "*/core/iwasm/*" "*/core/shared/*" --output-fil
 
 **Problem:** Commands fail with container-related errors
 
-**Solution:** See [AGENTS.md](../../AGENTS.md) for platform-specific execution requirements and [doc/dev-in-container.md](../../doc/dev-in-container.md#troubleshooting) for detailed container troubleshooting.
+**Solution:** Check container setup and verify devcontainer is running properly.
 
 **Problem:** Permission denied errors
 
@@ -1593,23 +1589,7 @@ sudo chown -R $USER:$USER tests/unit/build/
 
 ---
 
-## Related Documentation
-
-### WAMR Development Guides
-
-- **[doc/dev-in-container.md](../../doc/dev-in-container.md)** - Devcontainer setup (read this first)
-- **[doc/testing.md](../../doc/testing.md)** - Comprehensive testing guide (unit, spec, integration)
-- **[doc/architecture-overview.md](../../doc/architecture-overview.md)** - Understanding WAMR structure
-- **[doc/building.md](../../doc/building.md)** - Building iwasm and wamrc
-- **[AGENTS.md](../../AGENTS.md)** - AI agent development workflows
-
-### Test-Related Resources
-
-- **[tests/wamr-test-suites/](../wamr-test-suites/)** - WebAssembly spec tests
-- **[samples/](../../samples/)** - Integration test examples
-- **[tests/benchmarks/](../benchmarks/)** - Performance benchmarks
-
-### External Resources
+## External Resources
 
 - **[Google Test Documentation](https://google.github.io/googletest/)** - Test framework reference
 - **[CMake CTest Documentation](https://cmake.org/cmake/help/latest/manual/ctest.1.html)** - Test runner reference

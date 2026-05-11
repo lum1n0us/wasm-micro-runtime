@@ -32,8 +32,8 @@ All checks must be run inside the devcontainer using:
 ```
 
 For detailed instructions, see:
-- [Development in Devcontainer](./doc/dev-in-container.md)
-- [Code Quality Checks](./doc/code-quality.md)
+- [Development in Devcontainer](./doc/dev_in_container.md)
+- [Code Quality Checks](./doc/code_quality.md)
 - [Linting and Pre-Commit Checklist](./doc/linting.md)
 
 Code changes

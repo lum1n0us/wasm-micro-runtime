@@ -69,7 +69,7 @@ Verify the container is available:
 ./scripts/in-container.sh --status
 ```
 
-For more details, see `doc/dev-in-container.md`.
+For more details, see `doc/dev_in_container.md`.
 
 ---
 
@@ -678,7 +678,6 @@ workspace/
 # Ensure you're using the devcontainer
 ./scripts/in-container.sh --status
 
-# If container isn't available, see doc/dev-in-container.md
 
 # Rebuild container if needed
 docker-compose -f .devcontainer/docker-compose.yml build
@@ -853,14 +852,6 @@ Feature-specific PRs must also pass:
 
 ## Reference
 
-### Related Documentation
-
-- **`doc/testing.md`**: Comprehensive testing overview
-- **`doc/building.md`**: Build options and CMake flags
-- **`doc/dev-in-container.md`**: Devcontainer setup and usage
-- **`AGENTS.md`**: AI assistant guidelines (includes testing requirements)
-- **`tests/unit-test/README.md`**: Unit testing guide
-
 ### External Resources
 
 - **WebAssembly Specification**: https://webassembly.github.io/spec/
@@ -918,5 +909,4 @@ tests/wamr-test-suites/
 
 ---
 
-**For questions or issues with the test suite, see `doc/testing.md` or file an issue on GitHub.**
 
