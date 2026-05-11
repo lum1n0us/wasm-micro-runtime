@@ -23,7 +23,8 @@ This is the execution checklist for pre-commit quality checks. For standards and
 
 **All Changes:**
 - [ ] Code format check passes
-- [ ] Build succeeds with no warnings
+- [ ] iwasm build succeeds with no warnings (host platform)
+- [ ] wamrc build succeeds with no warnings (if AOT changes)
 
 **Code Changes:**
 - [ ] Unit tests pass
@@ -53,9 +54,25 @@ This is the execution checklist for pre-commit quality checks. For standards and
 
 ## 2. Build Check
 
-**Run**: `cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build -j$(nproc)`
+Build iwasm and wamrc separately on the host platform (Linux/macOS/Windows).
 
-**Expected**: Build succeeds with exit code 0, no warnings or errors.
+**iwasm build**:
+```bash
+cd product-mini/platforms/linux  # Use darwin for macOS, windows for Windows
+rm -rf build
+cmake -S . -B build -DCMAKE_C_FLAGS='-Wall -Werror'
+cmake --build build -j$(nproc)
+```
+
+**wamrc build** (if AOT changes):
+```bash
+cd wamr-compiler
+rm -rf build
+cmake -S . -B build -DCMAKE_C_FLAGS='-Wall -Werror'
+cmake --build build -j$(nproc)
+```
+
+**Expected**: Both builds succeed with exit code 0, no warnings or errors.
 
 **Details**: See [code_quality.md § Compiler Warnings](./code_quality.md#compiler-warnings) for standards.
 
@@ -237,7 +254,11 @@ git diff --cached --name-only --diff-filter=ACM | grep '\.\(c\|h\|cpp\|hpp\)$' |
 
 **Build:**
 ```bash
-cmake -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build -j$(nproc)
+# iwasm (Linux, use darwin for macOS, windows for Windows)
+cd product-mini/platforms/linux && rm -rf build && cmake -S . -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build -j$(nproc)
+
+# wamrc (if AOT changes)
+cd wamr-compiler && rm -rf build && cmake -S . -B build -DCMAKE_C_FLAGS='-Wall -Werror' && cmake --build build -j$(nproc)
 ```
 
 **Tests:**
