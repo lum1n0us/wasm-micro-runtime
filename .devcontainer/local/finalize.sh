@@ -10,10 +10,10 @@ echo "Running local finalize script..."
 # Install required packages
 pip3 install --no-cache-dir --break-system-packages -r .devcontainer/requirements.txt
 
-# Install opencode
-curl -fsSL https://opencode.ai/install | bash
+# # Install opencode
+# curl -fsSL https://opencode.ai/install | bash
 
-echo "You might want to copy your Opencode auth.json to ~/.local/share/opencode/auth.json"
-mkdir -p ~/.local/share/opencode
+# echo "You might want to copy your Opencode auth.json to ~/.local/share/opencode/auth.json"
+# mkdir -p ~/.local/share/opencode
 
 echo "Local finalize script completed. ✅"
