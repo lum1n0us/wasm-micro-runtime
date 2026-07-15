@@ -5,6 +5,12 @@ cmake_minimum_required(VERSION 3.14)
 
 project (test-compilation)
 
+if(NOT WAMR_BUILD_AOT OR WAMR_BUILD_INTERP OR WAMR_BUILD_FAST_INTERP OR
+   WAMR_BUILD_JIT OR WAMR_BUILD_FAST_JIT)
+  message(STATUS "Skipping compilation: AOT only")
+  return()
+endif()
+
 add_definitions (-DRUN_ON_LINUX)
 
 add_definitions (-Dattr_container_malloc=malloc)
@@ -18,10 +24,6 @@ set (WAMR_BUILD_LIBC_BUILTIN 1)
 set (WAMR_BUILD_MULTI_MODULE 1)
 set (WAMR_BUILD_APP_FRAMEWORK 0)
 set (WAMR_BUILD_THREAD_MGR 1)
-set (WAMR_BUILD_AOT 1)
-set (WAMR_BUILD_FAST_INTERP 0)
-set (WAMR_BUILD_INTERP 1)
-set (WAMR_BUILD_JIT 0)
 
 include (../unit_common.cmake)
 

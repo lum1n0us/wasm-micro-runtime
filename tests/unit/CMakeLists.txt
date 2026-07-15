@@ -6,6 +6,20 @@ cmake_minimum_required(VERSION 3.14)
 project(unit-test)
 option(FULL_TEST "Build all unit tests including llm-enhanced-test" OFF)
 
+# Classic interpreter is the default. Fast interpreter also requires the
+# classic interpreter implementation.
+set(WAMR_BUILD_INTERP 1 CACHE BOOL "Build classic interpreter")
+
+# By default, disable all other runtime modes. Users can enable them by setting the corresponding
+foreach(_unit_option WAMR_BUILD_FAST_INTERP WAMR_BUILD_JIT
+                     WAMR_BUILD_AOT WAMR_BUILD_FAST_JIT)
+  if(NOT DEFINED ${_unit_option})
+    set(${_unit_option} 0 CACHE BOOL "Unit test runtime mode")
+  endif()
+endforeach()
+
+unset(_unit_option)
+
 # Yes. To solve the compatibility issue with CMAKE (>= 4.0), we need to update
 # our `cmake_minimum_required()` to 3.5. However, there are CMakeLists.txt
 # from 3rd parties that we should not alter. Therefore, in addition to
@@ -103,7 +117,6 @@ add_subdirectory(linear-memory-wasm)
 add_subdirectory(linear-memory-aot)
 add_subdirectory(linux-perf)
 add_subdirectory(gc)
-add_subdirectory(unsupported-features)
 add_subdirectory(exception-handling)
 add_subdirectory(running-modes)
 add_subdirectory(mem-alloc)

@@ -5,13 +5,14 @@ cmake_minimum_required(VERSION 3.14)
 
 project(test-shared-heap)
 
+if(WAMR_BUILD_JIT OR WAMR_BUILD_FAST_JIT)
+  message(STATUS "Skipping shared-heap: classic, fast interpreter and AOT only")
+  return()
+endif()
+
 add_definitions(-DRUN_ON_LINUX)
 
 set(WAMR_BUILD_APP_FRAMEWORK 0)
-set(WAMR_BUILD_AOT 1)
-set(WAMR_BUILD_INTERP 1)
-set(WAMR_BUILD_FAST_INTERP 1)
-set(WAMR_BUILD_JIT 0)
 set(WAMR_BUILD_MEMORY64 0)
 set(WAMR_BUILD_SHARED_HEAP 1)
 

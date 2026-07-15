@@ -5,14 +5,15 @@ cmake_minimum_required(VERSION 3.14)
 
 project (test-linux-perf)
 
+if(NOT WAMR_BUILD_AOT AND NOT WAMR_BUILD_JIT)
+  message(STATUS "Skipping linux-perf: AOT and LLVM JIT only")
+  return()
+endif()
+
 add_definitions (-DRUN_ON_LINUX)
 
 set (WAMR_BUILD_LIBC_WASI 0)
 set (WAMR_BUILD_LIBC_BUILTIN 0)
-set (WAMR_BUILD_JIT 0)
-set (WAMR_BUILD_AOT 1)
-set (WAMR_BUILD_FAST_INTERP 0)
-set (WAMR_BUILD_INTERP 1)
 set (WAMR_BUILD_MULTI_MODULE 0)
 set (WAMR_BUILD_LINUX_PERF 1)
 

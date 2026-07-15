@@ -5,16 +5,17 @@ cmake_minimum_required(VERSION 3.14)
 
 project(test-memory64)
 
+if(WAMR_BUILD_FAST_INTERP OR WAMR_BUILD_JIT OR WAMR_BUILD_AOT OR
+   WAMR_BUILD_FAST_JIT)
+  message(STATUS "Skipping memory64: classic interpreter only")
+  return()
+endif()
+
 add_definitions(-DRUN_ON_LINUX)
 
 set(WAMR_BUILD_LIBC_WASI 1)
 set(WAMR_BUILD_APP_FRAMEWORK 0)
 # TODO: Currently only support classic interpreter mode
-set(WAMR_BUILD_AOT 0)
-set(WAMR_BUILD_INTERP 1)
-set(WAMR_BUILD_FAST_INTERP 0)
-set(WAMR_BUILD_JIT 0)
-set(WAMR_BUILD_FAST_JIT 0)
 set(WAMR_BUILD_MEMORY64 1)
 set(WAMR_BUILD_SHARED_MEMORY 1)
 

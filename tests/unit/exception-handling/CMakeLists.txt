@@ -5,15 +5,17 @@ cmake_minimum_required(VERSION 3.14)
 
 project (test-exception-handling)
 
+if(WAMR_BUILD_FAST_INTERP OR WAMR_BUILD_JIT OR WAMR_BUILD_AOT OR
+   WAMR_BUILD_FAST_JIT)
+  message(STATUS "Skipping exception-handling: classic interpreter only")
+  return()
+endif()
+
 add_definitions (-DRUN_ON_LINUX)
 
 add_definitions (-Dattr_container_malloc=malloc)
 add_definitions (-Dattr_container_free=free)
 
-set (WAMR_BUILD_AOT 0)
-set (WAMR_BUILD_INTERP 1)
-set (WAMR_BUILD_FAST_INTERP 0)
-set (WAMR_BUILD_JIT 0)
 set (WAMR_BUILD_LIBC_WASI 0)
 set (WAMR_BUILD_APP_FRAMEWORK 0)
 set (WAMR_BUILD_EXCE_HANDLING 1)
