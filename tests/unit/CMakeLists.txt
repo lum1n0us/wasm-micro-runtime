@@ -108,18 +108,23 @@ FetchContent_MakeAvailable(cmocka)
 include(GoogleTest)
 enable_testing()
 
-add_subdirectory(wasm-vm)
-add_subdirectory(interpreter)
-add_subdirectory(wasm-c-api)
-add_subdirectory(libc-builtin)
-add_subdirectory(shared-utils)
-add_subdirectory(linear-memory-wasm)
-add_subdirectory(linear-memory-aot)
-add_subdirectory(linux-perf)
-add_subdirectory(gc)
-add_subdirectory(exception-handling)
-add_subdirectory(running-modes)
-add_subdirectory(mem-alloc)
+set(UNIT_TEST_SUITES
+  wasm-vm
+  interpreter
+  wasm-c-api
+  libc-builtin
+  shared-utils
+  linear-memory-wasm
+  linear-memory-aot
+  linux-perf
+  gc
+  exception-handling
+  running-modes
+  mem-alloc
+)
+foreach(unit_test_suite IN LISTS UNIT_TEST_SUITES)
+  add_subdirectory(${unit_test_suite})
+endforeach()
 
 if(FULL_TEST)
   message(STATUS "FULL_TEST=ON: include llm-enhanced-test")
