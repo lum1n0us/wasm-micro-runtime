@@ -15,7 +15,7 @@ RUN apt-get update \
 RUN apt-get update \
   && apt-get install -y apt-transport-https apt-utils build-essential \
       ca-certificates ccache clang-format-14 curl file g++-multilib git gnupg \
-      libgcc-12-dev lib32gcc-12-dev libzstd-dev lsb-release \
+      lcov libgcc-12-dev lib32gcc-12-dev libzstd-dev lsb-release \
       ninja-build ocaml ocamlbuild opam \
       python3-venv python3-pip \
       software-properties-common tree tzdata \
