@@ -1,10 +1,6 @@
 # Copyright (C) 2019 Intel Corporation.  All rights reserved.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-cmake_minimum_required(VERSION 3.14)
-
-project (test-linux-perf)
-
 if(NOT WAMR_BUILD_AOT AND NOT WAMR_BUILD_JIT)
   message(STATUS "Skipping linux-perf: AOT and LLVM JIT only")
   return()

@@ -29,7 +29,8 @@ if (NOT DEFINED LLVM_DIR)
       message (FATAL_ERROR "Cannot find LLVM dir: ${LLVM_BUILD_ROOT}")
   endif ()
   set (CMAKE_PREFIX_PATH "${LLVM_BUILD_ROOT};${CMAKE_PREFIX_PATH}")
-  set (LLVM_DIR ${LLVM_BUILD_ROOT}/lib/cmake/llvm)
+  set (LLVM_DIR ${LLVM_BUILD_ROOT}/lib/cmake/llvm CACHE PATH
+       "LLVM CMake package directory")
 endif ()
 
 message(STATUS "unit_common.cmake included")

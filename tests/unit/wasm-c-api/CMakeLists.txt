@@ -1,9 +1,6 @@
 # Copyright (C) 2019 Intel Corporation.  All rights reserved.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-cmake_minimum_required (VERSION 3.14)
-project (wasm_c_api_test)
-
 if(WAMR_BUILD_FAST_INTERP OR WAMR_BUILD_JIT OR WAMR_BUILD_AOT OR
    WAMR_BUILD_FAST_JIT)
   message(STATUS "Skipping wasm-c-api: classic interpreter only")

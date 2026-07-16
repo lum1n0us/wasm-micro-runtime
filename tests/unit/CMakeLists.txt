@@ -128,24 +128,11 @@ else()
   message(STATUS "FULL_TEST=OFF: exclude llm-enhanced-test")
 endif()
 
-if(WAMR_BUILD_TARGET STREQUAL "X86_64")
+if(WAMR_BUILD_TARGET STREQUAL "X86_64" OR
+   WAMR_BUILD_TARGET STREQUAL "AARCH64")
   add_subdirectory(aot-stack-frame)
 
   # should enable 32-bit llvm when X86_32
-  add_subdirectory (aot)
-  add_subdirectory (custom-section)
-  add_subdirectory (compilation)
-
-  add_subdirectory (memory64)
-  add_subdirectory (shared-heap)
-
-  # HW_BOUND_CHECK is not supported on X86_32
-  add_subdirectory (runtime-common)
-endif()
-
-if(WAMR_BUILD_TARGET STREQUAL "AARCH64")
-  add_subdirectory(aot-stack-frame)
-
   add_subdirectory (aot)
   add_subdirectory (custom-section)
   add_subdirectory (compilation)
