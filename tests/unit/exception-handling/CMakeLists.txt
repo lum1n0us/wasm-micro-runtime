@@ -7,8 +7,6 @@ if(WAMR_BUILD_FAST_INTERP OR WAMR_BUILD_JIT OR WAMR_BUILD_AOT OR
   return()
 endif()
 
-add_definitions (-DRUN_ON_LINUX)
-
 add_definitions (-Dattr_container_malloc=malloc)
 add_definitions (-Dattr_container_free=free)
 

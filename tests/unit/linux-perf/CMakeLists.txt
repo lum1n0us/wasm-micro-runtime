@@ -6,8 +6,6 @@ if(NOT WAMR_BUILD_AOT AND NOT WAMR_BUILD_JIT)
   return()
 endif()
 
-add_definitions (-DRUN_ON_LINUX)
-
 set (WAMR_BUILD_LIBC_WASI 0)
 set (WAMR_BUILD_LIBC_BUILTIN 0)
 set (WAMR_BUILD_MULTI_MODULE 0)
@@ -19,10 +17,6 @@ add_definitions(-DWASM_ENABLE_WAMR_COMPILER=1)
 set (WAMR_BUILD_DUMP_CALL_STACK 1)
 
 include (../unit_common.cmake)
-
-find_package(LLVM REQUIRED CONFIG)
-include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
 
 include (${IWASM_DIR}/compilation/iwasm_compl.cmake)
 

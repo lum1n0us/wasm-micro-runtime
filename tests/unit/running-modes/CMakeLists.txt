@@ -29,8 +29,6 @@ ExternalProject_Add(
   INSTALL_COMMAND   ${CMAKE_COMMAND} --install build --prefix ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-add_definitions(-DRUN_ON_LINUX)
-
 set(WAMR_BUILD_LIBC_BUILTIN 1)
 set(WAMR_BUILD_MULTI_MODULE 0)
 set(WAMR_BUILD_LIBC_WASI 1)
@@ -39,10 +37,6 @@ set(WAMR_BUILD_REF_TYPES 1)
 
 # if only load this CMake other than load it as subdirectory
 include(../unit_common.cmake)
-
-find_package(LLVM REQUIRED CONFIG)
-include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 

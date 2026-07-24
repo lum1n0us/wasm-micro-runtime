@@ -26,8 +26,6 @@ ExternalProject_Add(
   INSTALL_COMMAND   ${CMAKE_COMMAND} --install build --prefix ${CMAKE_CURRENT_BINARY_DIR}/wasm-apps
 )
 
-add_definitions (-DRUN_ON_LINUX)
-
 set (WAMR_BUILD_LIBC_WASI 0)
 set (WAMR_BUILD_LIBC_BUILTIN 0)
 
@@ -39,10 +37,6 @@ add_definitions (-DWASM_ENABLE_AOT_STACK_FRAME=1)
 set (WAMR_BUILD_LOAD_CUSTOM_SECTION 1)
 
 include (../unit_common.cmake)
-
-find_package(LLVM REQUIRED CONFIG)
-include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
 
 include (${IWASM_DIR}/compilation/iwasm_compl.cmake)
 

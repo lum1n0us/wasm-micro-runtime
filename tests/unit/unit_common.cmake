@@ -3,6 +3,8 @@
 
 enable_language (ASM)
 
+add_definitions(-DRUN_ON_LINUX)
+
 # Usually, test cases should identify their unique
 # complation flags to implement their test plan
 
@@ -18,6 +20,10 @@ include (${SHARED_DIR}/utils/uncommon/shared_uncommon.cmake)
 
 # Add helper classes
 include_directories(${CMAKE_CURRENT_LIST_DIR}/common)
+
+find_package(LLVM REQUIRED CONFIG)
+include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
+add_definitions(${LLVM_DEFINITIONS})
 
 # config_common.cmake only sets up the llvm environment when
 # JIT is enabled. but in unit tests, we need llvm environment

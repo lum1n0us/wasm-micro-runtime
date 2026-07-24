@@ -7,8 +7,6 @@ if(NOT WAMR_BUILD_AOT OR WAMR_BUILD_INTERP OR WAMR_BUILD_FAST_INTERP OR
   return()
 endif()
 
-add_definitions (-DRUN_ON_LINUX)
-
 set (WAMR_BUILD_SIMD 1)
 set (WAMR_BUILD_REF_TYPES 1)
 set (WAMR_BUILD_LIBC_WASI 0)
@@ -19,10 +17,6 @@ set (WAMR_DISABLE_WRITE_GS_BASE 1)
 set (WAMR_BUILD_GC 1)
 
 include (../unit_common.cmake)
-
-find_package(LLVM REQUIRED CONFIG)
-include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
 
 include_directories (${CMAKE_CURRENT_SOURCE_DIR})
 
