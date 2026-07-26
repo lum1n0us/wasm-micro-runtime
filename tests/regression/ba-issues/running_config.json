@@ -1932,6 +1932,38 @@
                 "stdout content": "0x1:i32",
                 "description": "heap-buffer-overflow in fast interp loader when const table overflow check fires prematurely due to duplicate accumulation"
             }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980011
+            ],
+            "runtime": "iwasm-default",
+            "file": "fd_renumber_self.wasm",
+            "mode": "classic-interp",
+            "options": "-f _start",
+            "argument": "",
+            "expected return": {
+                "ret code": 0,
+                "stdout content": "",
+                "description": "fd_renumber(fd, fd) succeeds instead of dereferencing NULL"
+            }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980011
+            ],
+            "runtime": "iwasm-default",
+            "file": "fd_renumber_used_leak.wasm",
+            "mode": "classic-interp",
+            "options": "-f _start",
+            "argument": "",
+            "expected return": {
+                "ret code": 0,
+                "stdout content": "",
+                "description": "fd_renumber keeps the fd table used count exact; later fd allocation does not hang"
+            }
         }
     ]
 }
