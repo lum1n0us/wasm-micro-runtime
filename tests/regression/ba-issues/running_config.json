@@ -1916,6 +1916,38 @@
                 "stdout content": "0x2a:i32",
                 "description": "no heap buffer overflow from return_call when callee has a larger const pool than caller"
             }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980015
+            ],
+            "runtime": "iwasm-default",
+            "file": "fd_renumber_self.wasm",
+            "mode": "classic-interp",
+            "options": "-f _start",
+            "argument": "",
+            "expected return": {
+                "ret code": 0,
+                "stdout content": "",
+                "description": "fd_renumber(fd, fd) succeeds instead of dereferencing NULL"
+            }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980016
+            ],
+            "runtime": "iwasm-default",
+            "file": "fd_renumber_used_leak.wasm",
+            "mode": "classic-interp",
+            "options": "-f _start",
+            "argument": "",
+            "expected return": {
+                "ret code": 0,
+                "stdout content": "",
+                "description": "fd_renumber keeps the fd table used count exact; later fd allocation does not hang"
+            }
         }
     ]
 }
