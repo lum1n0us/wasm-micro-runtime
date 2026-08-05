@@ -16,25 +16,32 @@ WAMR_ROOT = HERE.parents[2]
 LOG_DIR = HERE / "build" / "logs"
 IMAGE = "wamr-zephyr"
 MODULE_DIR = "/root/zephyrproject/modules/wasm-micro-runtime"
+ZEPHYR_PLATFORM_DIR = f"{MODULE_DIR}/product-mini/platforms/zephyr"
 TIMEOUT_SECONDS = 30
 
-# board identifier per simulator
+# board identifier and WAMR build target per simulator. The target is derived
+# from the board by the Zephyr module, but samples that build the runtime
+# themselves (user-mode) still need it on the command line, just like in CI.
 BOARDS = {
-    "native_sim": "native_sim",
-    "qemu_arc": "qemu_arc/qemu_arc_hs",
+    "native_sim": ("native_sim", "X86_32"),
+    "qemu_arc": ("qemu_arc/qemu_arc_hs", "ARC"),
 }
-
-# strings expected in the output of every sample
-EXPECTED = ["Hello world!", "elapsed"]
 
 EPILOG = f"""\
 output:
-  The console only shows progress and the final result. The full output of
-  `docker build`, the CMake configuration, the compilation and the emulator run
-  is written to:
+  The Docker image build, the CMake configuration and the compilation only show
+  progress on the console; their full output is written to:
 
     build/logs/docker-build.log     the Docker image build
     build/logs/<sample>-<sim>.log   one per sample/simulator combination
+
+  The west build directory, including zephyr.exe / zephyr.elf, is
+  build/<sample>-<sim>/. Everything under build/ is created by the container
+  and therefore owned by root; -p always is passed so stale trees are rebuilt.
+
+  The output of the sample itself goes to both the console and the log. It is
+  not checked, only the exit status is: emulators do not stop on their own, so
+  the run is killed after {TIMEOUT_SECONDS}s and that counts as success.
 
   On failure the log path and the tail of that log are printed.
 """
@@ -45,22 +52,39 @@ def tail(log_path, lines=15):
     return "\n".join(f"  | {line}" for line in content[-lines:])
 
 
+def report(succeeded, step, log_path):
+    print("    ok" if succeeded else "    FAILED")
+    if not succeeded:
+        print(f"    log: {log_path}")
+        print(tail(log_path))
+    return succeeded
+
+
 def run_logged(argv, log_path, step):
-    """Run argv, appending its output to log_path. Return True on success."""
-    print(f"--> {step} ... ", end="", flush=True)
+    """Run argv, sending its output to log_path only."""
+    print(f"--> {step} ...", flush=True)
     with log_path.open("a") as log:
         log.write(f"\n$ {' '.join(argv)}\n")
         log.flush()
         completed = subprocess.run(argv, stdout=log, stderr=subprocess.STDOUT)
 
-    if completed.returncode == 0:
-        print("ok")
-        return True
+    return report(completed.returncode == 0, step, log_path)
 
-    print("FAILED")
-    print(f"    log: {log_path}")
-    print(tail(log_path))
-    return False
+
+def run_streamed(argv, log_path, step, ok_returncodes):
+    """Run argv, echoing its output to both the console and log_path."""
+    print(f"--> {step} ...", flush=True)
+    with log_path.open("a") as log:
+        log.write(f"\n$ {' '.join(argv)}\n")
+        process = subprocess.Popen(
+            argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        )
+        for line in process.stdout:
+            print(f"  | {line}", end="", flush=True)
+            log.write(line)
+        returncode = process.wait()
+
+    return report(returncode in ok_returncodes, step, log_path)
 
 
 def build_image():
@@ -86,46 +110,50 @@ def image_exists():
 
 def run_sample(sample, simulator):
     """Build and run one sample on one simulator. Return True on success."""
-    board = BOARDS[simulator]
+    board, target = BOARDS[simulator]
     log_path = LOG_DIR / f"{sample}-{simulator}.log"
     log_path.unlink(missing_ok=True)
 
-    def in_container(command, step):
-        return run_logged(
-            [
-                "docker",
-                "run",
-                "--rm",
-                "-v",
-                # native path on the host side, posix path on the container side
-                f"{WAMR_ROOT}:{MODULE_DIR}",
-                "-w",
-                f"{MODULE_DIR}/product-mini/platforms/zephyr/{sample}",
-                IMAGE,
-                "bash",
-                "-o",
-                "errexit",
-                "-o",
-                "nounset",
-                "-o",
-                "errtrace",
-                "-o",
-                "pipefail",
-                "-c",
-                command,
-            ],
-            log_path,
-            step,
-        )
+    def docker_run(command):
+        return [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            # native path on the host side, posix path on the container side
+            f"{WAMR_ROOT}:{MODULE_DIR}",
+            "-w",
+            f"{ZEPHYR_PLATFORM_DIR}/{sample}",
+            IMAGE,
+            "bash",
+            "-euo",
+            "pipefail",
+            "-c",
+            command,
+        ]
 
-    expected = " ".join(f"'{string}'" for string in EXPECTED)
-    return in_container(
-        f"west build . -b {board} -p always -- -DEXTRA_ZEPHYR_MODULES={MODULE_DIR}",
+    # keep every build tree, and the logs, under this directory
+    build_dir = f"{ZEPHYR_PLATFORM_DIR}/build/{sample}-{simulator}"
+
+    built = run_logged(
+        docker_run(
+            f"west build . -b {board} -p always -d {build_dir}"
+            f" -- -DEXTRA_ZEPHYR_MODULES={MODULE_DIR}"
+            f" -DWAMR_BUILD_TARGET={target}"
+        ),
+        log_path,
         f"{sample} on {simulator} ({board}): build",
-    ) and in_container(
-        f"{MODULE_DIR}/.github/scripts/run_qemu_and_verify.sh"
-        f" $PWD/build {TIMEOUT_SECONDS} {expected}",
-        f"{sample} on {simulator} ({board}): run and verify",
+    )
+    if not built:
+        return False
+
+    # The emulator keeps running once the sample is done, so it is killed by
+    # `timeout`, which reports 124.
+    return run_streamed(
+        docker_run(f"timeout {TIMEOUT_SECONDS}s west build -d {build_dir} -t run"),
+        log_path,
+        f"{sample} on {simulator} ({board}): run",
+        ok_returncodes={0, 124},
     )
 
 

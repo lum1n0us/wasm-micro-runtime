@@ -64,7 +64,7 @@ wamr_option_from_kconfig (AOT)
 wamr_option_from_kconfig (LIBC_BUILTIN)
 wamr_option_from_kconfig (LIBC_WASI)
 wamr_option_from_kconfig (LIB_PTHREAD)
-wamr_option_from_kconfig (MULTI_MODULE)
+wamr_option_from_kconfig (REF_TYPES)
 wamr_option_from_kconfig (GLOBAL_HEAP_POOL)
 if (CONFIG_WAMR_GLOBAL_HEAP_POOL)
   set (WAMR_BUILD_GLOBAL_HEAP_SIZE ${CONFIG_WAMR_GLOBAL_HEAP_SIZE})
@@ -74,6 +74,12 @@ include (${WAMR_ROOT_DIR}/build-scripts/runtime_lib.cmake)
 
 zephyr_library_named (wamr)
 zephyr_library_sources (${WAMR_RUNTIME_LIB_SOURCE})
+
+# The littlefs module exports its headers through an interface library rather
+# than globally; the platform layer includes zephyr/fs/littlefs.h.
+if (TARGET LITTLEFS)
+  zephyr_library_link_libraries (LITTLEFS)
+endif ()
 
 # Suppress -Wtype-limits warnings originating from Zephyr's own headers
 # (e.g. net_if.h "comparison is always true due to limited range of data type").

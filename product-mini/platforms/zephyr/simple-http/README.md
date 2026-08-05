@@ -61,31 +61,32 @@ To configure the authorized IP address(es) modify the following lines in the `ma
     };
 ```
 See the [platform README](../README.md) for environment setup, workspace layout
-and flashing. This sample needs a board with a working Ethernet interface, so
-it cannot be run on the QEMU boards used by the smoke tests.
+and flashing. Completing the request needs a real network interface, but the
+sample builds and runs on `native_sim` as well — the connect then fails with
+`Error 76`.
 
 ## Run Command
 * **Zephyr Build**
 
-    Unlike [simple](../simple), this sample does not use the
-    `wasm-micro-runtime` Zephyr module: [CMakeLists.txt](./CMakeLists.txt)
-    includes `runtime_lib.cmake` directly, because it also needs the wasi-sdk
-    sysroot libraries. The WAMR options are therefore `set()` in
-    `CMakeLists.txt` instead of coming from `prj.conf`, and the paths have to be
-    passed in the environment.
+    The runtime comes from the `wasm-micro-runtime` Zephyr module and is
+    configured with the `CONFIG_WAMR_*` options in [prj.conf](./prj.conf); no
+    environment variables or wasi-sdk paths are needed to build the
+    application.
 
-    Replace `nucleo_h563zi` with your board name and `WAMR_BUILD_TARGET` in
-    `CMakeLists.txt` with your target architecture.
+    It builds and runs on `native_sim`. The request itself fails there unless
+    the host side is set up as described below, but the runtime, the WASI
+    socket layer and the module all execute:
 
     ```bash
-    ZEPHYR_BASE=~/zephyrproject/zephyr \
-    WAMR_ROOT_DIR=~/wasm-micro-runtime \
-    WASI_SDK_PATH=~/wasi-sdk-21.0 \
-    WAMR_APP_FRAMEWORK_DIR=~/wamr-app-framework \
-    west build . -b nucleo_h563zi -p always
+    python3 ../docker_build_and_run.py simple-http
     ```
 
-    ⚠️ **Warning:** The flags `ZEPHYR_BASE`, `WAMR_ROOT_DIR`, `WASI_SDK_PATH`, and `WAMR_APP_FRAMEWORK_DIR` need to be set otherwise the build will fail.
+    For a real board, replace the board identifier and add a
+    `boards/<board-identifier>.conf` with the board specific settings:
+
+    ```bash
+    west build . -b nucleo_h563zi -p always
+    ```
 
 * **WebAssembly Module**
 

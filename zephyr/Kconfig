@@ -47,10 +47,12 @@ config WAMR_LIB_PTHREAD
 	help
 	  Provide the pthread library to WASM modules.
 
-config WAMR_MULTI_MODULE
-	bool "Multi-module"
+config WAMR_REF_TYPES
+	bool "Reference types"
 	help
-	  Allow a WASM module to import functions from another module.
+	  Support the reference types proposal (externref, funcref). Modules
+	  built with a recent wasi-sdk need this even when they do not use
+	  reference types themselves.
 
 config WAMR_GLOBAL_HEAP_POOL
 	bool "Global heap pool"

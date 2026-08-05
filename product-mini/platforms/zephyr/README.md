@@ -23,8 +23,9 @@ image, or by installing Zephyr locally. Both approaches are described below.
 
 ### Docker
 
-The provided [Dockerfile](./Dockerfile) sets up the Zephyr SDK, `west` and a
-Zephyr workspace matching the CI layout. Only the ARC and x86 toolchains are
+The provided [Dockerfile](./Dockerfile) sets up the Zephyr SDK, `west`, a
+Zephyr workspace matching the CI layout, and the wasi-sdk in `/opt/wasi-sdk`
+(`$WASI_SDK_PATH`) for recompiling the samples' WASM applications. Only the ARC and x86 toolchains are
 installed to keep the image reasonably small (~5 GB); add more `-t
 <toolchain>` options to `setup.sh` in the Dockerfile if you need other
 architectures.
@@ -107,7 +108,7 @@ export ZWS=~/zephyrproject
 mkdir -p $ZWS/application $ZWS/modules
 git clone https://github.com/bytecodealliance/wasm-micro-runtime.git \
   $ZWS/modules/wasm-micro-runtime
-cp $ZWS/modules/wasm-micro-runtime/product-mini/platforms/zephyr/simple/west_lite.yml \
+cp $ZWS/modules/wasm-micro-runtime/product-mini/platforms/zephyr/west_lite.yml \
   $ZWS/application/west_lite.yml
 
 cd $ZWS
@@ -208,6 +209,38 @@ west flash
 
 `west` automatically identifies the board if it is connected to the host
 machine.
+
+## Adding a new sample
+
+1. Create a directory next to the existing samples with the usual Zephyr
+   application layout: `CMakeLists.txt`, `prj.conf`, `src/`, and optionally
+   `boards/<board-identifier>.conf`. Keep `CMakeLists.txt` to
+   `find_package(Zephyr ...)`, `project(...)` and `target_sources(app ...)`;
+   the runtime comes from the module, so nothing WAMR specific belongs there.
+2. Select the runtime features with `CONFIG_WAMR_*` in `prj.conf`, as described
+   in [Configuring the runtime](#configuring-the-runtime).
+3. If the sample needs a Zephyr module that the workspace does not have yet —
+   littlefs, mbedTLS, an HAL for a new SoC — add it to
+   [west_lite.yml](./west_lite.yml). That manifest is deliberately minimal: it
+   pulls Zephyr and only the modules the samples actually use, which keeps both
+   the CI setup and the Docker image small. Copy the `name`, `revision` and
+   `path` of the project from Zephyr's own `west.yml` so that the versions
+   match:
+
+   ```yaml
+   - name: littlefs
+     url: https://github.com/zephyrproject-rtos/littlefs
+     revision: 408c16a909dd6cf128874a76f21c793798c9e423
+     path: modules/fs/littlefs
+   ```
+
+   Existing workspaces need a `west update` afterwards, and the Docker image
+   has to be rebuilt (`python3 docker_build_and_run.py --build`).
+4. Add a row to the [Samples](#samples) table and a `README.md` in the sample
+   directory covering only what is specific to it.
+5. If the sample runs on `native_sim` or QEMU, add it to the matrix in
+   [.github/workflows/compilation_on_zephyr.yml](../../../.github/workflows/compilation_on_zephyr.yml)
+   so that it is built and run by CI.
 
 ## Configuring the runtime
 

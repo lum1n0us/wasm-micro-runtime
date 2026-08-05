@@ -40,7 +40,7 @@ RUN pip3 install --no-cache-dir west
 
 # The dummy manifest repository only carries the minimal west manifest
 WORKDIR /root/zephyrproject/application
-COPY ./simple/west_lite.yml ./west_lite.yml
+COPY ./west_lite.yml ./west_lite.yml
 
 # Init the workspace from the minimal manifest, fetch Zephyr and export the
 # Zephyr CMake package, then install the Zephyr python requirements
@@ -50,6 +50,15 @@ RUN west init -l --mf west_lite.yml application \
     && west update --stats \
     && west zephyr-export \
     && pip3 install --no-cache-dir -r zephyr/scripts/requirements.txt
+
+# Install the wasi-sdk, used to (re)compile the WASM applications of the
+# samples that rely on WASI
+ARG WASI_SDK_VERSION=29
+ENV WASI_SDK_PATH=/opt/wasi-sdk
+# hadolint ignore=DL4006
+RUN mkdir -p ${WASI_SDK_PATH} \
+    && wget --progress=dot:giga -O - https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_VERSION}/wasi-sdk-${WASI_SDK_VERSION}.0-x86_64-linux.tar.gz \
+    | tar xz -C ${WASI_SDK_PATH} --strip-components=1
 
 # WAMR is not baked into the image. Bind mount the local checkout at this path
 # so that the sources being built are the ones in the working tree:
