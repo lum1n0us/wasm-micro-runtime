@@ -6,9 +6,10 @@ This example demonstrates how to build and run a WebAssembly application in user
 
 ## Setup
 
-Please refer to the [previous WAMR Zephyr README.md](../simple/README.md) for general Zephyr setup instructions.
+See the [platform README](../README.md) for environment setup, workspace layout
+and `native_sim` / QEMU usage.
 
-And refer to [official documentation of Zephyr user mode](https://docs.zephyrproject.org/latest/kernel/usermode/index.html) for more information about Zephyr user mode.
+Refer to the [official documentation of Zephyr user mode](https://docs.zephyrproject.org/latest/kernel/usermode/index.html) for more information about Zephyr user mode.
 
 ### Enable user mode
 
@@ -132,29 +133,12 @@ target_link_libraries(app PRIVATE wamr_lib)
   `add_dependencies(wamr_lib zephyr_generated_headers)` to avoid build race
   conditions with generated headers like `heap_constants.h`.
 
-### Example Targets
-
-#### qemu_x86 (Zephyr 4.x with Zephyr SDK 1.0+)
-
-Build for the `qemu_x86` board (32-bit x86, the default `WAMR_BUILD_TARGET`):
+### Build and run
 
 ```shell
 west build -b qemu_x86 . -p always
-```
-
-To use the pre-built library approach instead:
-
-```shell
-west build -b qemu_x86 . -p always -- -DWAMR_USE_PREBUILT_LIB=1
-```
-
-Run on QEMU using `west`:
-
-```shell
 west build -t run
 ```
-
-> Press `CTRL+a, x` to exit QEMU.
 
 Expected output:
 
@@ -170,23 +154,3 @@ User mode thread: elapsed 10
 
 > Note: The boot message order may vary. `wamr_partition` size should be around
 > 45056 bytes (40 KB global heap + other library globals).
-
-#### qemu_x86_tiny (older Zephyr / manual QEMU)
-
-Build for the `qemu_x86_tiny` board:
-
-```shell
-west build -b qemu_x86_tiny . -p always -- -DWAMR_BUILD_TARGET=X86_32
-```
-
-Run QEMU manually:
-
-```shell
-qemu-system-i386 -m 32 -cpu qemu32,+nx,+pae -machine pc \
-  -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
-  -no-reboot -nographic -net none -pidfile qemu.pid \
-  -chardev stdio,id=con,mux=on -serial chardev:con \
-  -mon chardev=con,mode=readline \
-  -icount shift=5,align=off,sleep=off -rtc clock=vm \
-  -kernel ./build/zephyr/zephyr.elf
-```

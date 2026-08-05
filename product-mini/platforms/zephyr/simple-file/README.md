@@ -11,29 +11,33 @@ This sample demonstrates the use of WASI API to interact with the file system.
 > * file close = `fs_close`
 > * directory close = `fs_closedir`
 
+See the [platform README](../README.md) for environment setup, workspace layout
+and flashing. This sample requires a board with a flash partition and a
+littlefs mount point, so it cannot be run on `native_sim` or the QEMU boards
+used by the smoke tests.
+
 ## Run Command
 * **Zephyr Build**
-    1. **Build:** Replace `nucleo_h743zi` with your board name and the `WAMR_BUILD_TARGET` in `CMakeList.txt` with your target architecture.
-        ```bash
-        ZEPHYR_BASE=~/zephyrproject/zephyr \
-        WAMR_ROOT_DIR=~/wasm-micro-runtime \
-        WASI_SDK_PATH=~/wasi-sdk-21.0 \
-        WAMR_APP_FRAMEWORK_DIR=~/wamr-app-framework \
-        west build . -b nucleo_h563zi -p always 
-        ```
-        ⚠️ **Warning:** The flags `ZEPHYR_BASE`, `WAMR_ROOT_DIR`, `WASI_SDK_PATH`, and `WAMR_APP_FRAMEWORK_DIR` need to be set otherwise the build will fail.
 
-    2. **Flash:** 
-        ```bash
-        ZEPHYR_BASE=~/zephyrproject/zephyr west flash
-        ```
+    Unlike [simple](../simple), this sample does not use the
+    `wasm-micro-runtime` Zephyr module: [CMakeLists.txt](./CMakeLists.txt)
+    includes `runtime_lib.cmake` directly, because it also needs the wasi-sdk
+    sysroot libraries. The WAMR options are therefore `set()` in
+    `CMakeLists.txt` instead of coming from `prj.conf`, and the paths have to be
+    passed in the environment.
 
-    3. **Monitor:** Use a serial link to monitor the output. Personally, I use minicom.
-        ```bash
-        minicom -D /dev/ttyACM0
-        ```
+    Replace `nucleo_h563zi` with your board name and `WAMR_BUILD_TARGET` in
+    `CMakeLists.txt` with your target architecture.
 
-    4. **Debug:** Curently investigating.
+    ```bash
+    ZEPHYR_BASE=~/zephyrproject/zephyr \
+    WAMR_ROOT_DIR=~/wasm-micro-runtime \
+    WASI_SDK_PATH=~/wasi-sdk-21.0 \
+    WAMR_APP_FRAMEWORK_DIR=~/wamr-app-framework \
+    west build . -b nucleo_h563zi -p always
+    ```
+
+    ⚠️ **Warning:** The flags `ZEPHYR_BASE`, `WAMR_ROOT_DIR`, `WASI_SDK_PATH`, and `WAMR_APP_FRAMEWORK_DIR` need to be set otherwise the build will fail.
 
 * **WebAssembly Module**
 

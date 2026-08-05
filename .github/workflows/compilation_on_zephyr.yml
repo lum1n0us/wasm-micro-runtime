@@ -129,6 +129,7 @@ jobs:
         run: |
           pushd product-mini/platforms/zephyr/${{ matrix.sample.path }}
           west build . -b ${{ matrix.arch.board }} -p always -- \
+            -DEXTRA_ZEPHYR_MODULES=${GITHUB_WORKSPACE}/modules/wasm-micro-runtime \
             -DWAMR_BUILD_TARGET=${{ matrix.arch.target }} ${{ matrix.sample.extra_cmake }}
           popd
 
