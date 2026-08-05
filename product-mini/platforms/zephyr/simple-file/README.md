@@ -86,6 +86,25 @@ file removed
 <inf> main: wasi exit code: 0
 ```
 
+On failure the module prints an `ERROR: ...` line and exits with a code that
+tells the host what went wrong (1 mkdir, 2 write, 3 read, 4 content mismatch,
+5 stat, 6 remove). The Zephyr application checks the call result, the exception
+and that exit code, then logs either
+
+```
+<inf> main: PASS: the file was written, read back and removed
+```
+
+or, for instance
+
+```
+ERROR: content mismatch, read "..." (13 bytes), expected "Hello, World!" (13 bytes)
+<inf> main: wasi exit code: 4
+<err> main: FAIL: the file operations reported error 4
+```
+
+and returns non-zero from `main`.
+
 > The littlefs error and warning on the first lines are expected: the flash
 > simulator of `native_sim` starts out blank, so there is no file system yet and
 > littlefs formats the area. A real board shows the same on its first boot.

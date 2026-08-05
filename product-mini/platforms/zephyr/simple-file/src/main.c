@@ -121,6 +121,8 @@ main(void)
     char error_buf[128];
     const char *exception;
     int rc;
+    /* everything but a fully verified run is a failure */
+    int ret = -1;
 
     int log_verbose_level = 2;
 
@@ -129,7 +131,7 @@ main(void)
     rc = littlefs_mount(mountpoint);
     if (rc < 0) {
         LOG_ERR("FAIL: mounting %s: %d\n", mountpoint->mnt_point, rc);
-        return 0;
+        return ret;
     }
 
 #if WASM_ENABLE_GLOBAL_HEAP_POOL != 0
@@ -144,7 +146,7 @@ main(void)
     /* initialize runtime environment */
     if (!wasm_runtime_full_init(&init_args)) {
         LOG_ERR("Init runtime environment failed.");
-        return;
+        return ret;
     }
 
     /* load WASM byte buffer from byte buffer of include file */
@@ -187,25 +189,38 @@ main(void)
     }
 
     /* invoke the main function */
-    if (wasm_runtime_lookup_function(wasm_module_inst, "_start")
-        || wasm_runtime_lookup_function(wasm_module_inst, "__main_argc_argv")
-        || wasm_runtime_lookup_function(wasm_module_inst, "main")) {
-
-        LOG_INF("main found");
-        wasm_application_execute_main(wasm_module_inst, 0, NULL);
-        LOG_INF("main executed");
-    }
-    else {
+    if (!wasm_runtime_lookup_function(wasm_module_inst, "_start")
+        && !wasm_runtime_lookup_function(wasm_module_inst, "__main_argc_argv")
+        && !wasm_runtime_lookup_function(wasm_module_inst, "main")) {
         LOG_ERR("Failed to lookup function main");
-        return -1;
+        goto fail3;
     }
 
-    if ((exception = wasm_runtime_get_exception(wasm_module_inst)))
-        LOG_ERR("get exception: %s", exception);
+    LOG_INF("main found");
+    if (!wasm_application_execute_main(wasm_module_inst, 0, NULL)) {
+        LOG_ERR("Failed to execute main");
+        goto fail3;
+    }
+    LOG_INF("main executed");
 
+    if ((exception = wasm_runtime_get_exception(wasm_module_inst))) {
+        LOG_ERR("get exception: %s", exception);
+        goto fail3;
+    }
+
+    /* The module reports what went wrong through its exit code, see
+       wasm-apps/file.c: 0 means every file operation was verified. */
     rc = wasm_runtime_get_wasi_exit_code(wasm_module_inst);
     LOG_INF("wasi exit code: %d", rc);
+    if (rc != 0) {
+        LOG_ERR("FAIL: the file operations reported error %d", rc);
+        goto fail3;
+    }
 
+    LOG_INF("PASS: the file was written, read back and removed");
+    ret = 0;
+
+fail3:
     /* destroy the module instance */
     wasm_runtime_deinstantiate(wasm_module_inst);
 
@@ -221,5 +236,5 @@ fail1:
 
     LOG_INF("elapsed: %dms", (end - start));
 
-    return 0;
+    return ret;
 }
