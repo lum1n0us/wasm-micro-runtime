@@ -61,9 +61,11 @@ To configure the authorized IP address(es) modify the following lines in the `ma
     };
 ```
 See the [platform README](../README.md) for environment setup, workspace layout
-and flashing. Completing the request needs a real network interface, but the
-sample builds and runs on `native_sim` as well — the connect then fails with
-`Error 76`.
+and flashing. Completing the request needs a real network interface. The sample
+builds and runs on `native_sim`, but without a reachable peer the connect fails
+and the module reports it as
+`ERROR: connect to 192.0.2.10:8000 failed with errno 73`, which
+[docker_build_and_run.py](../docker_build_and_run.py) counts as a failed run.
 
 ## Run Command
 * **Zephyr Build**
@@ -73,9 +75,9 @@ sample builds and runs on `native_sim` as well — the connect then fails with
     environment variables or wasi-sdk paths are needed to build the
     application.
 
-    It builds and runs on `native_sim`. The request itself fails there unless
-    the host side is set up as described below, but the runtime, the WASI
-    socket layer and the module all execute:
+    It builds and runs on `native_sim`. The request only succeeds when the host
+    side is set up as described above; otherwise the runtime, the WASI socket
+    layer and the module still execute, and the failing connect is reported:
 
     ```bash
     python3 ../docker_build_and_run.py simple-http
@@ -90,26 +92,33 @@ sample builds and runs on `native_sim` as well — the connect then fails with
 
 * **WebAssembly Module**
 
-    ❗ **Important:** I used wasi-sdk 21 to compile the module. I still haven't tried the module with the new wasi-sdk 22.
+    The Docker image ships the wasi-sdk in `/opt/wasi-sdk` (`$WASI_SDK_PATH`).
+    Its wasi-libc uses the reference types proposal, hence
+    `CONFIG_WAMR_REF_TYPES=y` in [prj.conf](./prj.conf).
 
     0. **Compile a static lib:** in the `wasm-apps` folder. 
         * **Compile the an object:**
         ```bash
-        ~/wasi-sdk-21.0/bin/clang --sysroot=/home/user/wasi-sdk-21.0/share/wasi-sysroot -Iinc/ -c inc/wasi_socket_ext.c -o inc/wasi_socket_ext.o
+        $WASI_SDK_PATH/bin/clang --sysroot=$WASI_SDK_PATH/share/wasi-sysroot -Iinc/ -c inc/wasi_socket_ext.c -o inc/wasi_socket_ext.o
         ```
         * **Create a static lib:**
         ```bash
-        ~/wasi-sdk-21.0/bin/llvm-ar rcs inc/libwasi_socket_ext.a inc/wasi_socket_ext.o
+        $WASI_SDK_PATH/bin/llvm-ar rcs inc/libwasi_socket_ext.a inc/wasi_socket_ext.o
         ```
     1. **Compile:** in the `wasm-apps` folder. 
         ```bash
-        ~/wasi-sdk-21.0/bin/clang --sysroot=/home/user/wasi-sdk-21.0/share/wasi-sysroot -Iinc/ -nodefaultlibs -o http_get.wasm http_get.c -lc -Linc/ -lwasi_socket_ext -z stack-size=8192 -Wl,--initial-memory=65536 -Wl,--export=__heap_base -Wl,--export=__data_end  -Wl,--allow-undefined
+        $WASI_SDK_PATH/bin/clang --sysroot=$WASI_SDK_PATH/share/wasi-sysroot -Iinc/ -nodefaultlibs -o http_get.wasm http_get.c -lc -Linc/ -lwasi_socket_ext -z stack-size=8192 -Wl,--initial-memory=65536 -Wl,--export=__heap_base -Wl,--export=__data_end  -Wl,--allow-undefined
         ```
     2. **generate a C header:** Use `xxd` or other tool, I also put simple python script. At application root `simple-http/`.
         ```bash
         python3 to_c_header.py
         ```
         Be free to modify the script to fit your needs.
+
+    Failures are reported as `ERROR: ...` with a distinct exit code per
+    operation: 1 socket, 2 connect, 3 send, 4 receive. A completed request
+    ends with `PASS: the HTTP request completed`. See
+    [Reporting failures](../README.md#reporting-failures).
 
 ## Output
 The output should be similar to the following:
@@ -143,5 +152,6 @@ Content-Length: 2821
 [wasm-mod] Connection closed
 main executed
 wasi exit code: 0
+PASS: the HTTP request completed
 elapsed: 405ms
 ```

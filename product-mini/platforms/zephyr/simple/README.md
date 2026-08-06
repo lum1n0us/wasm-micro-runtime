@@ -20,6 +20,11 @@ layout, `native_sim` / QEMU usage and the `CONFIG_WAMR_*` options.
 - [src/wasm-app-riscv64/build.sh](./src/wasm-app-riscv64/build.sh) — how the
   embedded module is compiled and turned into a header.
 
+The module of this sample only prints, so the failures that can occur are on
+the Zephyr side (loading, instantiating, an exception). They are reported as
+`ERROR: ...`, and a complete run ends with `PASS: ...`, see
+[Reporting failures](../README.md#reporting-failures).
+
 ## Build and run
 
 ```shell
@@ -42,5 +47,6 @@ boards, including the ones that need a non-default `WAMR_BUILD_TARGET` or
 Hello world!
 buf ptr: 0x1458
 buf: 1234
+PASS: the wasm module ran to completion
 elapsed: 10
 ```

@@ -210,6 +210,23 @@ west flash
 `west` automatically identifies the board if it is connected to the host
 machine.
 
+## Reporting failures
+
+A Zephyr application cannot return an exit status to the host, and an emulator
+has to be killed by a timeout, so the samples report problems through their
+output instead. The convention is:
+
+- The WASM application prints `ERROR: <what went wrong>` and returns a non-zero
+  exit code, which the runtime hands to the host as the WASI exit code.
+- The Zephyr application checks the result of the call, the exception and the
+  WASI exit code, prints `ERROR: ...` for anything unexpected, and prints
+  `PASS: <what was verified>` once everything has completed.
+
+[docker_build_and_run.py](./docker_build_and_run.py) treats a run as failed
+when the process exits with an unexpected status **or** the output contains an
+`ERROR:` line, and echoes the offending lines. Follow the convention in new
+samples and they are covered automatically.
+
 ## Adding a new sample
 
 1. Create a directory next to the existing samples with the usual Zephyr

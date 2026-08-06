@@ -34,7 +34,7 @@ iwasm_user_mode(void)
 
     /* Initialize the memory domain with single WAMR partition */
     if (k_mem_domain_init(&wamr_domain, 2, wamr_domain_parts) != 0) {
-        printk("Failed to initialize memory domain.\n");
+        printk("ERROR: failed to initialize memory domain\n");
         return false;
     }
 
@@ -45,7 +45,7 @@ iwasm_user_mode(void)
 
     /* Grant WAMR memory domain access to user mode thread */
     if (k_mem_domain_add_thread(&wamr_domain, tid) != 0) {
-        printk("Failed to add memory domain to thread.\n");
+        printk("ERROR: failed to add memory domain to thread\n");
         return false;
     }
 

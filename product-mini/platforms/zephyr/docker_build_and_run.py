@@ -19,6 +19,9 @@ MODULE_DIR = "/root/zephyrproject/modules/wasm-micro-runtime"
 ZEPHYR_PLATFORM_DIR = f"{MODULE_DIR}/product-mini/platforms/zephyr"
 TIMEOUT_SECONDS = 30
 
+# The samples report a failure by printing a line carrying this marker
+ERROR_MARKER = "ERROR:"
+
 # board identifier and WAMR build target per simulator. The target is derived
 # from the board by the Zephyr module, but samples that build the runtime
 # themselves (user-mode) still need it on the command line, just like in CI.
@@ -39,9 +42,12 @@ output:
   build/<sample>-<sim>/. Everything under build/ is created by the container
   and therefore owned by root; -p always is passed so stale trees are rebuilt.
 
-  The output of the sample itself goes to both the console and the log. It is
-  not checked, only the exit status is: emulators do not stop on their own, so
-  the run is killed after {TIMEOUT_SECONDS}s and that counts as success.
+  The output of the sample itself goes to both the console and the log. A run
+  counts as successful when the process exits with an expected status and the
+  output carries no "ERROR:" line -- by convention the samples report every
+  failure that way, since a Zephyr application cannot return a status to the
+  host. Emulators do not stop on their own, so the run is killed after
+  {TIMEOUT_SECONDS}s, which is an expected status.
 
   On failure the log path and the tail of that log are printed.
 """
@@ -56,7 +62,6 @@ def report(succeeded, step, log_path):
     print("    ok" if succeeded else "    FAILED")
     if not succeeded:
         print(f"    log: {log_path}")
-        print(tail(log_path))
     return succeeded
 
 
@@ -72,8 +77,10 @@ def run_logged(argv, log_path, step):
 
 
 def run_streamed(argv, log_path, step, ok_returncodes):
-    """Run argv, echoing its output to both the console and log_path."""
+    """Run argv, echoing its output to both the console and log_path. Fails on
+    an unexpected exit status or on an ERROR: line reported by the sample."""
     print(f"--> {step} ...", flush=True)
+    reported_errors = []
     with log_path.open("a") as log:
         log.write(f"\n$ {' '.join(argv)}\n")
         process = subprocess.Popen(
@@ -82,9 +89,15 @@ def run_streamed(argv, log_path, step, ok_returncodes):
         for line in process.stdout:
             print(f"  | {line}", end="", flush=True)
             log.write(line)
+            if ERROR_MARKER in line:
+                reported_errors.append(line.strip())
         returncode = process.wait()
 
-    return report(returncode in ok_returncodes, step, log_path)
+    for error in reported_errors:
+        print(f"    reported: {error}")
+
+    succeeded = returncode in ok_returncodes and not reported_errors
+    return report(succeeded, step, log_path)
 
 
 def build_image():

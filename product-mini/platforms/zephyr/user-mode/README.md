@@ -133,6 +133,13 @@ target_link_libraries(app PRIVATE wamr_lib)
   `add_dependencies(wamr_lib zephyr_generated_headers)` to avoid build race
   conditions with generated headers like `heap_constants.h`.
 
+### Reporting failures
+
+Runtime failures inside the user-mode thread are printed as `ERROR: ...` and a
+complete run ends with `PASS: ...`, so that
+[docker_build_and_run.py](../docker_build_and_run.py) can tell the two apart,
+see [Reporting failures](../README.md#reporting-failures).
+
 ### Build and run
 
 ```shell
@@ -149,6 +156,7 @@ User mode thread: start
 Hello world!
 buf ptr: 0x1458
 buf: 1234
+PASS: the wasm module ran to completion in user mode
 User mode thread: elapsed 10
 ```
 

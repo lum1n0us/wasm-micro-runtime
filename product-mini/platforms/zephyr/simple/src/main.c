@@ -44,7 +44,7 @@ bool
 wasm_application_execute_main(wasm_module_inst_t module_inst, int argc,
                               char *argv[]);
 
-static void *
+static bool
 app_instance_main(wasm_module_inst_t module_inst)
 {
     const char *exception;
@@ -61,8 +61,8 @@ app_instance_main(wasm_module_inst_t module_inst)
         exec_env =
             wasm_runtime_create_exec_env(module_inst, CONFIG_APP_HEAP_SIZE);
         if (!exec_env) {
-            os_printf("Create exec env failed\n");
-            return NULL;
+            os_printf("ERROR: create exec env failed\n");
+            return false;
         }
 
         LOG_VERBOSE("Calling app_main function\n");
@@ -75,14 +75,17 @@ app_instance_main(wasm_module_inst_t module_inst)
         wasm_runtime_destroy_exec_env(exec_env);
     }
     else {
-        os_printf("Failed to lookup function main or app_main to call\n");
-        return NULL;
+        os_printf(
+            "ERROR: failed to lookup function main or app_main to call\n");
+        return false;
     }
 
-    if ((exception = wasm_runtime_get_exception(module_inst)))
-        os_printf("%s\n", exception);
+    if ((exception = wasm_runtime_get_exception(module_inst))) {
+        os_printf("ERROR: exception: %s\n", exception);
+        return false;
+    }
 
-    return NULL;
+    return true;
 }
 
 #if WASM_ENABLE_GLOBAL_HEAP_POOL != 0
@@ -124,7 +127,7 @@ iwasm_main(void *arg1, void *arg2, void *arg3)
 
     /* initialize runtime environment */
     if (!wasm_runtime_full_init(&init_args)) {
-        printf("Init runtime environment failed.\n");
+        printf("ERROR: init runtime environment failed\n");
         return;
     }
 
@@ -139,7 +142,7 @@ iwasm_main(void *arg1, void *arg2, void *arg3)
     /* load WASM module */
     if (!(wasm_module = wasm_runtime_load(wasm_file_buf, wasm_file_size,
                                           error_buf, sizeof(error_buf)))) {
-        printf("%s\n", error_buf);
+        printf("ERROR: %s\n", error_buf);
         goto fail1;
     }
 
@@ -147,12 +150,13 @@ iwasm_main(void *arg1, void *arg2, void *arg3)
     if (!(wasm_module_inst = wasm_runtime_instantiate(
               wasm_module, CONFIG_APP_STACK_SIZE, CONFIG_APP_HEAP_SIZE,
               error_buf, sizeof(error_buf)))) {
-        printf("%s\n", error_buf);
+        printf("ERROR: %s\n", error_buf);
         goto fail2;
     }
 
     /* invoke the main function */
-    app_instance_main(wasm_module_inst);
+    if (app_instance_main(wasm_module_inst))
+        printf("PASS: the wasm module ran to completion\n");
 
     /* destroy the module instance */
     wasm_runtime_deinstantiate(wasm_module_inst);

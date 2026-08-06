@@ -15,7 +15,7 @@ main(int argc, char **argv)
 
     buf = malloc(16);
     if (!buf) {
-        printf("malloc buf failed\n");
+        printf("ERROR: malloc buf failed\n");
         return -1;
     }
 
