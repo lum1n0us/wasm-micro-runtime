@@ -15,6 +15,20 @@ and flashing. The sample needs a flash partition with a littlefs mount point;
 `native_sim` provides one through its flash simulator, so it can be built and
 run there without any hardware.
 
+## Test status
+
+The scenarios are declared in [sample.yaml](./sample.yaml); twister decides the
+verdict from the console output. Last run with
+[build_and_run.py](../build_and_run.py) on 2026-08-06:
+
+| Scenario | Simulator | Result |
+| --- | --- | --- |
+| `sample.wamr.simple_file` | `native_sim` | passed |
+
+`qemu_arc/qemu_arc_hs` is not in `platform_allow`: the board has no flash
+partition for littlefs, so the build stops with
+`'DT_N_NODELABEL_storage_partition_PARTITION_ID' undeclared`.
+
 ## Run Command
 * **Zephyr Build**
 
@@ -27,7 +41,7 @@ run there without any hardware.
     littlefs can be mounted on:
 
     ```bash
-    python3 ../docker_build_and_run.py simple-file
+    python3 ../build_and_run.py simple-file
     ```
 
     For a real board, replace the board identifier and add a
@@ -63,7 +77,7 @@ run there without any hardware.
 
 ## Output
 
-Running on `native_sim` (`python3 ../docker_build_and_run.py simple-file`):
+Running on `native_sim` (`python3 ../build_and_run.py simple-file`):
 
 ```
 *** Booting Zephyr OS build v3.7.0 ***

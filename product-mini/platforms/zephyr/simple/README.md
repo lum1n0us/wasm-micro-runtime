@@ -20,10 +20,22 @@ layout, `native_sim` / QEMU usage and the `CONFIG_WAMR_*` options.
 - [src/wasm-app-riscv64/build.sh](./src/wasm-app-riscv64/build.sh) — how the
   embedded module is compiled and turned into a header.
 
-The module of this sample only prints, so the failures that can occur are on
-the Zephyr side (loading, instantiating, an exception). They are reported as
-`ERROR: ...`, and a complete run ends with `PASS: ...`, see
-[Reporting failures](../README.md#reporting-failures).
+The module allocates a buffer, formats a string into it and checks the result,
+returning 0 on success and 1 (allocation) or 2 (content mismatch) otherwise.
+The Zephyr application turns that, an exception or its own errors into an exit
+code and a `PASS:` / `ERROR:` line, see
+[Reporting results](../README.md#reporting-results).
+
+## Test status
+
+The scenarios are declared in [sample.yaml](./sample.yaml); twister decides the
+verdict from the console output. Last run with
+[build_and_run.py](../build_and_run.py) on 2026-08-06:
+
+| Scenario | Simulator | Result |
+| --- | --- | --- |
+| `sample.wamr.simple` | `native_sim` | passed |
+| `sample.wamr.simple` | `qemu_arc/qemu_arc_hs` | passed |
 
 ## Build and run
 

@@ -27,6 +27,11 @@
 
 LOG_MODULE_REGISTER(main);
 
+/* Exit codes of the sample, see ../README.md */
+#define EXIT_OK 0
+#define EXIT_HOST 1
+#define EXIT_WASM 2
+
 static char global_heap_buf[CONFIG_HEAP_MEM_POOL_SIZE] = { 0 };
 
 static int app_argc;
@@ -122,7 +127,7 @@ main(void)
     const char *exception;
     int rc;
     /* everything but a fully verified run is a failure */
-    int ret = -1;
+    int ret = EXIT_HOST;
 
     int log_verbose_level = 2;
 
@@ -199,12 +204,14 @@ main(void)
     LOG_INF("main found");
     if (!wasm_application_execute_main(wasm_module_inst, 0, NULL)) {
         LOG_ERR("ERROR: failed to execute main");
+        ret = EXIT_WASM;
         goto fail3;
     }
     LOG_INF("main executed");
 
     if ((exception = wasm_runtime_get_exception(wasm_module_inst))) {
         LOG_ERR("ERROR: exception: %s", exception);
+        ret = EXIT_WASM;
         goto fail3;
     }
 
@@ -214,11 +221,12 @@ main(void)
     LOG_INF("wasi exit code: %d", rc);
     if (rc != 0) {
         LOG_ERR("ERROR: the file operations reported code %d", rc);
+        ret = EXIT_WASM;
         goto fail3;
     }
 
     LOG_INF("PASS: the file was written, read back and removed");
-    ret = 0;
+    ret = EXIT_OK;
 
 fail3:
     /* destroy the module instance */

@@ -24,6 +24,11 @@
 #define CONFIG_APP_STACK_SIZE 8192
 #define CONFIG_APP_HEAP_SIZE 8192
 
+/* Exit codes of the sample, see ../README.md */
+#define EXIT_OK 0
+#define EXIT_HOST 1
+#define EXIT_WASM 2
+
 static char global_heap_buf[CONFIG_HEAP_MEM_POOL_SIZE] = { 0 };
 
 static int app_argc;
@@ -43,7 +48,7 @@ main(void)
     const char *exception;
     int rc;
     /* everything but a completed request is a failure */
-    int ret = -1;
+    int ret = EXIT_HOST;
 
     int log_verbose_level = 2;
 
@@ -117,12 +122,14 @@ main(void)
     printf("main found\n");
     if (!wasm_application_execute_main(wasm_module_inst, 0, NULL)) {
         printf("ERROR: failed to execute main\n");
+        ret = EXIT_WASM;
         goto fail3;
     }
     printf("main executed\n");
 
     if ((exception = wasm_runtime_get_exception(wasm_module_inst))) {
         printf("ERROR: exception: %s\n", exception);
+        ret = EXIT_WASM;
         goto fail3;
     }
 
@@ -132,11 +139,12 @@ main(void)
     printf("wasi exit code: %d\n", rc);
     if (rc != 0) {
         printf("ERROR: the HTTP request reported code %d\n", rc);
+        ret = EXIT_WASM;
         goto fail3;
     }
 
     printf("PASS: the HTTP request completed\n");
-    ret = 0;
+    ret = EXIT_OK;
 
 fail3:
     /* destroy the module instance */
