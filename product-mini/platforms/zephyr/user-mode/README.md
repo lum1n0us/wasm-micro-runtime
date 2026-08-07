@@ -184,4 +184,3 @@ verdict from the console output. Last run with
 which does not implement `CONFIG_USERSPACE`, so the option is dropped and the
 build fails on `'wamr_partition' undeclared`. Use an architecture with MPU/MMU
 support such as `qemu_arc/qemu_arc_hs` or `qemu_x86`.
-
