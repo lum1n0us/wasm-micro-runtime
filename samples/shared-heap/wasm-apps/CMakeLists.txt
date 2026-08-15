@@ -37,3 +37,7 @@ target_link_libraries(test1.wasm)
 
 add_executable(test2.wasm test2.c)
 target_link_libraries(test2.wasm)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/test1.wasm
+              ${CMAKE_CURRENT_BINARY_DIR}/test2.wasm
+        DESTINATION wasm-apps)

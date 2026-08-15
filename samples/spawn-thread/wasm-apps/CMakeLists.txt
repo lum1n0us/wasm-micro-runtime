@@ -35,3 +35,5 @@ set (CMAKE_EXE_LINKER_FLAGS
 
 add_executable(test.wasm  sum.c)
 target_link_libraries(test.wasm)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/test.wasm DESTINATION wasm-apps)

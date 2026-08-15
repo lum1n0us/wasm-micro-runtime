@@ -42,3 +42,5 @@ target_link_libraries(main_thread_exception.wasm)
 
 add_executable(main_global_atomic.wasm  main_global_atomic.c)
 target_link_libraries(main_global_atomic.wasm)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/test.wasm DESTINATION wasm-apps)

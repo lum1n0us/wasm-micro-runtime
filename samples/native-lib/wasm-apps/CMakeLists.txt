@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 cmake_minimum_required(VERSION 3.14)
-project(wasm-app)
+project(native_lib_wasm_apps)
 
 set (WAMR_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../..)
 list (APPEND CMAKE_MODULE_PATH ${WAMR_ROOT_DIR}/build-scripts)
@@ -31,3 +31,5 @@ set (CMAKE_EXE_LINKER_FLAGS
 
 add_executable(test.wasm main.c)
 target_link_libraries(test.wasm)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/test.wasm DESTINATION wasm-apps)

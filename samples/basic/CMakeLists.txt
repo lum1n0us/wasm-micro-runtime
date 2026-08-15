@@ -50,6 +50,9 @@ set (WAMR_BUILD_INTERP 1)
 set (WAMR_BUILD_AOT 1)
 set (WAMR_BUILD_JIT 0)
 set (WAMR_BUILD_LIBC_BUILTIN 1)
+# free_buffer_early exercises wasm_runtime_is_underlying_binary_freeable(),
+# which requires the fast interpreter.
+set (WAMR_BUILD_FAST_INTERP 1)
 
 if (NOT MSVC)
   set (WAMR_BUILD_LIBC_WASI 1)
@@ -64,9 +67,17 @@ endif ()
 
 # build out vmlib
 set (WAMR_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/../..)
+list(APPEND CMAKE_MODULE_PATH ${WAMR_ROOT_DIR}/build-scripts)
 include (${WAMR_ROOT_DIR}/build-scripts/runtime_lib.cmake)
 
 add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
+
+################  wasm application  ################
+# Build wasm-apps/testapp.c through the standalone wasm-apps CMake project
+# (ExternalProject). Tools are required: missing wasi-sdk makes configure
+# fail.
+include(${CMAKE_CURRENT_LIST_DIR}/../samples_common.cmake)
+samples_build_wasm_app(basic_wasm_apps wasm-apps)
 
 ################  application related  ################
 include_directories(${CMAKE_CURRENT_LIST_DIR}/src)
@@ -86,3 +97,19 @@ else ()
   target_link_libraries (basic vmlib -lm -ldl -lpthread -lrt)
   target_link_libraries (free_buffer_early vmlib -lm -ldl -lpthread -lrt)
 endif ()
+
+################  tests  ################
+include(CTest)
+include(${CMAKE_CURRENT_LIST_DIR}/../samples_common.cmake)
+
+if(BUILD_TESTING)
+  add_dependencies(basic basic_wasm_apps)
+  add_dependencies(free_buffer_early basic_wasm_apps)
+
+  samples_add_test(basic_main
+    "Native finished calling wasm function: calculate, return: 120"
+    $<TARGET_FILE:basic> -f wasm-apps/testapp.wasm)
+  samples_add_test(basic_free_buffer_early
+    "Able to free wasm binary buffer."
+    $<TARGET_FILE:free_buffer_early> -f wasm-apps/testapp.wasm)
+endif()

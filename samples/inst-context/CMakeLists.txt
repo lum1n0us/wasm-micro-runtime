@@ -64,9 +64,17 @@ endif ()
 
 # build out vmlib
 set (WAMR_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/../..)
+list(APPEND CMAKE_MODULE_PATH ${WAMR_ROOT_DIR}/build-scripts)
 include (${WAMR_ROOT_DIR}/build-scripts/runtime_lib.cmake)
 
 add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
+
+################  wasm application  ################
+# Build wasm-apps/testapp.c through the standalone wasm-apps CMake project
+# (ExternalProject). Tools are required: missing wasi-sdk makes configure
+# fail.
+include(${CMAKE_CURRENT_LIST_DIR}/../samples_common.cmake)
+samples_build_wasm_app(inst_context_wasm_apps wasm-apps)
 
 ################  application related  ################
 include_directories(${CMAKE_CURRENT_LIST_DIR}/src)
@@ -82,3 +90,15 @@ if (APPLE)
 else ()
   target_link_libraries (inst-context vmlib -lm -ldl -lpthread -lrt)
 endif ()
+
+################  tests  ################
+include(CTest)
+include(${CMAKE_CURRENT_LIST_DIR}/../samples_common.cmake)
+
+if(BUILD_TESTING)
+  add_dependencies(inst-context inst_context_wasm_apps)
+
+  samples_add_test(inst_context
+    "return: 103"
+    $<TARGET_FILE:inst-context> -f wasm-apps/testapp.wasm)
+endif()

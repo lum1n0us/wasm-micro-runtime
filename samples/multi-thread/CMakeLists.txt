@@ -64,7 +64,10 @@ add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
 
 
 ################ wasm application ################
-add_subdirectory(wasm-apps)
+# Build the wasm applications through the standalone wasm-apps CMake project
+# (ExternalProject, so WAMR host flags don't leak into the wasm build).
+include(${CMAKE_CURRENT_LIST_DIR}/../samples_common.cmake)
+samples_build_wasm_app(multi_thread_wasm_apps wasm-apps)
 
 ################ wamr runtime ################
 include (${SHARED_DIR}/utils/uncommon/shared_uncommon.cmake)
@@ -77,4 +80,16 @@ add_executable (iwasm ${RUNTIME_SOURCE_ALL})
 check_pie_supported()
 set_target_properties (iwasm PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(iwasm vmlib -lpthread -lm -ldl)
+
+################  tests  ################
+include(CTest)
+include(${CMAKE_CURRENT_LIST_DIR}/../samples_common.cmake)
+
+if(BUILD_TESTING)
+  add_dependencies(iwasm multi_thread_wasm_apps)
+
+  samples_add_test(multi_thread
+    "sem wait success\\."
+    $<TARGET_FILE:iwasm> wasm-apps/test.wasm)
+endif()
 
