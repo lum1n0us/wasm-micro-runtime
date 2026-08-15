@@ -65,9 +65,13 @@ add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
 
 ################ wasm application ################
 # Build the wasm application through the standalone wasm-apps CMake project
-# (ExternalProject, so WAMR host flags don't leak into the wasm build).
+# (ExternalProject + wasi-sdk toolchain, so WAMR host flags don't leak into
+# the wasm build).
 include(${CMAKE_CURRENT_LIST_DIR}/../samples_common.cmake)
-samples_build_wasm_app(import_func_callback_wasm_apps wasm-apps)
+samples_build_wasm_app(import_func_callback_wasm_apps wasm-apps
+  CONFIGURE_ARGS
+    -DWASI_SDK_PREFIX=${WASISDK_HOME}
+    -DCMAKE_TOOLCHAIN_FILE=${WASISDK_TOOLCHAIN})
 
 ################  application related  ################
 include_directories(${CMAKE_CURRENT_LIST_DIR}/src)

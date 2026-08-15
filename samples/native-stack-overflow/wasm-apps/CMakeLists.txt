@@ -3,7 +3,8 @@
 #
 # Standalone CMake project for the native-stack-overflow sample's wasm
 # application and its AOT variants. Built by the parent project via
-# samples_build_wasm_app() (ExternalProject).
+# samples_build_wasm_app() (ExternalProject) with the wasi-sdk toolchain;
+# libc-builtin expressed through compile/link options (reactor model).
 #
 # Tools: wasi-sdk + wamrc (REQUIRED - missing tools make configure fail).
 
@@ -12,23 +13,20 @@ project(native_stack_overflow_wasm_apps LANGUAGES C)
 
 set(WAMR_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../..")
 list(APPEND CMAKE_MODULE_PATH "${WAMR_ROOT_DIR}/build-scripts")
-find_package(WASISDK REQUIRED)
 find_package(WAMRC REQUIRED)
 
-set(CMAKE_SYSTEM_PROCESSOR wasm32)
 set(CMAKE_SYSROOT "${WAMR_ROOT_DIR}/wamr-sdk/app/libc-builtin-sysroot")
-set(CMAKE_C_COMPILER "${WASISDK_CC_COMMAND}")
-set(CMAKE_C_COMPILER_TARGET "wasm32")
-set(CMAKE_C_FLAGS "-nostdlib -Qunused-arguments -Os -z stack-size=4096")
-set(CMAKE_EXE_LINKER_FLAGS
-    "-Wl,--initial-memory=65536, \
-     -Wl,--no-entry,             \
-     -Wl,--allow-undefined,      \
-     -mexec-model=reactor"
-)
 
 add_executable(testapp.wasm testapp.c)
-target_link_libraries(testapp.wasm)
+
+target_compile_options(testapp.wasm PRIVATE
+  -nostdlib -Qunused-arguments -Os -z stack-size=4096)
+target_link_options(testapp.wasm PRIVATE
+  -nostdlib
+  -Wl,--initial-memory=131072
+  -Wl,--no-entry
+  -Wl,--allow-undefined
+  -mexec-model=reactor)
 
 # AOT variants (plain, and with the signature native library).
 # SIGNATURE_SO is passed by the parent project (DEPENDS signature).

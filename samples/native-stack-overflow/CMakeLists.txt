@@ -82,6 +82,8 @@ add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
 # Build wasm-apps/testapp.c and the AOT variants through the standalone
 # wasm-apps CMake project (ExternalProject). Tools are required: missing
 # wasi-sdk/wamrc makes configure fail.
+list(APPEND CMAKE_MODULE_PATH ${WAMR_ROOT_DIR}/build-scripts)
+find_package(WASISDK REQUIRED)
 include(${CMAKE_CURRENT_LIST_DIR}/../samples_common.cmake)
 
 # signature.so used by the "--native-lib" AOT variants (like the removed
@@ -91,7 +93,10 @@ target_include_directories(signature PRIVATE ${WAMR_ROOT_DIR}/core/iwasm/include
 
 samples_build_wasm_app(native_stack_overflow_wasm_apps wasm-apps
   DEPENDS signature
-  CONFIGURE_ARGS -DSIGNATURE_SO=$<TARGET_FILE:signature>)
+  CONFIGURE_ARGS
+    -DWASI_SDK_PREFIX=${WASISDK_HOME}
+    -DCMAKE_TOOLCHAIN_FILE=${WASISDK_TOOLCHAIN}
+    -DSIGNATURE_SO=$<TARGET_FILE:signature>)
 
 ################  application related  ################
 include_directories(${CMAKE_CURRENT_LIST_DIR}/src)

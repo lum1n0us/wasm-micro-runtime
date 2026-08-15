@@ -95,8 +95,13 @@ target_link_libraries (shared_heap_test ${LIBS})
 
 # Build the wasm applications through the standalone wasm-apps CMake project
 # (ExternalProject, so WAMR host flags don't leak into the wasm build).
+list(APPEND CMAKE_MODULE_PATH ${WAMR_ROOT_DIR}/build-scripts)
+find_package(WASISDK REQUIRED)
 include(${CMAKE_CURRENT_LIST_DIR}/../samples_common.cmake)
-samples_build_wasm_app(shared_heap_wasm_apps wasm-apps)
+samples_build_wasm_app(shared_heap_wasm_apps wasm-apps
+  CONFIGURE_ARGS
+    -DWASI_SDK_PREFIX=${WASISDK_HOME}
+    -DCMAKE_TOOLCHAIN_FILE=${WASISDK_TOOLCHAIN})
 
 if (WAMR_BUILD_AOT EQUAL 1)
   find_package(WAMRC REQUIRED)

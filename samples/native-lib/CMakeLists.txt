@@ -89,8 +89,13 @@ target_link_libraries(test_hello2 libiwasm)
 ################ wasm application ###############
 # Build the wasm application through the standalone wasm-apps CMake project
 # (ExternalProject, so WAMR host flags don't leak into the wasm build).
+list(APPEND CMAKE_MODULE_PATH ${WAMR_ROOT_DIR}/build-scripts)
+find_package(WASISDK REQUIRED)
 include(${CMAKE_CURRENT_LIST_DIR}/../samples_common.cmake)
-samples_build_wasm_app(native_lib_wasm_apps wasm-apps)
+samples_build_wasm_app(native_lib_wasm_apps wasm-apps
+  CONFIGURE_ARGS
+    -DWASI_SDK_PREFIX=${WASISDK_HOME}
+    -DCMAKE_TOOLCHAIN_FILE=${WASISDK_TOOLCHAIN})
 
 ################  tests  ################
 include(CTest)

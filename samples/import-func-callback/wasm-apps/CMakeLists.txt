@@ -3,34 +3,25 @@
 #
 # Standalone CMake project for the import-func-callback sample's wasm
 # application. Built by the parent project via samples_build_wasm_app()
-# (ExternalProject).
+# (ExternalProject) with the wasi-sdk toolchain; libc-builtin expressed
+# through compile/link options.
 #
 # Tools: wasi-sdk (REQUIRED - missing wasi-sdk makes configure fail).
 
 cmake_minimum_required(VERSION 3.14)
-project(import_func_callback_wasm_apps LANGUAGES NONE)
+project(import_func_callback_wasm_apps LANGUAGES C)
 
 set(WAMR_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../..")
-list(APPEND CMAKE_MODULE_PATH "${WAMR_ROOT_DIR}/build-scripts")
-find_package(WASISDK REQUIRED)
 
-set(WASM_OUT "${CMAKE_CURRENT_BINARY_DIR}/test.wasm")
+set(CMAKE_SYSROOT "${WAMR_ROOT_DIR}/wamr-sdk/app/libc-builtin-sysroot")
 
-add_custom_command(
-  OUTPUT ${WASM_OUT}
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}
-  COMMAND ${WASISDK_CC_COMMAND}
-          -nostdlib
-          --target=wasm32
-          -Wl,--no-entry
-          -Wl,--export=test
-          -Wl,--allow-undefined
-          -o ${WASM_OUT}
-          "${CMAKE_CURRENT_SOURCE_DIR}/test.c"
-  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test.c"
-  COMMENT "Building test.wasm"
-  VERBATIM
-)
-add_custom_target(import_func_callback_wasm ALL DEPENDS ${WASM_OUT})
+add_executable(test.wasm test.c)
 
-install(FILES ${WASM_OUT} DESTINATION wasm-apps)
+target_compile_options(test.wasm PRIVATE -nostdlib -Qunused-arguments)
+target_link_options(test.wasm PRIVATE
+  -nostdlib
+  -Wl,--no-entry
+  "LINKER:--export=test"
+  -Wl,--allow-undefined)
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/test.wasm" DESTINATION wasm-apps)

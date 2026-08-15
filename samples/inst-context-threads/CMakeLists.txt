@@ -74,10 +74,14 @@ add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
 
 ################  wasm application  ################
 # Build wasm-apps/testapp.c through the standalone wasm-apps CMake project
-# (ExternalProject). Tools are required: missing wasi-sdk makes configure
-# fail.
+# (ExternalProject, wasi-sdk pthread toolchain). Tools are required: missing
+# wasi-sdk makes configure fail.
 include(${CMAKE_CURRENT_LIST_DIR}/../samples_common.cmake)
-samples_build_wasm_app(inst_context_threads_wasm_apps wasm-apps)
+find_package(WASISDK REQUIRED)
+samples_build_wasm_app(inst_context_threads_wasm_apps wasm-apps
+  CONFIGURE_ARGS
+    -DWASI_SDK_PREFIX=${WASISDK_HOME}
+    -DCMAKE_TOOLCHAIN_FILE=${WASISDK_PTHREAD_TOOLCHAIN})
 
 ################  application related  ################
 include_directories(${CMAKE_CURRENT_LIST_DIR}/src)
