@@ -17,8 +17,16 @@ on:
       - "main"
       - "release/**"
       - "dev/**"
+    # This list is also what the approval gate re-applies on
+    # pull_request_review (see gate.yml). Because `required` below treats a
+    # skipped job as success, anything missing here makes `zephyr CI` go green
+    # without building - so every input this workflow's result depends on must
+    # be listed, including the reusable workflows and composite actions it
+    # calls and the gate machinery that decides whether it runs at all.
     paths:
+      - ".github/scripts/**"
       - ".github/workflows/compilation_on_zephyr.yml"
+      - ".github/workflows/gate.yml"
       - "build-scripts/**"
       - "core/**"
       - "!core/deps/**"
@@ -59,6 +67,7 @@ jobs:
   # skipped: a skipped job propagates the skip down the needs chain to every
   # descendant, even ones that broke the chain with their own `if`.
   gate:
+    name: approval gate
     permissions:
       contents: read
       pull-requests: read
@@ -146,3 +155,46 @@ jobs:
           .github/scripts/run_qemu_and_verify.sh \
             product-mini/platforms/zephyr/${{ matrix.sample.path }}/build 10 ${{ matrix.sample.verify }}
         working-directory: modules/wasm-micro-runtime
+
+  # Single stable check for branch protection. Set THIS as the required status
+  # check, never an individual job: matrix job names are built from the matrix
+  # dimensions, so every matrix refactor renames all of them and silently
+  # invalidates whatever was configured under Settings -> Branches.
+  #
+  # `if: always()` is mandatory. Without it this job is skipped whenever an
+  # upstream job fails, and a skipped job counts as passing for a required
+  # check - it would be a gate that is green forever.
+  #
+  # `skipped` must count as success: when the gate resolves to run=false (the
+  # PR does not touch this workflow's paths, or it is not the first approval)
+  # every job below is skipped, and that is the normal path.
+  required:
+    # Same as the `required` job in compilation_on_ubuntu.yml: the job name is
+    # the check run name the ruleset matches. On an upstream push this job is
+    # skipped (see the `if:`) and renamed to "zephyr CI (push)": the skipped
+    # run cannot be mistaken for a validation result, and the required "zephyr
+    # CI" name is produced only by the approval-triggered run - no green check
+    # before approval, no false red either.
+    name: zephyr CI${{ github.event_name == 'push' && github.event.repository.fork == false && ' (push)' || '' }}
+    # `always()` is mandatory: on approval-triggered runs this job must run
+    # and fail when any dependency failed (a skipped job counts as passing for
+    # a required check). Only an upstream push is exempt - the gate already
+    # resolved to run=false there, every dependency is skipped, and skipping
+    # this job too keeps the whole push run uniformly "did not run".
+    if: always() && !(github.event_name == 'push' && github.event.repository.fork == false)
+    needs: [gate, smoke_test]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Report which dependency failed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.value.result)\t\(.key)"' | sort
+          failed_jobs=$(echo "$NEEDS" | jq -r \
+            'to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key' \
+            | paste -sd ', ' -)
+          if [ -n "$failed_jobs" ]; then
+            echo "::error title=zephyr CI::failed or cancelled dependency jobs: $failed_jobs"
+          fi
+          echo "$NEEDS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")' \
+            > /dev/null

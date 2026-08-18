@@ -81,7 +81,7 @@ jobs:
   # See the same document, section 3.5.
   build_iwasm:
     needs: gate
-    if: ${{ !cancelled() && (github.event_name != 'pull_request_review' || needs.gate.outputs.run == 'true') }}
+    if: ${{ !cancelled() && needs.gate.outputs.run == 'true' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -152,8 +152,19 @@ jobs:
   # Single stable check for branch protection - see the same job in
   # compilation_on_ubuntu.yml for why an individual matrix job must not be used.
   required:
-    name: android CI
-    if: always()
+    # Same as the `required` job in compilation_on_ubuntu.yml: the job name is
+    # the check run name the ruleset matches. On an upstream push this job is
+    # skipped (see the `if:`) and renamed to "android CI (push)": the skipped
+    # run cannot be mistaken for a validation result, and the required "android
+    # CI" name is produced only by the approval-triggered run - no green check
+    # before approval, no false red either.
+    name: android CI${{ github.event_name == 'push' && github.event.repository.fork == false && ' (push)' || '' }}
+    # `always()` is mandatory: on approval-triggered runs this job must run
+    # and fail when any dependency failed (a skipped job counts as passing for
+    # a required check). Only an upstream push is exempt - the gate already
+    # resolved to run=false there, every dependency is skipped, and skipping
+    # this job too keeps the whole push run uniformly "did not run".
+    if: always() && !(github.event_name == 'push' && github.event.repository.fork == false)
     needs: [gate, build_iwasm]
     runs-on: ubuntu-22.04
     steps:
@@ -162,5 +173,11 @@ jobs:
           NEEDS: ${{ toJSON(needs) }}
         run: |
           echo "$NEEDS" | jq -r 'to_entries[] | "\(.value.result)\t\(.key)"' | sort
+          failed_jobs=$(echo "$NEEDS" | jq -r \
+            'to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key' \
+            | paste -sd ', ' -)
+          if [ -n "$failed_jobs" ]; then
+            echo "::error title=android CI::failed or cancelled dependency jobs: $failed_jobs"
+          fi
           echo "$NEEDS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")' \
             > /dev/null
