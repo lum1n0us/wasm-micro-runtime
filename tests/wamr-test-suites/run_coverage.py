@@ -64,6 +64,7 @@ from coverage_preset import (
     PRESETS,
     cmake_flags_for,
     expand_preset,
+    source_excludes_for,
     validate_mode_preset,
 )
 from coverage_compile_commands import load_and_filter
@@ -129,6 +130,12 @@ def resolve_llvm_dir(llvm_dir: str) -> str:
     return os.path.abspath(os.path.join(WAMR_DIR, llvm_dir))
 
 
+def spec_build_dir() -> str:
+    """Build directory of the spec-layer iwasm product (test_wamr.sh builds
+    it in place under product-mini/platforms/<platform>/build)."""
+    return os.path.join(IWEAM_PLATFORM_DIR, platform(), "build")
+
+
 def fingerprint(combos) -> str:
     """Normalized fingerprint of the report's combinations."""
     parts = []
@@ -148,11 +155,21 @@ def run_spec(workdir, mode):
 
     test_wamr.sh re-clones the spec repo on github before every run, which
     intermittently fails (empty replies / HTTP2 framing errors), so retry a
-    few times before giving up."""
+    few times before giving up.
+
+    test_wamr.sh configures the product iwasm build *in place* (the same
+    product-mini/platforms/<platform>/build directory is reused across
+    modes and runs), so stale .gcno/.gcda from earlier configurations
+    accumulate there.  Wipe it before the run so the collected spec-layer
+    data belongs to this combo only."""
     script = os.path.join(TESTS_DIR, "test_wamr.sh")
     spec_mode = "jit" if mode == "llvm-jit" else mode
     cmd = ["bash", script, "-s", "spec", "-b", "-t", spec_mode, "-C"]
     env = dict(os.environ, COLLECT_CODE_COVERAGE="1")
+    build_dir = spec_build_dir()
+    if os.path.isdir(build_dir):
+        print(f"spec: wiping stale product build dir {build_dir}")
+        shutil.rmtree(build_dir)
     last_exc = None
     for attempt in range(1, 4):
         try:
@@ -248,9 +265,11 @@ def run_regression(mode, coverage):
     subprocess.run(cmd, cwd=os.path.dirname(script), check=True)
 
 
-def collect(build_dirs, out_dir):
+def collect(build_dirs, out_dir, exclude_sources=()):
     script = os.path.join(SPEC_TEST_DIR, "collect_gcovr.py")
     cmd = [sys.executable, script, "--out", out_dir] + build_dirs
+    for prefix in exclude_sources:
+        cmd += ["--exclude-source", prefix]
     subprocess.run(cmd, check=True)
 
 
@@ -264,6 +283,10 @@ def run_report(name, combos, out_root, unit, regression, llvm_dir, coverage,
     os.makedirs(out_dir, exist_ok=True)
 
     all_build_dirs = []
+    # Source prefixes excluded for this report: union over all combos of the
+    # feature-off sources (a multi-combo report keeps a file excluded if any
+    # of its combos has the owning feature off).
+    excludes: list = []
 
     for combo in combos:
         mode = combo["mode"]
@@ -285,15 +308,25 @@ def run_report(name, combos, out_root, unit, regression, llvm_dir, coverage,
 
         # spec layer: test_wamr.sh builds its own iwasm (fixed configuration,
         # mode flags + mandatory SPEC_TEST/BULK_MEMORY/REF_TYPES) and runs the
-        # spec suite on it; its .gcda lands in
-        # product-mini/platforms/<plat>/build, which we collect below.
+        # spec suite on it; its .gcda lands in the product build dir that
+        # spec_build_dir() points at, which we collect below (run_spec wiped
+        # the dir first so no stale objects from other configurations leak in).
         run_spec(workdir, mode)
-        spec_build_dir = os.path.join(
-            IWEAM_PLATFORM_DIR, platform(), "build")
-        if os.path.isdir(spec_build_dir):
-            all_build_dirs.append(spec_build_dir)
+        spec_dir = spec_build_dir()
+        if os.path.isdir(spec_dir):
+            all_build_dirs.append(spec_dir)
         else:
-            print(f"WARNING: spec iwasm build dir not found: {spec_build_dir}")
+            print(f"WARNING: spec iwasm build dir not found: {spec_dir}")
+
+        # Sources whose feature is off in this combo's F never belong to the
+        # denominator; the collect step passes them to gcovr as excludes.
+        for p in source_excludes_for(f):
+            if p not in excludes:
+                excludes.append(p)
+        if excludes:
+            print("source excludes (feature off in F):")
+            for p in excludes:
+                print(f"  - {p}")
 
         if unit:
             unit_dir = run_unit(workdir, mode, llvm_dir, coverage,
@@ -347,7 +380,32 @@ def run_report(name, combos, out_root, unit, regression, llvm_dir, coverage,
             run_regression(mode, coverage)
             all_build_dirs.append(reg_dir)
 
-    collect(all_build_dirs, out_dir)
+    collect(all_build_dirs, out_dir, excludes)
+
+    if excludes:
+        # Record the exclusion policy next to unmatched.txt and verify that
+        # gcovr honoured it (no file entry may remain under the prefixes).
+        with open(os.path.join(out_dir, "excluded_sources.txt"), "w") as fh:
+            fh.write(f"mode={mode} preset={preset}\n")
+            fh.write("source prefixes excluded from this report because the "
+                     "preset's F turns their feature off (gcovr --exclude at "
+                     "collect time):\n")
+            for p in excludes:
+                fh.write(f"  {p}\n")
+        import json as _json
+        try:
+            with open(os.path.join(out_dir, "coverage.json")) as fh:
+                leaked = [
+                    f["file"] for f in _json.load(fh)["files"]
+                    if any(f["file"].startswith(p) for p in excludes)
+                ]
+            if leaked:
+                print(f"WARNING: {len(leaked)} file(s) under excluded "
+                      f"prefixes still in report: {leaked}")
+            else:
+                print("excluded-source check: OK (0 leaked entries)")
+        except (OSError, KeyError) as exc:
+            print(f"excluded-source check skipped: {exc}")
 
     # Write the fingerprint file
     with open(os.path.join(out_dir, "fingerprint.txt"), "w") as f:

@@ -297,9 +297,51 @@ def validate_mode_preset(mode: str, preset: str) -> str:
     return preset
 
 
+# Sources that implement a feature and must not count towards a report whose
+# F disables that feature.  The prefix is matched against the repo-relative
+# source path ('core/...'): when the feature is 0, any report file under one
+# of these prefixes belongs to code that cannot run in this configuration, so
+# it is excluded from the denominator (gcovr --exclude at collect time) no
+# matter which build directory leaked its .gcda (unit suites built with the
+# feature on, stale spec-layer objects from an earlier re-configure, ...).
+#
+# Deliberately NOT listed here (they stay in the denominator even when their
+# WAMR_BUILD_* is 0, because the measured default runtime compiles them):
+#   * core/iwasm/libraries/lib-pthread/lib_pthread_wrapper.c
+#   * core/iwasm/libraries/thread-mgr/thread_manager.c
+FEATURE_OFF_SOURCE_EXCLUDES = {
+    "WAMR_BUILD_GC": [
+        # GC runtime (only built/executed with GC on)
+        "core/iwasm/common/gc/",
+        # EMS GC allocator (only used by the GC configuration)
+        "core/shared/mem-alloc/ems/ems_gc",
+    ],
+    "WAMR_BUILD_LIBC_WASI": [
+        # WASI libc wrapper + sandboxed-system-primitives (only with WASI on)
+        "core/iwasm/libraries/libc-wasi/",
+    ],
+}
+
+
+def source_excludes_for(f: dict) -> list:
+    """Return the source prefixes to exclude for a fully expanded F.
+
+    A feature that is absent from F (wildcard, preset 'default') excludes
+    nothing; a feature explicitly set to 0 excludes its sources.
+    """
+    prefixes = []
+    for feature, paths in FEATURE_OFF_SOURCE_EXCLUDES.items():
+        if f.get(feature) == 0:
+            prefixes.extend(paths)
+    return sorted(set(prefixes))
+
+
 if __name__ == "__main__":
     import sys
     for name in sorted(PRESETS):
         f = expand_preset(name)
         enabled = sorted(k for k, v in f.items() if v == 1)
         print(f"{name}: enabled={enabled}")
+        excl = source_excludes_for(f)
+        if excl:
+            print(f"        source-excludes={excl}")

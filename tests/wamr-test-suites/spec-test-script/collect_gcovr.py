@@ -113,7 +113,7 @@ def _ensure_user_site() -> None:
             )
 
 
-def run_gcovr(build_dirs, out_dir, root) -> None:
+def run_gcovr(build_dirs, out_dir, root, exclude_sources=()) -> None:
     os.makedirs(out_dir, exist_ok=True)
 
     _ensure_user_site()
@@ -123,6 +123,13 @@ def run_gcovr(build_dirs, out_dir, root) -> None:
     for pattern in FILTER_PATTERNS:
         cmd += ["--filter", pattern]
     for pattern in EXCLUDE_PATTERNS:
+        cmd += ["--exclude", pattern]
+    # Source prefixes excluded per report object: feature-off sources that
+    # must not count towards the denominator (see coverage_preset.py
+    # FEATURE_OFF_SOURCE_EXCLUDES).  gcovr's --exclude matches the source
+    # path (repo-root relative), so this drops the whole file entry --
+    # headers included -- from every output format.
+    for pattern in exclude_sources:
         cmd += ["--exclude", pattern]
 
     # Merge mode for functions seen on multiple lines across gcov files:
@@ -177,6 +184,13 @@ def main():
         help="Build directories containing .gcno/.gcda files. "
              "Multiple directories are merged into one report.",
     )
+    parser.add_argument(
+        "--exclude-source", action="append", default=[],
+        metavar="PREFIX",
+        help="Source prefix (repo-root relative, e.g. "
+             "'core/iwasm/common/gc/') excluded from the report; repeatable. "
+             "Used to keep feature-off sources out of the denominator.",
+    )
     args = parser.parse_args()
 
     # Make pip --user installs importable before probing for gcovr.
@@ -202,7 +216,7 @@ def main():
     # script was invoked from.
     os.chdir(root)
 
-    run_gcovr(build_dirs, args.out, root)
+    run_gcovr(build_dirs, args.out, root, args.exclude_source)
 
     print(f"Code coverage reports generated under {os.path.abspath(args.out)}")
     print("  * index.html / *.html   - HTML line/branch report")
