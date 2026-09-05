@@ -244,6 +244,16 @@ def collect_needed_runtimes(test_cases: List[dict]) -> Set[str]:
     return runtimes
 
 
+def cases_need_wamrc(test_cases: List[dict]) -> bool:
+    """wamrc is needed only when a selected test case compiles via it
+    (compile_options) -- e.g. every aot case and the wamrc-only cases."""
+    for test_case in test_cases:
+        compile_options = test_case.get("compile_options")
+        if compile_options and compile_options.get("compiler") == "wamrc":
+            return True
+    return False
+
+
 def build(data: dict, platform: str, mode: Optional[str], coverage: bool,
           llvm_dir: str = "") -> None:
     os.makedirs(os.path.join(WORK_DIR, "build"), exist_ok=True)
