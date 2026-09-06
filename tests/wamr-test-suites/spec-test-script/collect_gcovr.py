@@ -118,8 +118,6 @@ def run_gcovr(build_dirs, out_dir, root, exclude_sources=()) -> None:
 
     _ensure_user_site()
     cmd = _gcovr_cmd() + ["--root", root]
-    for build_dir in build_dirs:
-        cmd += ["--object-directory", os.path.abspath(build_dir)]
     for pattern in FILTER_PATTERNS:
         cmd += ["--filter", pattern]
     for pattern in EXCLUDE_PATTERNS:
@@ -144,13 +142,25 @@ def run_gcovr(build_dirs, out_dir, root, exclude_sources=()) -> None:
     # corrupted entries instead of aborting the whole report.
     cmd += ["--gcov-ignore-parse-errors", "negative_hits.warn"]
 
+    # The build directories must be passed as gcovr *search paths*
+    # (positional arguments).  Repeating --object-directory does NOT work:
+    # it is a single-valued option (the working-directory hint for gcov), so
+    # gcovr then falls back to scanning the whole --root tree -- which picks
+    # up the .gcno/.gcda of every other report's _work directory and every
+    # unrelated build (wamr-compiler, spec dirs of other modes, ...).
+    search_paths = [os.path.abspath(d) for d in build_dirs if os.path.isdir(d)]
+    if not search_paths:
+        raise SystemExit(
+            "None of the given build directories exist; nothing to collect."
+        )
+
     # HTML report with line/branch details
     html_cmd = cmd + [
         "--branches",
         "--html-details",
         "--html-title", "WAMR Code Coverage",
         "--output", os.path.join(out_dir, "index.html"),
-    ]
+    ] + search_paths
     print("Running:", " ".join(html_cmd))
     subprocess.run(html_cmd, check=True)
 
@@ -159,7 +169,7 @@ def run_gcovr(build_dirs, out_dir, root, exclude_sources=()) -> None:
         "--branches",
         "--json",
         "--output", os.path.join(out_dir, "coverage.json"),
-    ]
+    ] + search_paths
     print("Running:", " ".join(json_cmd))
     subprocess.run(json_cmd, check=True)
 
@@ -168,7 +178,7 @@ def run_gcovr(build_dirs, out_dir, root, exclude_sources=()) -> None:
         "--branches",
         "--txt",
         "--output", os.path.join(out_dir, "summary.txt"),
-    ]
+    ] + search_paths
     print("Running:", " ".join(txt_cmd))
     subprocess.run(txt_cmd, check=True)
 
