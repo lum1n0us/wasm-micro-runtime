@@ -51,6 +51,8 @@ set (WAMR_BUILD_AOT 1)
 set (WAMR_BUILD_JIT 0)
 set (WAMR_BUILD_LIBC_BUILTIN 1)
 set (WAMR_BUILD_REF_TYPES 1)
+#TODO: If others in samples/ also need bulk memory?
+set (WAMR_BUILD_BULK_MEMORY 1)
 
 if (NOT MSVC)
   set (WAMR_BUILD_LIBC_WASI 1)

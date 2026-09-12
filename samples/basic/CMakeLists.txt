@@ -106,6 +106,7 @@ endif ()
 include(CTest)
 include(${CMAKE_CURRENT_LIST_DIR}/../samples_common.cmake)
 
+#TODO: Why BUILD_TESTING is used here. Can it be removed?
 if(BUILD_TESTING)
   add_dependencies(basic basic_wasm_apps)
   add_dependencies(free_buffer_early basic_wasm_apps)

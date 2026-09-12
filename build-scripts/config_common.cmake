@@ -323,9 +323,14 @@ endif ()
 if (WAMR_BUILD_BULK_MEMORY EQUAL 1)
   set (WAMR_BUILD_BULK_MEMORY_OPT 1)
 endif ()
+
 if (WAMR_BUILD_REF_TYPES EQUAL 1)
   set (WAMR_BUILD_CALL_INDIRECT_OVERLONG 1)
 endif ()
+
+#TODO: add a options for WASM SPEC 1.0
+#TODO: add a options for WASM SPEC 2.0
+#TODO: add a options for WASM SPEC 3.0
 
 include(${CMAKE_CURRENT_LIST_DIR}/unsupported_combination.cmake)
 
