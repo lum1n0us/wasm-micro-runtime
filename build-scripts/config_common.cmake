@@ -95,19 +95,18 @@ if (NOT WAMR_BUILD_AOT EQUAL 1)
 endif ()
 endif ()
 
-if (WAMR_BUILD_FAST_JIT EQUAL 1)
-  if (NOT WAMR_BUILD_LAZY_JIT EQUAL 0)
-    # Enable Lazy JIT by default
+# Lazy JIT is an implementation detail of the JIT running modes rather than a
+# feature of its own: derive it from the running mode unless the user asked for
+# a specific value.
+if (NOT DEFINED WAMR_BUILD_LAZY_JIT)
+  if (WAMR_BUILD_FAST_JIT EQUAL 1 OR WAMR_BUILD_JIT EQUAL 1)
     set (WAMR_BUILD_LAZY_JIT 1)
+  else ()
+    set (WAMR_BUILD_LAZY_JIT 0)
   endif ()
 endif ()
 
 if (WAMR_BUILD_JIT EQUAL 1)
-  if (NOT WAMR_BUILD_LAZY_JIT EQUAL 0)
-    # Enable Lazy JIT by default
-    set (WAMR_BUILD_LAZY_JIT 1)
-  endif ()
-
   # In Debug mode, always use release builds of pre-built dependency libraries
   if (WAMR_BUILD_PLATFORM STREQUAL "windows" AND MSVC)
     add_compile_options($<$<CONFIG:Debug>:/MD>)
@@ -213,19 +212,27 @@ if (WAMR_BUILD_LINUX_PERF EQUAL 1)
 endif ()
 
 if (NOT DEFINED WAMR_BUILD_SHRUNK_MEMORY)
-  # Enable shrunk memory by default
-  set (WAMR_BUILD_SHRUNK_MEMORY 1)
+  set (WAMR_BUILD_SHRUNK_MEMORY 0)
 endif ()
 
 ########################################
 # Default values
+#
+# Every feature defaults to OFF here, so that a build which does not ask for
+# anything gets the smallest possible runtime.  Products that want a feature on
+# by default set it explicitly at their own entry point (see the root
+# CMakeLists.txt, product-mini/platforms/*/ and wamr-compiler/).
 ########################################
 if (NOT DEFINED WAMR_BUILD_BULK_MEMORY)
-  set (WAMR_BUILD_BULK_MEMORY 1)
+  set (WAMR_BUILD_BULK_MEMORY 0)
 endif ()
 
 if (NOT DEFINED WAMR_BUILD_BULK_MEMORY_OPT)
   set (WAMR_BUILD_BULK_MEMORY_OPT 0)
+endif ()
+
+if (NOT DEFINED WAMR_BUILD_BRANCH_HINTS)
+  set (WAMR_BUILD_BRANCH_HINTS 0)
 endif ()
 
 if (NOT DEFINED WAMR_BUILD_CALL_INDIRECT_OVERLONG)
@@ -248,8 +255,16 @@ if (NOT DEFINED WAMR_BUILD_MULTI_MEMORY)
   set (WAMR_BUILD_MULTI_MEMORY 0)
 endif ()
 
+if (NOT DEFINED WAMR_BUILD_REF_TYPES)
+  set (WAMR_BUILD_REF_TYPES 0)
+endif ()
+
 if (NOT DEFINED WAMR_BUILD_SHARED_MEMORY)
   set(WAMR_BUILD_SHARED_MEMORY 0)
+endif ()
+
+if (NOT DEFINED WAMR_BUILD_SIMD)
+  set (WAMR_BUILD_SIMD 0)
 endif ()
 
 if (NOT DEFINED WAMR_BUILD_STRINGREF)
@@ -266,6 +281,33 @@ endif ()
 
 if (NOT DEFINED WAMR_BUILD_LIME1)
   set (WAMR_BUILD_LIME1 0)
+endif ()
+
+# Macros which used to be reachable only by defining them on the compiler
+# command line.  They keep their core/config.h default, they just become
+# configurable from cmake like every other switch.
+if (NOT DEFINED WAMR_BUILD_LOG)
+  set (WAMR_BUILD_LOG 1)
+endif ()
+
+if (NOT DEFINED WAMR_BUILD_OPCODE_COUNTER)
+  set (WAMR_BUILD_OPCODE_COUNTER 0)
+endif ()
+
+if (NOT DEFINED WAMR_BUILD_WORD_ALIGN_READ)
+  set (WAMR_BUILD_WORD_ALIGN_READ 0)
+endif ()
+
+if (NOT DEFINED WAMR_BUILD_BASE_LIB)
+  set (WAMR_BUILD_BASE_LIB 0)
+endif ()
+
+if (NOT DEFINED WAMR_BUILD_APP_FRAMEWORK)
+  set (WAMR_BUILD_APP_FRAMEWORK 0)
+endif ()
+
+if (NOT DEFINED WAMR_BUILD_FUZZ_TEST)
+  set (WAMR_BUILD_FUZZ_TEST 0)
 endif ()
 
 ########################################
@@ -310,9 +352,13 @@ if (WAMR_BUILD_AOT EQUAL 1)
 else ()
   message ("     WAMR AOT disabled")
 endif ()
+if (WAMR_BUILD_LAZY_JIT EQUAL 1)
+  add_definitions("-DWASM_ENABLE_LAZY_JIT=1")
+else ()
+  add_definitions("-DWASM_ENABLE_LAZY_JIT=0")
+endif ()
 if (WAMR_BUILD_FAST_JIT EQUAL 1)
   if (WAMR_BUILD_LAZY_JIT EQUAL 1)
-    add_definitions("-DWASM_ENABLE_LAZY_JIT=1")
     message ("     WAMR Fast JIT enabled with Lazy Compilation")
   else ()
     message ("     WAMR Fast JIT enabled with Eager Compilation")
@@ -323,7 +369,6 @@ endif ()
 if (WAMR_BUILD_JIT EQUAL 1)
   add_definitions("-DWASM_ENABLE_JIT=1")
   if (WAMR_BUILD_LAZY_JIT EQUAL 1)
-    add_definitions("-DWASM_ENABLE_LAZY_JIT=1")
     message ("     WAMR LLVM ORC JIT enabled with Lazy Compilation")
   else ()
     message ("     WAMR LLVM ORC JIT enabled with Eager Compilation")
@@ -643,10 +688,22 @@ endif ()
 if (WAMR_BUILD_MODULE_INST_CONTEXT EQUAL 1)
   add_definitions (-DWASM_ENABLE_MODULE_INST_CONTEXT=1)
   message ("     Module instance context enabled")
+else ()
+  add_definitions (-DWASM_ENABLE_MODULE_INST_CONTEXT=0)
+endif ()
+# WAMR_BUILD_GC_VERIFY is the older name of WAMR_BUILD_GC_HEAP_VERIFY; both used
+# to define BH_ENABLE_GC_VERIFY, from two different cmake files.  Keep the old
+# name working and define the macro in one place only.
+if (WAMR_BUILD_GC_VERIFY EQUAL 1)
+  message (DEPRECATION
+           "WAMR_BUILD_GC_VERIFY is deprecated, use WAMR_BUILD_GC_HEAP_VERIFY")
+  set (WAMR_BUILD_GC_HEAP_VERIFY 1)
 endif ()
 if (WAMR_BUILD_GC_HEAP_VERIFY EQUAL 1)
   add_definitions (-DBH_ENABLE_GC_VERIFY=1)
   message ("     GC heap verification enabled")
+else ()
+  add_definitions (-DBH_ENABLE_GC_VERIFY=0)
 endif ()
 if ("$ENV{COLLECT_CODE_COVERAGE}" STREQUAL "1" OR COLLECT_CODE_COVERAGE EQUAL 1)
   include(${CMAKE_CURRENT_LIST_DIR}/code_coverage.cmake)
@@ -709,37 +766,37 @@ if (WAMR_BUILD_LINUX_PERF EQUAL 1)
   add_definitions (-DWASM_ENABLE_LINUX_PERF=1)
   message ("     Linux perf support enabled")
 endif ()
-if (WAMR_BUILD_AOT EQUAL 1 OR WAMR_BUILD_JIT EQUAL 1)
-  if (NOT DEFINED WAMR_BUILD_QUICK_AOT_ENTRY)
-    # Enable quick aot/jit entries by default
+# Quick AOT/JIT entries only exist in the AOT and LLVM JIT running modes, so the
+# running mode decides the value unless the user asked for a specific one.
+if (NOT DEFINED WAMR_BUILD_QUICK_AOT_ENTRY)
+  if (WAMR_BUILD_AOT EQUAL 1 OR WAMR_BUILD_JIT EQUAL 1)
     set (WAMR_BUILD_QUICK_AOT_ENTRY 1)
-  endif ()
-  if (WAMR_BUILD_QUICK_AOT_ENTRY EQUAL 1)
-    add_definitions (-DWASM_ENABLE_QUICK_AOT_ENTRY=1)
-    message ("     Quick AOT/JIT entries enabled")
   else ()
-    add_definitions (-DWASM_ENABLE_QUICK_AOT_ENTRY=0)
-    message ("     Quick AOT/JIT entries disabled")
+    set (WAMR_BUILD_QUICK_AOT_ENTRY 0)
   endif ()
-else ()
-  # Disable quick aot/jit entries for interp and fast-jit
-  add_definitions (-DWASM_ENABLE_QUICK_AOT_ENTRY=0)
 endif ()
-if (WAMR_BUILD_AOT EQUAL 1)
-  if (NOT DEFINED WAMR_BUILD_AOT_INTRINSICS)
-    # Enable aot intrinsics by default
-    set (WAMR_BUILD_AOT_INTRINSICS 1)
-  endif ()
-  if (WAMR_BUILD_AOT_INTRINSICS EQUAL 1)
-    add_definitions (-DWASM_ENABLE_AOT_INTRINSICS=1)
-    message ("     AOT intrinsics enabled")
-  else ()
-    add_definitions (-DWASM_ENABLE_AOT_INTRINSICS=0)
-    message ("     AOT intrinsics disabled")
-  endif ()
+if (WAMR_BUILD_QUICK_AOT_ENTRY EQUAL 1)
+  add_definitions (-DWASM_ENABLE_QUICK_AOT_ENTRY=1)
+  message ("     Quick AOT/JIT entries enabled")
 else ()
-  # Disable aot intrinsics for interp, fast-jit and llvm-jit
+  add_definitions (-DWASM_ENABLE_QUICK_AOT_ENTRY=0)
+  message ("     Quick AOT/JIT entries disabled")
+endif ()
+
+# Likewise, AOT intrinsics are only meaningful in the AOT running mode.
+if (NOT DEFINED WAMR_BUILD_AOT_INTRINSICS)
+  if (WAMR_BUILD_AOT EQUAL 1)
+    set (WAMR_BUILD_AOT_INTRINSICS 1)
+  else ()
+    set (WAMR_BUILD_AOT_INTRINSICS 0)
+  endif ()
+endif ()
+if (WAMR_BUILD_AOT_INTRINSICS EQUAL 1)
+  add_definitions (-DWASM_ENABLE_AOT_INTRINSICS=1)
+  message ("     AOT intrinsics enabled")
+else ()
   add_definitions (-DWASM_ENABLE_AOT_INTRINSICS=0)
+  message ("     AOT intrinsics disabled")
 endif ()
 if (WAMR_BUILD_ALLOC_WITH_USAGE EQUAL 1)
   add_definitions(-DWASM_MEM_ALLOC_WITH_USAGE=1)
@@ -775,6 +832,42 @@ endif ()
 if (WAMR_BUILD_BRANCH_HINTS EQUAL 1)
   message ("     Branch hints enabled")
   add_definitions(-DWASM_ENABLE_BRANCH_HINTS=1)
+endif ()
+if (WAMR_BUILD_LOG EQUAL 1)
+  add_definitions (-DWASM_ENABLE_LOG=1)
+else ()
+  add_definitions (-DWASM_ENABLE_LOG=0)
+  message ("     Log disabled")
+endif ()
+if (WAMR_BUILD_OPCODE_COUNTER EQUAL 1)
+  add_definitions (-DWASM_ENABLE_OPCODE_COUNTER=1)
+  message ("     Opcode counter enabled")
+else ()
+  add_definitions (-DWASM_ENABLE_OPCODE_COUNTER=0)
+endif ()
+if (WAMR_BUILD_WORD_ALIGN_READ EQUAL 1)
+  add_definitions (-DWASM_ENABLE_WORD_ALIGN_READ=1)
+  message ("     Word align read enabled")
+else ()
+  add_definitions (-DWASM_ENABLE_WORD_ALIGN_READ=0)
+endif ()
+if (WAMR_BUILD_BASE_LIB EQUAL 1)
+  add_definitions (-DWASM_ENABLE_BASE_LIB=1)
+  message ("     Base lib enabled")
+else ()
+  add_definitions (-DWASM_ENABLE_BASE_LIB=0)
+endif ()
+if (WAMR_BUILD_APP_FRAMEWORK EQUAL 1)
+  add_definitions (-DWASM_ENABLE_APP_FRAMEWORK=1)
+  message ("     App framework enabled")
+else ()
+  add_definitions (-DWASM_ENABLE_APP_FRAMEWORK=0)
+endif ()
+if (WAMR_BUILD_FUZZ_TEST EQUAL 1)
+  add_definitions (-DWASM_ENABLE_FUZZ_TEST=1)
+  message ("     Fuzz test mode enabled")
+else ()
+  add_definitions (-DWASM_ENABLE_FUZZ_TEST=0)
 endif ()
 
 ########################################

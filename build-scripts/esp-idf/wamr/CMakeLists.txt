@@ -36,6 +36,16 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
     set (WAMR_BUILD_AOT 1)
   endif ()
 
+  # There is no Kconfig entry for these two; keep them on as they have always
+  # been on this platform.  The library default is off.
+  if (NOT DEFINED WAMR_BUILD_BULK_MEMORY)
+    set (WAMR_BUILD_BULK_MEMORY 1)
+  endif ()
+
+  if (NOT DEFINED WAMR_BUILD_SHRUNK_MEMORY)
+    set (WAMR_BUILD_SHRUNK_MEMORY 1)
+  endif ()
+
   if (CONFIG_WAMR_ENABLE_LIBC_BUILTIN)
     set (WAMR_BUILD_LIBC_BUILTIN 1)
   endif ()

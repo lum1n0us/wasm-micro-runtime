@@ -28,7 +28,11 @@ Always start by creating a [GitHub Issues](https://github.com/wasm-micro-runtime
 ### New Features
 
 - Add a compilation option in `build-scripts/config_common.cmake`. Default it to `0` unless the feature must be enabled by default.
-- Add the corresponding macro switch in `core/config.h`. Default it to `0` unless the feature must be enabled by default.
+- Add the corresponding macro switch in `core/config.h`. Default it to `0` unless the feature must be enabled by default. A macro used with `#if` and never given a default silently evaluates to `0`; `-Wundef` reports it.
+- Assign the macro both ways: write `add_definitions(-D<MACRO>=1)` in the `if` branch and `add_definitions(-D<MACRO>=0)` in the `else` branch, instead of defining it only when the feature is on.
+- Test the macro with `#if <MACRO> != 0`. Do not use `#ifdef`, `#ifndef` or `#if defined(<MACRO>)` on a feature macro: it always holds, so the code under it never turns off. The two exceptions are `BH_VPRINTF` and `BH_LOG`, whose value is a function name rather than `0`/`1`.
+- Keep the option off by default in `build-scripts/`, and turn it on at the build entry point (the repository root `CMakeLists.txt`, a `product-mini` platform file or `wamr-compiler/CMakeLists.txt`) if a product needs it. A build that asks for nothing should get the smallest runtime.
+- When a platform has both a Make and a CMake build path (NuttX), the Make path (`wamr.mk`) is the reference; keep the CMake path in sync with it.
 - Update `doc/build_wamr.md` with the option and its usage.
 - Add or update a demonstration in `samples`.
 

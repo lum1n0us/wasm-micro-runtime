@@ -13,6 +13,9 @@ endif ()
 if (NOT DEFINED DEPS_DIR)
     set (DEPS_DIR ${WAMR_ROOT_DIR}/core/deps)
 endif ()
+if (NOT DEFINED WAMR_BUILD_PLATFORM)
+  string(TOLOWER "${CMAKE_SYSTEM_NAME}" WAMR_BUILD_PLATFORM)
+endif ()
 if (NOT DEFINED SHARED_PLATFORM_CONFIG)
     # CMake file for platform configuration. The PLATFORM_SHARED_SOURCE variable
     # should point to a list of platform-specfic source files to compile.

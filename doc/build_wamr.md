@@ -42,8 +42,10 @@ add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
 | [WAMR_BUILD_AOT](#configure-aot)                                                                         | AoT compilation(wamrc)               |
 | [WAMR_BUILD_AOT](#configure-aot)                                                                         | AoT runtime                          |
 | [WAMR_BUILD_AOT_INTRINSICS](#aot-intrinsics)                                                             | AoT intrinsics                       |
+| [WAMR_BUILD_APP_FRAMEWORK](#legacy-app-framework)                                                        | legacy app framework                 |
 | [WAMR_BUILD_AOT_STACK_FRAME](#aot-stack-frame-feature)                                                   | AoT stack frame                      |
 | [WAMR_BUILD_AOT_VALIDATOR](#aot-validator)                                                               | AoT validator                        |
+| [WAMR_BUILD_BASE_LIB](#legacy-app-framework)                                                             | legacy base lib                      |
 | [WAMR_BUILD_BULK_MEMORY](#bulk-memory-feature)                                                           | bulk memory                          |
 | [WAMR_BUILD_COPY_CALL_STACK](#copy-call-stack)                                                           | copy call stack                      |
 | [WAMR_BUILD_CUSTOM_NAME_SECTION](#name-section)                                                          | name section                         |
@@ -84,10 +86,12 @@ add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
 | [WAMR_BUILD_MODULE_INST_CONTEXT](#module-instance-context-apis)                                          | module instance context              |
 | [WAMR_BUILD_MULTI_MEMORY](#multi-memory)                                                                 | multi-memory support                 |
 | [WAMR_BUILD_MULTI_MODULE](#multi-module-feature)                                                         | multi-module support                 |
+| [WAMR_BUILD_OPCODE_COUNTER](#opcode-counter)                                                             | opcode counter                       |
 | [WAMR_BUILD_PERF_PROFILING](#performance-profiling-experiment)                                           | performance profiling                |
 | [WAMR_BUILD_PLATFORM](#configure-platform-and-architecture)                                              | Default platform                     |
 | [WAMR_BUILD_QUICK_AOT_ENTRY](#quick-aotjti-entries)                                                      | quick AOT entry                      |
 | [WAMR_BUILD_REF_TYPES](#reference-types-feature)                                                         | reference types                      |
+| [WAMR_BUILD_LOG](#log-system)                                                                            | log system                           |
 | [WAMR_BUILD_SANITIZER](#sanitizer)                                                                       | sanitizer                            |
 | [WAMR_BUILD_SGX_IPFS](#intel-protected-file-system)                                                      | Intel Protected File System support  |
 | [WAMR_BUILD_SHARED_HEAP](#shared-heap-among-wasm-apps-and-host-native)                                   | shared heap                          |
@@ -95,7 +99,9 @@ add_library(vmlib ${WAMR_RUNTIME_LIB_SOURCE})
 | [WAMR_BUILD_SHRUNK_MEMORY](#shrunk-the-memory-usage)                                                     | shrunk memory                        |
 | [WAMR_BUILD_SIMD](#128-bit-simd-feature)                                                                 | SIMD support                         |
 | [WAMR_BUILD_SIMDE](#128-bit-simd-feature)                                                                | SIMD E extensions                    |
+| [WAMR_BUILD_FUZZ_TEST](#fuzz-test-mode)                                                                  | fuzz test mode                       |
 | [WAMR_BUILD_SPEC_TEST](#support-spec-test)                                                               | spec test                            |
+| [WAMR_BUILD_WORD_ALIGN_READ](#word-aligned-read)                                                         | word aligned read                    |
 | [WAMR_BUILD_STACK_GUARD_SIZE](#stack-guard-size)                                                         | Stack guard size                     |
 | [WAMR_BUILD_STATIC_PGO](running-pgoprofile-guided-optimization-instrumented-aot-file)                    | Static PGO                           |
 | [WAMR_BUILD_STRINGREF](#garbage-collection)                                                              | String reference support             |
@@ -189,7 +195,7 @@ cmake -DWAMR_BUILD_PLATFORM=linux -DWAMR_BUILD_TARGET=ARM
 Comparing with fast JIT, LLVM JIT covers more architectures and produces better optimized code, but takes longer on cold start.
 
 - **WAMR_BUILD_JIT**=1/0: turn LLVM JIT on or off. Defaults to off.
-- **WAMR_BUILD_LAZY_JIT**=1/0: turn lazy JIT on or off. Defaults to off in interpreter-only builds; once LLVM JIT or fast JIT is enabled and lazy JIT is not explicitly set to 0, it is enabled by default. With lazy JIT, functions are compiled in background threads before they are called, which can reduce startup time for large modules.
+- **WAMR_BUILD_LAZY_JIT**=1/0: turn lazy JIT on or off. Derived from the running mode: on when LLVM JIT or fast JIT is enabled, off otherwise. Setting it explicitly overrides the derived value. With lazy JIT, functions are compiled in background threads before they are called, which can reduce startup time for large modules.
 
 ### **Configure Fast JIT**
 
@@ -249,7 +255,7 @@ Use fast jit as the first tier and LLVM JIT as the second tier.
 
 ### **bulk memory feature**
 
-- **WAMR_BUILD_BULK_MEMORY**=1/0, default to on.
+- **WAMR_BUILD_BULK_MEMORY**=1/0, default to off in `build-scripts`, and turned on by the build entry points (iwasm and wamrc are built with it on).
 
 > [!NOTE]
 > Enabling bulk memory also turns on `bulk-memory-opt` (`WAMR_BUILD_BULK_MEMORY_OPT`).
@@ -363,6 +369,9 @@ The SIMDe library is pulled in automatically when both `WAMR_BUILD_SIMD` and `WA
 
 - **WAMR_BUILD_GC**=1/0, default to off.
 - **WAMR_BUILD_GC_HEAP_VERIFY**=1/0, default to off. When enabled, verifies the heap during free.
+
+> [!NOTE]
+> `WAMR_BUILD_GC_VERIFY` is a deprecated alias of this option. It still works and prints a cmake deprecation warning; use `WAMR_BUILD_GC_HEAP_VERIFY` instead.
 - **WAMR_BUILD_STRINGREF**=1/0, default to off. When enabled, need to set WAMR_STRINGREF_IMPL_SOURCE as well
 
 > [!NOTE]
@@ -468,6 +477,11 @@ The SIMDe library is pulled in automatically when both `WAMR_BUILD_SIMD` and `WA
 > ```
 >
 > Then run `cmake -DWAMR_BH_VPRINTF=my_vprintf ..`, or add the compiler macro `BH_VPRINTF=my_vprintf` (for example `add_definitions(-DBH_VPRINTF=my_vprintf)` in CMakeLists.txt). See [basic sample](../samples/basic/src/main.c) for an example.
+>
+> `WAMR_BH_VPRINTF` and `WAMR_BH_LOG` are the two options whose value is a
+> function name rather than 0 or 1, so `BH_VPRINTF` and `BH_LOG` are the only
+> macros the runtime tests with `#ifndef` instead of `#if`. Leaving them unset
+> and setting them both have to build.
 
 ### **WAMR_BH_LOG**=<log_callback>, default to off.
 
@@ -565,14 +579,14 @@ The SIMDe library is pulled in automatically when both `WAMR_BUILD_SIMD` and `WA
 
 ### **quick AOT/JTI entries**
 
-- **WAMR_BUILD_QUICK_AOT_ENTRY**=1/0: register quick call entries to speed up AOT/JIT function calls. Default is on when AOT or LLVM JIT is enabled; it is always off in interpreter/fast-JIT-only builds.
+- **WAMR_BUILD_QUICK_AOT_ENTRY**=1/0: register quick call entries to speed up AOT/JIT function calls. Derived from the running mode: on when AOT or LLVM JIT is enabled, off otherwise. Setting it explicitly overrides the derived value.
 
 > [!NOTE]
 > See [Refine callings to AOT/JIT functions from host native](./perf_tune.md#83-refine-callings-to-aotjit-functions-from-host-native).
 
 ### **AOT intrinsics**
 
-- **WAMR_BUILD_AOT_INTRINSICS**=1/0: turn on AOT intrinsic functions. Default is on when AOT is enabled (LLVM JIT enables AOT implicitly); it is always off in interpreter/fast-JIT-only builds. AOT code can call these when wamrc uses `--disable-llvm-intrinsics` or `--enable-builtin-intrinsics=<intr1,intr2,...>`.
+- **WAMR_BUILD_AOT_INTRINSICS**=1/0: turn on AOT intrinsic functions. Derived from the running mode: on when AOT is enabled, off otherwise. Setting it explicitly overrides the derived value. AOT code can call these when wamrc uses `--disable-llvm-intrinsics` or `--enable-builtin-intrinsics=<intr1,intr2,...>`.
 
 > [!NOTE]
 > See [Tuning the XIP intrinsic functions](./xip.md#tuning-the-xip-intrinsic-functions).
@@ -586,7 +600,7 @@ The SIMDe library is pulled in automatically when both `WAMR_BUILD_SIMD` and `WA
 
 ### **bulk-memory-opt**
 
-- **WAMR_BUILD_BULK_MEMORY_OPT**=1/0, default to off, but it is enabled automatically when bulk memory (`WAMR_BUILD_BULK_MEMORY`, default on) is on. The minimal Lime1 feature set also enables it.
+- **WAMR_BUILD_BULK_MEMORY_OPT**=1/0, default to off. Enabled automatically when `WAMR_BUILD_BULK_MEMORY` or `WAMR_BUILD_LIME1` is on.
 
 > [!NOTE]
 > See [bulk-memory-opt](https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#bulk-memory-opt).
@@ -639,7 +653,7 @@ The SIMDe library is pulled in automatically when both `WAMR_BUILD_SIMD` and `WA
 
 ### **Shrunk the memory usage**
 
-- **WAMR_BUILD_SHRUNK_MEMORY**=1/0, default to on.
+- **WAMR_BUILD_SHRUNK_MEMORY**=1/0, default to off in `build-scripts`, and turned on by the build entry points (iwasm and wamrc are built with it on).
 
 > [!NOTE]
 > When enabled, this reduces memory by shrinking linear memory, especially when `memory.grow` is unused and memory needs are predictable.
@@ -764,3 +778,37 @@ To enable the minimal Lime1 feature set, turn off features that are on by defaul
 ```Bash
 cmake .. -DWAMR_BUILD_LIME1=1 -DWAMR_BUILD_BULK_MEMORY=0 -DWAMR_BUILD_REF_TYPES=0 -DWAMR_BUILD_SIMD=0
 ```
+
+### **Log system**
+
+- **WAMR_BUILD_LOG**=1/0, default to on. Turns the runtime log system
+  (`WASM_ENABLE_LOG`) on or off. The macro is read by the `product-mini`
+  executables rather than by the vmcore, so turning it off mainly shrinks
+  `iwasm` itself.
+
+### **Opcode counter**
+
+- **WAMR_BUILD_OPCODE_COUNTER**=1/0, default to off. Counts the executed
+  opcodes. Only has an effect when `WAMR_BUILD_FAST_INTERP` is on, which is the
+  only place the macro is read.
+
+### **Word aligned read**
+
+- **WAMR_BUILD_WORD_ALIGN_READ**=1/0, default to off. Reads the AOT file through
+  word aligned accesses, for targets that fault on unaligned loads.
+
+### **Legacy app framework**
+
+- **WAMR_BUILD_BASE_LIB**=1/0, default to off.
+- **WAMR_BUILD_APP_FRAMEWORK**=1/0, default to off.
+
+> [!NOTE]
+> These two belong to the legacy application framework. They are kept
+> configurable because the loaders and `wasm_native.c` still read the
+> corresponding macros; new applications should not need them.
+
+### **Fuzz test mode**
+
+- **WAMR_BUILD_FUZZ_TEST**=1/0, default to off. Caps the memory allocator so the
+  runtime stays inside the memory budget of a fuzzing host. Only meant for the
+  fuzzing targets under `tests/fuzz`.

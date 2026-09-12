@@ -82,8 +82,13 @@ if(CONFIG_INTERPRETERS_WAMR_SHARED_MEMORY)
   set(WAMR_BUILD_SHARED_MEMORY 1)
 endif()
 
+# Follow wamr.mk, which is the reference build path on NuttX: bulk memory is
+# opt-in through Kconfig and assigned both ways there.  Leaving it unset here
+# used to pick up a default of on instead, so the two paths disagreed.
 if(CONFIG_INTERPRETERS_WAMR_BULK_MEMORY)
   set(WAMR_BUILD_BULK_MEMORY 1)
+else()
+  set(WAMR_BUILD_BULK_MEMORY 0)
 endif()
 
 if(CONFIG_INTERPRETERS_WAMR_AOT_STACK_FRAME)
