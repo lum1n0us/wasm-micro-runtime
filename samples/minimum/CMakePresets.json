@@ -1,0 +1,24 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "all-off",
+      "displayName": "every feature off",
+      "description": "The smallest runtime WAMR can build: classic interpreter, nothing else. Only the two switches that build-scripts defaults to on are written out -- everything else is expected to already be off, and check_defaults.py fails if it is not.",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+
+        "WAMR_BUILD_INTERP": "1",
+
+        "WAMR_BUILD_BULK_MEMORY": "0",
+        "WAMR_BUILD_SHRUNK_MEMORY": "0"
+      }
+    }
+  ]
+}
