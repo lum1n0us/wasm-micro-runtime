@@ -26,12 +26,14 @@ A target's macro set is the union over its compile units (one target compiles
 many files, one suite may build several targets).  With a feature set F, which
 is written in the same (macro) plane (coverage_features.py):
 
-    matched(target) = every assertion of F agrees with the target's macro set
-                      AND every macro the target enables is listed in F
+    matched(target) = every macro the target enables is enabled by F
 
-The second half is what makes F a *complete* configuration declaration: a
-macro F does not mention is 0.  Together the two halves say that the target's
-enabled macro set IS F's enabled macro set.
+i.e. only the target -> F direction is constrained (E ⊆ F).  F is an upper
+bound: a macro it does not mention is 0, so a target that turns on something F
+does not declare is left out and the report never contains code compiled with a
+configuration F does not declare.  F may declare more than the selected targets
+enable -- a target covering a subset of F is admitted, and the gap is reported
+by warnings_for() instead of dropping the target.
 
 A **suite** is the unit of build, run and collection: `ctest` and the gcovr
 collector both work on a suite build directory, not on a single target.  A
@@ -46,6 +48,8 @@ import os
 import re
 from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple
+
+from coverage_features import enabled_macros
 
 # `-DWASM_ENABLE_XXX` (bare) or `-DWASM_ENABLE_XXX=0|1` in a compile command.
 _MACRO_RE = re.compile(r"-D(WASM_ENABLE_[A-Z0-9_]+)(?:=([01]))?")
@@ -263,16 +267,14 @@ class Selection:
 
 
 def matches(f: Dict[str, int], target: UnitTarget) -> bool:
-    """Does this target's configuration equal the feature set F?
+    """Does this target's configuration fit inside the feature set F?
 
-    Both directions of the module docstring's rule: F's assertions must agree
-    with the target's macro set, and the target must not enable anything F does
-    not declare.
+    Only the target -> F direction is constrained: the target must not enable
+    anything F does not declare (E ⊆ F).  F may enable macros the target leaves
+    off -- covering a subset of F admits the target, and the gap is reported by
+    warnings_for() rather than excluding it.
     """
-    for name, want in f.items():
-        if target.macros.get(name, 0) != want:
-            return False
-    return target.enabled() <= set(f)
+    return target.enabled() <= enabled_macros(f)
 
 
 def select(targets: Dict[str, UnitTarget],
@@ -319,6 +321,10 @@ def warnings_for(selection: Selection, known_macros: Set[str]) -> List[str]:
     enabled_anywhere: Set[str] = set()
     for target in cand.values():
         enabled_anywhere.update(target.enabled())
+    enabled_selected: Set[str] = set()
+    for names in selection.suites.values():
+        for name in names:
+            enabled_selected.update(selection.targets[name].enabled())
 
     for name in sorted(selection.f):
         if selection.f[name] != 1:
@@ -333,6 +339,11 @@ def warnings_for(selection: Selection, known_macros: Set[str]) -> List[str]:
                 f"{name}=1 has no unit coverage source: no unit target of this "
                 "build enables it, so the unit half of the report cannot cover "
                 "that feature (consider curating the feature set)")
+        elif name not in enabled_selected:
+            warnings.append(
+                f"{name}=1 is not enabled by any selected unit target: F "
+                "admits targets that cover a subset of it (E ⊆ F), so the unit "
+                "half of the report does not exercise that feature")
     for suite in sorted(selection.partial):
         hit, missed = selection.partial[suite]
         warnings.append(
@@ -350,26 +361,22 @@ def _closest_hint(selection: Selection,
                   cand: Dict[str, UnitTarget]) -> str:
     """Point at the unit target that is closest to F and say what differs.
 
-    F has to be written out completely, so getting it right is a matter of
-    diffing it against a real target's macro set; this makes the first run
-    enough to do that."""
-    want = set(selection.f)
+    Under the subset rule only the macros a target enables beyond F can keep it
+    out, so the hint names those; getting F right is a matter of diffing it
+    against a real target's macro set, which makes the first run enough."""
+    want = enabled_macros(selection.f)
     best = None
     for name, target in sorted(cand.items()):
-        enabled = target.enabled()
-        add = sorted(enabled - want)      # the target enables, F does not
-        drop = sorted(want - enabled)     # F enables, the target does not
-        score = len(add) + len(drop)
-        if best is None or score < best[0]:
-            best = (score, name, target.suite, add, drop)
+        add = sorted(target.enabled() - want)   # the target enables, F does not
+        if best is None or len(add) < best[0]:
+            best = (len(add), name, target.suite, add)
     if best is None:
         return "the build plan has no unit target at all"
-    _, name, suite, add, drop = best
+    _, name, suite, add = best
     hint = f"closest target: {name} (suite {suite})"
-    if drop:
-        hint += f"; remove from F: {', '.join(drop)}"
     if add:
-        hint += f"; add to F: {', '.join(add)}"
+        hint += (f"; it enables what F does not declare: {', '.join(add)} "
+                 "(add it to F, or stop the suite from enabling it)")
     return hint
 
 

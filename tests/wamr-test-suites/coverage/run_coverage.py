@@ -22,20 +22,22 @@ The unit half comes from the build plan rather than from the spelling of F, so
 two spellings of the same configuration identify the same report.
 
 The report's feature set F is what the user spells out as compile macros
-(--feature), e.g. '--feature "-DWASM_ENABLE_GC=1"'.  It is a complete
-configuration declaration (coverage_features.py) and is used only to decide
-which unit targets belong to the report -- it is never injected into a build.
+(--feature), e.g. '--feature "-DWASM_ENABLE_GC=1"'.  It is an upper bound
+(coverage_features.py) and is used only to decide which unit targets belong to
+the report -- it is never injected into a build.
 
 Unit target selection: the unit build of each mode is configured (nothing is
 built yet) with -DCMAKE_EXPORT_COMPILE_COMMANDS=ON; the resulting
 compile_commands.json is cmake's build *plan*, and coverage_targets.py reads
 each target's name, suite build directory and macro set out of it.  A target
-belongs to the report when the macros it enables are exactly the macros F
-enables, and a suite belongs to the report when all of its targets do -- a
-suite is the unit that is built, run by ctest and collected.  Only then are the
-selected targets built and their suites tested, and only those suite build
-directories are collected.  Feature sets the unit suites cannot cover are
-reported as warnings, never silently filtered away.
+belongs to the report when every macro it enables is enabled by F (E ⊆ F), and
+a suite belongs to the report when all of its targets do -- a suite is the unit
+that is built, run by ctest and collected.  A target that enables a subset of F
+is admitted, so the report can never contain code compiled with a configuration
+F does not declare, while F may still declare more than the selected units
+exercise; both kinds of mismatch are reported as warnings, never silently
+filtered away.  Only then are the selected targets built and their suites
+tested, and only those suite build directories are collected.
 
 The spec layer runs through test_wamr.sh, which always gets `-s spec -b`
 (spec suite, wabt binary release instead of compiling it); --spec only carries
@@ -377,11 +379,11 @@ def run_report(name, combos, out_root, unit, llvm_dir, coverage,
             print("F = (none: every unit target belongs to the report)\n")
         else:
             print(f"F = {feature_flags_for(f)}")
-            print("(F is a complete configuration declaration in the compile-"
-                  "macro plane; a macro it does not mention is 0.  It is not "
-                  "injected into the unit configure: each suite declares its "
-                  "own, and compile_commands.json selects the report's unit "
-                  "targets from the result)\n")
+            print("(F is an upper bound in the compile-macro plane; a macro it "
+                  "does not mention is 0.  It is not injected into the unit "
+                  "configure: each suite declares its own, and "
+                  "compile_commands.json selects the report's unit targets "
+                  "from the result)\n")
 
         entry = {"combo": combo, "selection": None, "unit_dir": None,
                  "report": ""}
@@ -537,12 +539,13 @@ def main():
     parser.add_argument(
         "--feature", action="append", default=[],
         help="Feature set F of the current report, as compile macros; "
-             "repeatable.  E.g. --feature \"-DWASM_ENABLE_GC=1\".  F is a "
-             "complete configuration declaration: the listed macros are 1 and "
-             "every other macro is 0, so a unit target belongs to the report "
-             "only when the macros it enables are exactly these.  Default (not "
-             "given): no constraint -- every unit target belongs to the "
-             "report, each suite keeping the values its own CMakeLists "
+             "repeatable.  E.g. --feature \"-DWASM_ENABLE_GC=1\".  F is an "
+             "upper bound: the listed macros are 1 and every other macro is 0, "
+             "so a unit target belongs to the report when it enables nothing "
+             "outside these (a target enabling a subset of F is admitted, and "
+             "the F macros no selected target enables are warned about).  "
+             "Default (not given): no constraint -- every unit target belongs "
+             "to the report, each suite keeping the values its own CMakeLists "
              "declares.  F selects the report's unit targets; it is not "
              "injected into the build.",
     )

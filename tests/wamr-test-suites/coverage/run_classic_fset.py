@@ -8,15 +8,15 @@
 Runs one canned report object:
   * running mode: classic-interp
   * feature set F: the classic interpreter with the libc-builtin runtime
-  * test set: spec + unit (the unit targets whose configuration is exactly F)
+  * test set: spec + unit (the unit targets whose configuration fits inside F)
 
-F is written in the compile-macro plane, as the compiler sees it, and is a
-complete configuration declaration: a macro it does not mention is 0.  The
-report therefore contains the unit suites that are built with exactly this
-configuration, and nothing else -- no suite is pulled in with a configuration
-the report does not declare.  Adding a macro here narrows the selection (and
-`run_coverage.py` warns when an enabled macro has no unit target at all), so
-this list is the single knob for what the unit half of the report covers.
+F is written in the compile-macro plane, as the compiler sees it, and is an
+upper bound: a macro it does not mention is 0.  The report therefore contains
+only unit suites that enable nothing F does not declare -- no suite is pulled in
+with a feature the report does not declare.  A target may enable a subset of F
+(e.g. without the runtime under test); that is admitted, and `run_coverage.py`
+warns about the F macros no selected target enables.  This list is the single
+knob for what the unit half of the report covers.
 
 Note that F describes the *unit* targets only: the spec layer is configured by
 test_wamr.sh itself (the running-mode flags plus the --spec switches) and is not

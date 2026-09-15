@@ -13,14 +13,17 @@ actually sees, and the plane the coverage numbers are computed in:
 
     --feature "-DWASM_ENABLE_INTERP=1 -DWASM_ENABLE_GC=1"
 
-F is a **complete configuration declaration**: a macro it does not mention is 0.
-`-DWASM_ENABLE_XXX=0` may be written for emphasis, but it is redundant (0 is
-already the default and can never narrow the selection further).  This is what
-lets the unit-target selection (`coverage_targets.py`) be a plain set
-comparison against compile_commands.json: no cmake-variable -> macro
-translation table, no hand-maintained checklist of every feature, and no
-"implied feature" closure (implications are cmake's job and are already
-resolved in the macros the compiler is invoked with).
+F is an **upper bound** for the unit-target selection: a macro it does not
+mention is 0, so a unit target that enables anything F does not declare is left
+out.  `-DWASM_ENABLE_XXX=0` may be written for emphasis, but it is redundant (0
+is already the default and can never admit a target).  F may also declare more
+than the selected targets enable -- that is a warning (coverage_targets.py),
+not a reason to exclude them.  This is what lets the unit-target selection
+(`coverage_targets.py`) be a plain set comparison against
+compile_commands.json: no cmake-variable -> macro translation table, no
+hand-maintained checklist of every feature, and no "implied feature" closure
+(implications are cmake's job and are already resolved in the macros the
+compiler is invoked with).
 
 The one exception is an *empty* F, which is a wildcard: every unit target
 belongs to the report, each suite keeping the values its own CMakeLists.txt

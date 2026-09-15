@@ -36,7 +36,7 @@ coverage scope; see [Regression tests](#regression-tests).
 |---|---|
 | `coverage/run_coverage.py` | Parameterized entry: build + run spec/unit for one or more report objects, collect gcovr reports, merge reports. |
 | `coverage/coverage_features.py` | The feature set F: parses `--feature` (compile macros) and validates the macro names. |
-| `coverage/coverage_targets.py` | Reads `compile_commands.json` as cmake's build plan and selects the unit targets/suites whose configuration is exactly F. |
+| `coverage/coverage_targets.py` | Reads `compile_commands.json` as cmake's build plan and selects the unit targets/suites whose configuration fits inside F (E ⊆ F). |
 | `coverage/run_classic_fset.py` | The canned classic-interp feature-set report object: that mode + a fixed feature set + unit. |
 | `coverage/run_full.py` | Full run: every spec variant plus the unit suites of the supported modes, merged into `_merged/`. |
 | `coverage/collect_coverage_gcovr.py` | gcovr collector: one or more build dirs → HTML + JSON + txt report (scope-filtered). Replaces `collect_coverage.sh`. |
@@ -181,11 +181,18 @@ compiler sees, and the plane the coverage numbers are computed in:
 --feature "-DWASM_ENABLE_INTERP=1 -DWASM_ENABLE_GC=1 -DWASM_ENABLE_REF_TYPES=1"
 ```
 
-F is a **complete configuration declaration**: a macro it does not mention is 0.
+F is an **upper bound** for the unit selection: a macro it does not mention is 0,
+so a target that enables anything F does not declare is left out.
 `-DWASM_ENABLE_XXX=0` may be written for emphasis but is redundant. There is no
 feature checklist to maintain and no cmake-variable → macro translation table:
 implications (`GC` → `REF_TYPES`, `JIT` → `INTERP`, ...) are cmake's job and are
 already resolved in the macros every compile unit is invoked with.
+
+F may declare more than the selected unit targets enable — a target that covers
+a *subset* of F is admitted, and the F macros no selected target enables are
+reported as a warning. That keeps the pick-up wide (a suite that does not turn
+on the runtime under test still contributes) while the report still never
+contains code compiled with a feature F does not declare.
 
 An *empty* F is the one exception: it is a wildcard, every unit target belongs
 to the report, and each suite keeps the values its own `CMakeLists.txt`
@@ -202,7 +209,7 @@ read from the `-o` argument) and the macros that target is compiled with, so
 the selection is a set comparison:
 
 ```
-target belongs to the report  <=>  the macros it enables are exactly the macros F enables
+target belongs to the report  <=>  the macros it enables are a subset of the macros F enables
 ```
 
 A **suite** belongs to the report only when *all* of its targets do, because a
@@ -222,13 +229,15 @@ run continues:
 - an enabled macro that **no unit target** enables (e.g.
   `WASM_ENABLE_SPEC_TEST=1`: the spec suite is configured by `test_wamr.sh`, not
   by the unit suites) — the unit half of the report cannot cover that feature;
+- an enabled macro that **no selected** unit target enables while some
+  unselected target does — admitted by the subset rule, but the unit half does
+  not exercise that feature either;
 - an enabled macro that is neither a `core/config.h` `#ifndef` default nor used
   by any compile unit of this build — most likely a typo;
 - a suite of which only *some* targets match F;
 - an F that selects **no** unit target at all — the warning then names the
-  closest target and what to add to / remove from F, so one run is enough to
-  curate F (a complete declaration has to be written out, and this is the diff
-  against a real configuration).
+  closest target and what it enables that F does not declare, so one run is
+  enough to curate F.
 
 The report directory keeps the full record: `unit-selection.txt` lists the
 selected suites and each target's macro set, the skipped and the partially
