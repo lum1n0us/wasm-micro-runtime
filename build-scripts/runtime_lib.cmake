@@ -51,36 +51,6 @@ if (NOT DEFINED WAMR_BUILD_TARGET)
     endif ()
 endif ()
 
-################ optional according to settings ################
-if (WAMR_BUILD_FAST_JIT EQUAL 1 OR WAMR_BUILD_JIT EQUAL 1)
-    # Enable classic interpreter if Fast JIT or LLVM JIT is enabled
-    set (WAMR_BUILD_INTERP 1)
-    set (WAMR_BUILD_FAST_INTERP 0)
-endif ()
-
-if (WAMR_BUILD_INTERP EQUAL 1)
-    include (${IWASM_DIR}/interpreter/iwasm_interp.cmake)
-endif ()
-
-if (WAMR_BUILD_FAST_JIT EQUAL 1)
-    if (WAMR_BUILD_PLATFORM STREQUAL "windows")
-        message ("Fast JIT currently not supported on Windows")
-        set (WAMR_BUILD_FAST_JIT 0)
-    else ()
-        include (${IWASM_DIR}/fast-jit/iwasm_fast_jit.cmake)
-    endif ()
-endif ()
-
-if (WAMR_BUILD_JIT EQUAL 1)
-    # Enable AOT if LLVM JIT is enabled
-    set (WAMR_BUILD_AOT 1)
-    include (${IWASM_DIR}/compilation/iwasm_compl.cmake)
-endif ()
-
-if (WAMR_BUILD_AOT EQUAL 1)
-    include (${IWASM_DIR}/aot/iwasm_aot.cmake)
-endif ()
-
 # GC, stringref and the stringref implementation are one chain: stringref is
 # built on GC, and it needs an implementation to link against.  Each link turns
 # the next one on, so asking for GC is enough, and asking for a later link
@@ -120,6 +90,36 @@ endif ()
 if (WAMR_BUILD_STRINGREF EQUAL 1 AND NOT DEFINED WAMR_STRINGREF_IMPL_SOURCE)
     # The builtin implementation; a custom one is given by path.
     set (WAMR_STRINGREF_IMPL_SOURCE "STUB")
+endif ()
+
+################ optional according to settings ################
+if (WAMR_BUILD_FAST_JIT EQUAL 1 OR WAMR_BUILD_JIT EQUAL 1)
+    # Enable classic interpreter if Fast JIT or LLVM JIT is enabled
+    set (WAMR_BUILD_INTERP 1)
+    set (WAMR_BUILD_FAST_INTERP 0)
+endif ()
+
+if (WAMR_BUILD_INTERP EQUAL 1)
+    include (${IWASM_DIR}/interpreter/iwasm_interp.cmake)
+endif ()
+
+if (WAMR_BUILD_FAST_JIT EQUAL 1)
+    if (WAMR_BUILD_PLATFORM STREQUAL "windows")
+        message ("Fast JIT currently not supported on Windows")
+        set (WAMR_BUILD_FAST_JIT 0)
+    else ()
+        include (${IWASM_DIR}/fast-jit/iwasm_fast_jit.cmake)
+    endif ()
+endif ()
+
+if (WAMR_BUILD_JIT EQUAL 1)
+    # Enable AOT if LLVM JIT is enabled
+    set (WAMR_BUILD_AOT 1)
+    include (${IWASM_DIR}/compilation/iwasm_compl.cmake)
+endif ()
+
+if (WAMR_BUILD_AOT EQUAL 1)
+    include (${IWASM_DIR}/aot/iwasm_aot.cmake)
 endif ()
 
 if (WAMR_BUILD_GC EQUAL 1)
