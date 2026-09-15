@@ -197,8 +197,9 @@ The unit build of each mode is **configured** first (`cmake -S tests/unit -B
 <work>/unittest-build-<mode> -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`), and nothing
 is built yet. `compile_commands.json` is then read as cmake's *build plan*
 (`coverage/coverage_targets.py`): every entry already names the target it
-belongs to (`output` = `<build>/<suite>/CMakeFiles/<target>.dir/...`) and the
-macros that target is compiled with, so the selection is a set comparison:
+belongs to (its object path, `<build>/<suite>/CMakeFiles/<target>.dir/...`,
+read from the `-o` argument) and the macros that target is compiled with, so
+the selection is a set comparison:
 
 ```
 target belongs to the report  <=>  the macros it enables are exactly the macros F enables
@@ -250,7 +251,7 @@ cd tests/wamr-test-suites
 ./test_wamr.sh -s spec -b -C -t classic-interp
 ```
 
-Reports land under `tests/wamr-test-suites/coverage-report/`
+Reports land under `tests/wamr-test-suites/workspace/coverage-report/`
 (`index.html`, `coverage.json`, `summary.txt`).
 
 ## Regression tests

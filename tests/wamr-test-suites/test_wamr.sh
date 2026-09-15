@@ -832,7 +832,7 @@ function malformed_test()
 function collect_standalone()
 {
     if [[ ${COLLECT_CODE_COVERAGE} == 1 ]]; then
-        local GCOVR_SCRIPT=${WORK_DIR}/coverage/collect_coverage_gcovr.py
+        local GCOVR_SCRIPT=${WORK_DIR}/../coverage/collect_coverage_gcovr.py
         local COV_REPORT_DIR=${WORK_DIR}/coverage-report
         local STANDALONE_DIR=${WORK_DIR}/../../standalone
         local BUILD_DIRS=()
@@ -964,7 +964,7 @@ function build_wamrc()
 function collect_coverage()
 {
     if [[ ${COLLECT_CODE_COVERAGE} == 1 ]]; then
-        local GCOVR_SCRIPT=${WORK_DIR}/coverage/collect_coverage_gcovr.py
+        local GCOVR_SCRIPT=${WORK_DIR}/../coverage/collect_coverage_gcovr.py
         local COV_REPORT_DIR=${WORK_DIR}/coverage-report
         local BUILD_DIRS=()
 

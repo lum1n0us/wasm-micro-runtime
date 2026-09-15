@@ -15,8 +15,10 @@ cmake's *build plan*.
 Every entry of that file already carries what the selection needs, so neither a
 path heuristic nor a cmake-variable -> macro translation table is involved:
 
-  * `output` = `<build>/<suite>/CMakeFiles/<target>.dir/...` names the target
-    and the suite build directory it belongs to;
+  * the object path -- `<build>/<suite>/CMakeFiles/<target>.dir/...` -- names
+    the target and the suite build directory it belongs to; it is the entry's
+    `output` when it has one and the command's `-o` argument otherwise (CMake
+    itself writes only `directory`, `command` and `file`);
   * `command` records the `-DWASM_ENABLE_XXX[=1]` macros the compiler is
     actually invoked with, i.e. the configuration that target is built in.
 
@@ -48,8 +50,13 @@ from typing import Dict, List, Optional, Set, Tuple
 # `-DWASM_ENABLE_XXX` (bare) or `-DWASM_ENABLE_XXX=0|1` in a compile command.
 _MACRO_RE = re.compile(r"-D(WASM_ENABLE_[A-Z0-9_]+)(?:=([01]))?")
 
-# `<...>/CMakeFiles/<target>.dir/...` in the entry's `output` field.
+# `<...>/CMakeFiles/<target>.dir/...` in the entry's object path.
 _OUTPUT_RE = re.compile(r"CMakeFiles[/\\](.+?)\.dir[/\\]")
+
+# The object file a compile command produces, i.e. its `-o` argument.  The
+# trailing whitespace requirement keeps `-ofoo` (and options such as
+# `-openmp`) from matching.
+_OBJECT_RE = re.compile(r"(?:^|\s)-o\s+(\S+)")
 
 # FetchContent vendors googletest/cmocka into `<build>/_deps`: those targets
 # are build dependencies, not unit-test targets.
@@ -76,6 +83,27 @@ class UnitTarget:
         return f"<UnitTarget {self.name} suite={self.suite}>"
 
 
+def object_path(entry: dict, command: str) -> str:
+    """Absolute path of the object file a compile entry produces.
+
+    CMake writes only `directory`, `command` and `file` into
+    compile_commands.json (verified with CMake 3.25 for both the Ninja and the
+    Unix Makefiles generator), so the object path -- the part that names the
+    target and its suite -- is the command's `-o` argument.  An `output` field
+    (`ninja -t compdb`, and CMake generators that write one) wins when present.
+    A relative path is relative to the entry's `directory`.
+    """
+    output = entry.get("output", "")
+    if not output:
+        match = _OBJECT_RE.search(command)
+        if not match:
+            return ""
+        output = match.group(1)
+    if not os.path.isabs(output):
+        output = os.path.join(entry.get("directory", ""), output)
+    return os.path.normpath(output)
+
+
 def parse_compile_commands(path: str, build_dir: str) -> Dict[str, UnitTarget]:
     """Read a unit build's compile_commands.json and group it by target.
 
@@ -89,31 +117,26 @@ def parse_compile_commands(path: str, build_dir: str) -> Dict[str, UnitTarget]:
     raw: Dict[str, dict] = {}
     order: List[str] = []
     for entry in entries:
-        output = entry.get("output", "")
+        command = entry.get("command")
+        if command is None:
+            command = " ".join(entry.get("arguments", []))
+
+        output = object_path(entry, command)
         if not output:
             raise SystemExit(
-                f"{path}: a compile_commands.json entry has no 'output' field, "
-                "so the target it belongs to cannot be determined. Configure "
-                "with a generator that writes it (Ninja or Unix Makefiles with "
-                "a recent CMake).")
+                f"{path}: a compile_commands.json entry names no object file "
+                "(neither an 'output' field nor a '-o' argument), so the target "
+                "it belongs to cannot be determined.")
         match = _OUTPUT_RE.search(output)
         if not match:
             continue
         target = match.group(1)
 
-        # The part of `output` before CMakeFiles/ is the directory the target
-        # is built in, i.e. its suite.  Ninja writes `output` absolute, Unix
-        # Makefiles writes it relative to the *build root* (which is not the
-        # entry's `directory`: for Makefiles that one is the suite dir itself).
+        # The part of the object path before CMakeFiles/ is the directory the
+        # target is built in, i.e. its suite.
         prefix = output[:match.start()]
-        if os.path.isabs(prefix):
-            suite = os.path.relpath(os.path.normpath(prefix), root)
-        else:
-            suite = os.path.normpath(prefix) if prefix else "."
+        suite = os.path.relpath(os.path.normpath(prefix), root)
 
-        command = entry.get("command")
-        if command is None:
-            command = " ".join(entry.get("arguments", []))
         macros = {}
         for macro in _MACRO_RE.finditer(command):
             name = macro.group(1)
