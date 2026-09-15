@@ -6,7 +6,8 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
-/* THIS FILE exists to provide compatibility with CMake and Make build systems */
+/* THIS FILE exists to provide compatibility with CMake and Make build systems
+ */
 
 /* clang-format off */
 #if !defined(BUILD_TARGET_X86_64) \
