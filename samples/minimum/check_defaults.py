@@ -18,7 +18,7 @@ WAMR_BUILD_SHRUNK_MEMORY ship defaulting to on, on purpose, and the preset turns
 them off explicitly.
 
     cmake --preset all-off
-    python3 check_defaults.py build/compile_commands.json
+    python3 check_defaults.py build/all-off/compile_commands.json
 """
 
 import json
