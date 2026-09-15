@@ -398,10 +398,13 @@ The SIMDe library is pulled in automatically when both `WAMR_BUILD_SIMD` and `WA
 
 > [!NOTE]
 > `WAMR_BUILD_GC_VERIFY` is a deprecated alias of this option. It still works and prints a cmake deprecation warning; use `WAMR_BUILD_GC_HEAP_VERIFY` instead.
-- **WAMR_BUILD_STRINGREF**=1/0, default to off. When enabled, need to set WAMR_STRINGREF_IMPL_SOURCE as well
+- **WAMR_BUILD_STRINGREF**=1/0, defaults to whatever `WAMR_BUILD_GC` is.
+- **WAMR_STRINGREF_IMPL_SOURCE**=STUB/`<path>`: the stringref implementation to link against, `STUB` for the builtin one. Defaults to `STUB` when stringref is on.
 
 > [!NOTE]
-> Enabling GC automatically enables reference types; enabling stringref automatically enables GC (and hence reference types).
+> GC, stringref and the stringref implementation are one chain: `WAMR_BUILD_GC=1` is enough to get all three, and GC also enables reference types.
+>
+> Each link can be turned off on its own (`-DWAMR_BUILD_GC=1 -DWAMR_BUILD_STRINGREF=0` builds GC without stringref), but asking for a later link without its predecessor fails the configure step rather than silently turning the predecessor on: `WAMR_BUILD_STRINGREF=1` with `WAMR_BUILD_GC=0`, or `WAMR_STRINGREF_IMPL_SOURCE` with `WAMR_BUILD_STRINGREF=0`.
 
 > [!WARNING]
 > Current implentation of Garbage Collection(GC) is not fully compliant with the Wasm GC proposal and Wasm 3.0 specification. There are still few known limitations:

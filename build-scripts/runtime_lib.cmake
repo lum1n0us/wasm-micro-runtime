@@ -81,8 +81,45 @@ if (WAMR_BUILD_AOT EQUAL 1)
     include (${IWASM_DIR}/aot/iwasm_aot.cmake)
 endif ()
 
+# GC, stringref and the stringref implementation are one chain: stringref is
+# built on GC, and it needs an implementation to link against.  Each link turns
+# the next one on, so asking for GC is enough, and asking for a later link
+# without its predecessor is a configuration error rather than a silent
+# promotion -- a build that says WAMR_BUILD_GC=0 WAMR_BUILD_STRINGREF=1 wants
+# two different things.
+if (DEFINED WAMR_STRINGREF_IMPL_SOURCE
+    AND DEFINED WAMR_BUILD_STRINGREF
+    AND NOT WAMR_BUILD_STRINGREF EQUAL 1)
+    message (FATAL_ERROR
+      "WAMR_STRINGREF_IMPL_SOURCE is set but WAMR_BUILD_STRINGREF is "
+      "${WAMR_BUILD_STRINGREF}: the implementation is what stringref links "
+      "against, so it says nothing on its own. Set WAMR_BUILD_STRINGREF=1, or "
+      "drop WAMR_STRINGREF_IMPL_SOURCE.")
+endif ()
+
+if (DEFINED WAMR_STRINGREF_IMPL_SOURCE AND NOT DEFINED WAMR_BUILD_STRINGREF)
+    set (WAMR_BUILD_STRINGREF 1)
+endif ()
+
+if (WAMR_BUILD_STRINGREF EQUAL 1
+    AND DEFINED WAMR_BUILD_GC
+    AND NOT WAMR_BUILD_GC EQUAL 1)
+    message (FATAL_ERROR
+      "WAMR_BUILD_STRINGREF=1 needs WAMR_BUILD_GC=1: stringref values are GC "
+      "objects. Set WAMR_BUILD_GC=1, or drop WAMR_BUILD_STRINGREF.")
+endif ()
+
 if (WAMR_BUILD_STRINGREF EQUAL 1)
     set (WAMR_BUILD_GC 1)
+endif ()
+
+if (WAMR_BUILD_GC EQUAL 1 AND NOT DEFINED WAMR_BUILD_STRINGREF)
+    set (WAMR_BUILD_STRINGREF 1)
+endif ()
+
+if (WAMR_BUILD_STRINGREF EQUAL 1 AND NOT DEFINED WAMR_STRINGREF_IMPL_SOURCE)
+    # The builtin implementation; a custom one is given by path.
+    set (WAMR_STRINGREF_IMPL_SOURCE "STUB")
 endif ()
 
 if (WAMR_BUILD_GC EQUAL 1)
