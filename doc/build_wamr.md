@@ -184,7 +184,7 @@ The defaults below are guaranteed by [build-scripts](../build-scripts) itself (`
 | `WAMR_BUILD_WASI_EPHEMERAL_NN` | `WAMR_BUILD_WASI_NN` enabled | `WASM_ENABLE_WASI_EPHEMERAL_NN` |
 
 > [!NOTE]
-> Feature flags without defaults inside `build-scripts` — for example `WAMR_BUILD_INTERP`, `WAMR_BUILD_AOT`, `WAMR_BUILD_FAST_INTERP`, `WAMR_BUILD_LIBC_BUILTIN`, `WAMR_BUILD_LIBC_WASI`, `WAMR_BUILD_SIMD`, `WAMR_BUILD_REF_TYPES` (usually on), and `WAMR_BUILD_JIT`, `WAMR_BUILD_FAST_JIT`, `WAMR_BUILD_MULTI_MODULE` and friends (usually off) — get their defaults from the top-level build entry, such as the repository root [CMakeLists.txt](../CMakeLists.txt) or the `product-mini` platform files. `runtime_lib.cmake` only forces some of them when the engine options require it: LLVM JIT forces AOT on, LLVM JIT/fast JIT force the classic interpreter on (`WAMR_BUILD_INTERP=1`, `WAMR_BUILD_FAST_INTERP=0`), and GC forces reference types on. Inside `build-scripts` itself, `WAMR_BUILD_GC`, `WAMR_BUILD_MEMORY64`, `WAMR_BUILD_MULTI_MEMORY`, `WAMR_BUILD_SHARED_MEMORY`, `WAMR_BUILD_STRINGREF`, `WAMR_BUILD_TAIL_CALL`, `WAMR_BUILD_EXCE_HANDLING`, `WAMR_BUILD_EXTENDED_CONST_EXPR`, and `WAMR_BUILD_LIME1` default to off. Individual `product-mini` platforms may still override any of the defaults above.
+> Feature flags without defaults inside `build-scripts` — for example `WAMR_BUILD_INTERP`, `WAMR_BUILD_AOT`, `WAMR_BUILD_LIBC_BUILTIN`, `WAMR_BUILD_LIBC_WASI`, `WAMR_BUILD_SIMD`, `WAMR_BUILD_REF_TYPES` (usually on), and `WAMR_BUILD_JIT`, `WAMR_BUILD_FAST_JIT`, `WAMR_BUILD_MULTI_MODULE` and friends (usually off) — get their defaults from the top-level build entry, such as the repository root [CMakeLists.txt](../CMakeLists.txt) or the `product-mini` platform files. `runtime_lib.cmake` only forces some of them when the engine options require it: LLVM JIT forces AOT on, LLVM JIT/fast JIT force the classic interpreter on (`WAMR_BUILD_INTERP=1`, `WAMR_BUILD_FAST_INTERP=0`), and GC forces reference types on. Inside `build-scripts` itself, `WAMR_BUILD_GC`, `WAMR_BUILD_MEMORY64`, `WAMR_BUILD_MULTI_MEMORY`, `WAMR_BUILD_SHARED_MEMORY`, `WAMR_BUILD_FAST_INTERP`, `WAMR_BUILD_TAIL_CALL`, `WAMR_BUILD_EXCE_HANDLING`, `WAMR_BUILD_EXTENDED_CONST_EXPR`, and `WAMR_BUILD_LIME1` default to off. Individual `product-mini` platforms may still override any of the defaults above.
 
 ### **Configure platform and architecture**
 
@@ -204,7 +204,7 @@ cmake -DWAMR_BUILD_PLATFORM=linux -DWAMR_BUILD_TARGET=ARM
 
 - **WAMR_BUILD_INTERP**=1/0: turn the WASM interpreter on or off.
 
-- **WAMR_BUILD_FAST_INTERP**=1/0: pick fast (default) or classic interpreter.
+- **WAMR_BUILD_FAST_INTERP**=1/0: pick the fast or the classic interpreter. `build-scripts` defaults it to 0, the classic interpreter; most build entries, including every `product-mini` platform, set it to 1.
 
 > [!NOTE]
 > The fast interpreter runs ~2X faster than classic interpreter, but consumes about 2X memory to hold the pre-compiled code.

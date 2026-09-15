@@ -420,10 +420,6 @@ if (NOT DEFINED WAMR_BUILD_FUZZ_TEST)
   set (WAMR_BUILD_FUZZ_TEST 0)
 endif ()
 
-########################################
-# Compilation options to marco
-########################################
-
 if (WAMR_BUILD_LIME1 EQUAL 1)
   set (WAMR_BUILD_BULK_MEMORY_OPT 1)
   set (WAMR_BUILD_CALL_INDIRECT_OVERLONG 1)
@@ -438,7 +434,37 @@ if (WAMR_BUILD_REF_TYPES EQUAL 1)
   set (WAMR_BUILD_CALL_INDIRECT_OVERLONG 1)
 endif ()
 
+if (NOT DEFINED WAMR_BUILD_INTERP)
+  set (WAMR_BUILD_INTERP 0)
+endif ()
+
+if (NOT DEFINED WAMR_BUILD_AOT)
+  set (WAMR_BUILD_AOT 0)
+endif ()
+
+if (NOT DEFINED WAMR_BUILD_JIT)
+  set (WAMR_BUILD_JIT 0)
+endif ()
+
+if (NOT DEFINED WAMR_BUILD_LAZY_JIT)
+  set (WAMR_BUILD_LAZY_JIT 0)
+endif ()
+
+if (NOT DEFINED WAMR_BUILD_FAST_JIT)
+  set (WAMR_BUILD_FAST_JIT 0)
+endif ()
+
+if (NOT DEFINED WAMR_BUILD_FAST_INTERP)
+  set (WAMR_BUILD_FAST_INTERP 0)
+endif ()
+
 include(${CMAKE_CURRENT_LIST_DIR}/unsupported_combination.cmake)
+
+########################################
+# Compilation options to marco
+# If a compilation option is enabled, the corresponding macro will be defined.
+# Otherwise, core/config.h will take care of defining the macro with its default value.
+########################################
 
 message ("-- Build Configurations:")
 message ("     Build as target ${WAMR_BUILD_TARGET}")
