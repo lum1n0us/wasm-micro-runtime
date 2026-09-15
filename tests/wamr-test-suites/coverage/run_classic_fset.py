@@ -7,10 +7,20 @@
 
 Runs one canned report object:
   * running mode: classic-interp
-  * feature set F: the classic interpreter with the libc-builtin runtime,
-    shared heap, global heap pool and custom-section loading, plus the
-    spec-test exemptions (SPEC_TEST / BULK_MEMORY / REF_TYPES)
-  * test set: spec + unit (compatible targets only)
+  * feature set F: the classic interpreter with the libc-builtin runtime
+  * test set: spec + unit (the unit targets whose configuration is exactly F)
+
+F is written in the compile-macro plane, as the compiler sees it, and is a
+complete configuration declaration: a macro it does not mention is 0.  The
+report therefore contains the unit suites that are built with exactly this
+configuration, and nothing else -- no suite is pulled in with a configuration
+the report does not declare.  Adding a macro here narrows the selection (and
+`run_coverage.py` warns when an enabled macro has no unit target at all), so
+this list is the single knob for what the unit half of the report covers.
+
+Note that F describes the *unit* targets only: the spec layer is configured by
+test_wamr.sh itself (the running-mode flags plus the --spec switches) and is not
+gated on F.
 
 Usage (from anywhere in the repository):
   python3 tests/wamr-test-suites/coverage/run_classic_fset.py \
@@ -26,15 +36,17 @@ COVERAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(COVERAGE_DIR)))
 RUN_COVERAGE = os.path.join(COVERAGE_DIR, "run_coverage.py")
 
-# The report's feature set, spelled out the way --feature expects it.
+# The report's feature set F, spelled out the way --feature expects it: the
+# macros the unit targets must have been compiled with.  It follows the values
+# the classic unit suites resolve to (INTERP is the mode, BULK_MEMORY /
+# BULK_MEMORY_OPT / SHRUNK_MEMORY are cmake defaults and therefore have to be
+# written out here), plus LIBC_BUILTIN for the runtime under test.
 FEATURE_SET = " ".join([
-    "-DWAMR_BUILD_LIBC_BUILTIN=1",
-    "-DWAMR_BUILD_SHARED_HEAP=1",
-    "-DWAMR_BUILD_GLOBAL_HEAP_POOL=1",
-    "-DWAMR_BUILD_LOAD_CUSTOM_SECTION=1",
-    "-DWAMR_BUILD_SPEC_TEST=1",
-    "-DWAMR_BUILD_BULK_MEMORY=1",
-    "-DWAMR_BUILD_REF_TYPES=1",
+    "-DWASM_ENABLE_INTERP=1",
+    "-DWASM_ENABLE_LIBC_BUILTIN=1",
+    "-DWASM_ENABLE_BULK_MEMORY=1",
+    "-DWASM_ENABLE_BULK_MEMORY_OPT=1",
+    "-DWASM_ENABLE_SHRUNK_MEMORY=1",
 ])
 
 

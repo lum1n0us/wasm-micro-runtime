@@ -13,21 +13,29 @@ collect_coverage_gcovr.py).
 
 A "report object" is one or more (running mode × spec options × feature set)
 combinations; the fingerprint of a report is the normalized serialization of
-its combinations:
+what it is made of:
 
-    fingerprint = running-modes + spec options + feature set
+    fingerprint = running modes + spec options + selected unit targets and
+                  their macro sets
 
-The report's feature set F is what the user spells out as cmake switches
-(--feature), e.g. '--feature "-DWAMR_BUILD_GC=1"'.  It is completed and used
-only to decide which unit targets belong to the report -- it is never injected
-into a build.
+The unit half comes from the build plan rather than from the spelling of F, so
+two spellings of the same configuration identify the same report.
 
-Unit compatibility: the unit build for each mode is configured with
--DCMAKE_EXPORT_COMPILE_COMMANDS=ON; the generated compile_commands.json is
-parsed (coverage_compile_commands.py) and every target is checked against F
-(rule 1: F=1 features must be enabled; rule 2: F=0 features must not be
-enabled).  Only compatible targets' build directories are collected, and the
-unmatched targets are written to the report as the "unmatched list".
+The report's feature set F is what the user spells out as compile macros
+(--feature), e.g. '--feature "-DWASM_ENABLE_GC=1"'.  It is a complete
+configuration declaration (coverage_features.py) and is used only to decide
+which unit targets belong to the report -- it is never injected into a build.
+
+Unit target selection: the unit build of each mode is configured (nothing is
+built yet) with -DCMAKE_EXPORT_COMPILE_COMMANDS=ON; the resulting
+compile_commands.json is cmake's build *plan*, and coverage_targets.py reads
+each target's name, suite build directory and macro set out of it.  A target
+belongs to the report when the macros it enables are exactly the macros F
+enables, and a suite belongs to the report when all of its targets do -- a
+suite is the unit that is built, run by ctest and collected.  Only then are the
+selected targets built and their suites tested, and only those suite build
+directories are collected.  Feature sets the unit suites cannot cover are
+reported as warnings, never silently filtered away.
 
 The spec layer runs through test_wamr.sh, which always gets `-s spec -b`
 (spec suite, wabt binary release instead of compiling it); --spec only carries
@@ -39,9 +47,9 @@ Regression tests are NOT part of this tool.
 Examples:
   # classic-interp with a curated feature set + spec + unit
   python3 run_coverage.py --report classic-fset --mode classic-interp \
-      --feature "-DWAMR_BUILD_LIBC_BUILTIN=1 -DWAMR_BUILD_SHARED_HEAP=1 \
-                 -DWAMR_BUILD_GLOBAL_HEAP_POOL=1 -DWAMR_BUILD_SPEC_TEST=1 \
-                 -DWAMR_BUILD_BULK_MEMORY=1 -DWAMR_BUILD_REF_TYPES=1" \
+      --feature "-DWASM_ENABLE_INTERP=1 -DWASM_ENABLE_LIBC_BUILTIN=1 \
+                 -DWASM_ENABLE_BULK_MEMORY=1 -DWASM_ENABLE_BULK_MEMORY_OPT=1 \
+                 -DWASM_ENABLE_SHRUNK_MEMORY=1" \
       --unit --out build/coverage
 
   # GC spec variant: test_wamr.sh -s spec -b -t classic-interp -C -G
@@ -66,11 +74,15 @@ import subprocess
 import sys
 
 from coverage_features import (
-    MODE_FEATURE_VALUES,
-    expand_features,
+    config_macro_names,
     feature_flags_for,
+    parse_feature_flags,
 )
-from coverage_compile_commands import load_and_filter
+from coverage_targets import (
+    parse_compile_commands,
+    select,
+    warnings_for,
+)
 
 COVERAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 TESTS_DIR = os.path.dirname(COVERAGE_DIR)                    # tests/wamr-test-suites
@@ -78,8 +90,6 @@ WAMR_DIR = os.path.dirname(os.path.dirname(TESTS_DIR))       # repository root
 COLLECTOR = os.path.join(COVERAGE_DIR, "collect_coverage_gcovr.py")
 UNIT_DIR = os.path.join(WAMR_DIR, "tests", "unit")
 IWEAM_PLATFORM_DIR = os.path.join(WAMR_DIR, "product-mini", "platforms")
-
-RUNNING_MODES = sorted(MODE_FEATURE_VALUES)
 
 # test_wamr.sh COMPILE_FLAGS equivalents per running mode.
 MODE_BUILD_FLAGS = {
@@ -118,6 +128,8 @@ MODE_BUILD_FLAGS = {
     ),
 }
 
+RUNNING_MODES = sorted(MODE_BUILD_FLAGS)
+
 
 def platform() -> str:
     return subprocess.run(
@@ -140,15 +152,18 @@ def spec_build_dir() -> str:
     return os.path.join(IWEAM_PLATFORM_DIR, platform(), "build")
 
 
-def fingerprint(combos) -> str:
-    """Normalized fingerprint of the report's combinations.  The feature set is
-    serialized from the expanded F, so the flag order does not matter."""
+def fingerprint(combos, facts) -> str:
+    """Normalized fingerprint of the report's combinations.
+
+    `facts` is the per-combination selection record (Selection.facts(), empty
+    for a combination that has no unit build), so the fingerprint is derived
+    from the build plan the report was selected from -- the selected targets
+    and their macro sets -- rather than from the user's spelling of F."""
     parts = []
-    for combo in combos:
+    for combo, fact in zip(combos, facts):
         parts.append(combo["mode"])
         parts.append(combo.get("spec", ""))
-        parts.append(feature_flags_for(
-            expand_features(combo.get("features", ""), combo["mode"])))
+        parts.append(fact)
     raw = "||".join(parts)
     return hashlib.sha1(raw.encode()).hexdigest()[:16]
 
@@ -246,19 +261,20 @@ def run_spec(workdir, mode, spec_opts=""):
     return snapshot
 
 
-def run_unit(workdir, mode, llvm_dir, coverage, full_test=False):
-    """Configure + build + test the unit suites for one running mode, then
-    filter the build directories by compile_commands.json compatibility.
+def configure_unit(workdir, mode, llvm_dir, coverage, full_test=False):
+    """Configure the unit build of one running mode and return its build dir.
 
-    The report's feature set F is deliberately NOT injected into the unit
+    Nothing is built here: the configure is what writes compile_commands.json,
+    i.e. the build plan the target selection is made from.  That is also why
+    the report's feature set F is deliberately NOT injected into the unit
     configure: every suite (including the llm-enhanced-test ones under
     FULL_TEST=ON) declares the feature values its own test plan needs via
     set(WAMR_BUILD_*), and injecting top-level -DWAMR_BUILD_*=1 flags would
     turn core code on for suites whose curated source lists do not link the
     matching wrapper (e.g. SHARED_HEAP=1 breaks llm interpreter-core).
-    compile_commands.json therefore records exactly what each suite built,
-    and the compatibility check against F (coverage_compile_commands.py)
-    decides which of those targets belong to the report's denominator."""
+    compile_commands.json therefore records exactly what each suite builds, and
+    the selection (coverage_targets.py) decides which of those targets belong
+    to the report."""
     build_dir = os.path.join(workdir, f"unittest-build-{mode}")
     cmake_args = [
         "cmake", "-S", UNIT_DIR, "-B", build_dir,
@@ -307,17 +323,35 @@ def run_unit(workdir, mode, llvm_dir, coverage, full_test=False):
                   f"{_attempt + 1}/3); retrying...")
     else:
         raise last_exc
-    jobs = os.cpu_count() or 4
-    subprocess.run(
-        ["cmake", "--build", build_dir, "-j", str(min(jobs, 8))], check=True)
-    subprocess.run(
-        ["ctest", "--test-dir", build_dir, "--output-on-failure"],
-        check=True,
-    )
     return build_dir
 
 
+def build_and_run_unit(build_dir, selection):
+    """Build the selected targets and run the selected suites.
+
+    Only the selected targets are built (`cmake --build --target`), and only
+    the selected suites are run: ctest is organized per suite, so each suite's
+    own CTestTestfile.cmake is the run unit.  A suite is selected only when all
+    of its targets match F, so "the selected targets of a suite" is the whole
+    suite -- the build and the run cannot disagree."""
+    if not selection.matched:
+        print("unit: F selects no target; skipping the build and the test run")
+        return
+    jobs = os.cpu_count() or 4
+    subprocess.run(
+        ["cmake", "--build", build_dir, "-j", str(min(jobs, 8)),
+         "--target"] + sorted(selection.matched), check=True)
+    for suite in sorted(selection.suites):
+        subprocess.run(
+            ["ctest", "--test-dir", os.path.join(build_dir, suite),
+             "--output-on-failure"], check=True)
+
+
 def collect(build_dirs, out_dir):
+    if not build_dirs:
+        print(f"WARNING: nothing to collect for {out_dir}: no spec data and no "
+              "selected unit suite.  No report was written.")
+        return
     cmd = [sys.executable, COLLECTOR, "--out", out_dir] + build_dirs
     subprocess.run(cmd, check=True)
 
@@ -327,27 +361,72 @@ def run_report(name, combos, out_root, unit, llvm_dir, coverage,
     workdir = os.path.join(out_root, "_work", name)
     os.makedirs(workdir, exist_ok=True)
 
-    fp = fingerprint(combos)
-    out_dir = os.path.join(out_root, f"{name}_{fp}")
-    os.makedirs(out_dir, exist_ok=True)
-
-    all_build_dirs = []
-
+    # Phase 1: configure the unit build of every combination and select its
+    # targets.  The selection reads cmake's build plan, so it happens after
+    # the configure and before anything is built or run; the spec layer is not
+    # touched yet, so the feature-set warnings below are printed before it
+    # starts.
+    prepared = []
+    facts = []
     for combo in combos:
         mode = combo["mode"]
         features = combo.get("features", "")
-        spec_opts = combo.get("spec", "")
-        f = expand_features(features, mode)
+        f = parse_feature_flags(features) or None
         print(f"\n=== report '{name}' / mode '{mode}' ===")
-        if not features.split():
-            print("F = (no feature constraint: every unit suite keeps its own "
-                  "CMakeLists values)\n")
+        if f is None:
+            print("F = (none: every unit target belongs to the report)\n")
         else:
-            print(f"F = {feature_flags_for(f)}\n")
-            print("(F is not injected into the unit configure: each suite "
-                  "declares its own; compile_commands.json and the "
-                  "compatibility check below select the report's unit targets)\n")
-        print(f"spec options: -s spec -b {spec_opts or '(no extra switch)'}\n")
+            print(f"F = {feature_flags_for(f)}")
+            print("(F is a complete configuration declaration in the compile-"
+                  "macro plane; a macro it does not mention is 0.  It is not "
+                  "injected into the unit configure: each suite declares its "
+                  "own, and compile_commands.json selects the report's unit "
+                  "targets from the result)\n")
+
+        entry = {"combo": combo, "selection": None, "unit_dir": None,
+                 "report": ""}
+        if unit:
+            unit_dir = configure_unit(workdir, mode, llvm_dir, coverage,
+                                      full_test)
+            targets = parse_compile_commands(
+                os.path.join(unit_dir, "compile_commands.json"), unit_dir)
+            selection = select(targets, f)
+            known = config_macro_names() | {
+                macro for target in targets.values() for macro in target.macros}
+            warnings = warnings_for(selection, known)
+            print(f"unit: {len(targets)} targets in the build plan, "
+                  f"{len(selection.matched)} selected in "
+                  f"{len(selection.suites)} suites, "
+                  f"{len(selection.skipped)} suites skipped, "
+                  f"{len(selection.partial)} suites excluded (partial match)")
+            for warning in warnings:
+                print(f"WARNING: {warning}")
+            entry["unit_dir"] = unit_dir
+            entry["selection"] = selection
+            entry["report"] = (
+                f"mode={mode}\nspec={combo.get('spec', '') or '(none)'}\n"
+                f"features={features or '(none)'}\n\n"
+                + selection.describe(warnings))
+        prepared.append(entry)
+        facts.append(entry["selection"].facts() if entry["selection"] else "")
+
+    # The fingerprint describes the build plan the report was selected from,
+    # so it needs the selection and can only be taken here -- after the
+    # configure, still before any build, test run or collection.
+    fp = fingerprint(combos, facts)
+    out_dir = os.path.join(out_root, f"{name}_{fp}")
+    os.makedirs(out_dir, exist_ok=True)
+    with open(os.path.join(out_dir, "unit-selection.txt"), "w") as fh:
+        fh.write("\n\n".join(entry["report"] for entry in prepared
+                             if entry["report"]))
+        fh.write("\n")
+
+    # Phase 2: run everything the selection kept.
+    all_build_dirs = []
+    for entry in prepared:
+        combo = entry["combo"]
+        mode = combo["mode"]
+        spec_opts = combo.get("spec", "")
 
         # spec layer: test_wamr.sh builds its own iwasm (fixed configuration,
         # mode flags + mandatory SPEC_TEST/BULK_MEMORY/REF_TYPES) and runs the
@@ -355,55 +434,18 @@ def run_report(name, combos, out_root, unit, llvm_dir, coverage,
         # spec_build_dir() points at.  run_spec wiped the dir first (no stale
         # objects from other configurations) and returns a snapshot of it,
         # which is what we collect from.
+        print(f"spec options: -s spec -b {spec_opts or '(no extra switch)'}",
+              flush=True)
         spec_snapshot = run_spec(workdir, mode, spec_opts)
         if spec_snapshot:
             all_build_dirs.append(spec_snapshot)
 
-        if unit:
-            unit_dir = run_unit(workdir, mode, llvm_dir, coverage,
-                                full_test)
-            cc_path = os.path.join(unit_dir, "compile_commands.json")
-            (compatible, incompatible, unmatched, missing,
-             dir_violations, dir_coverage_missing) = load_and_filter(
-                cc_path, f, mode, UNIT_DIR)
-            print(f"unit targets compatible with F: {compatible}")
-            print(f"unit targets incompatible (excluded): {incompatible}")
-            for t, c in unmatched:
-                print(f"  - {t}: {c}")
-            print("rule-1 gap warnings (F=1 features with no unit source):")
-            for m in missing:
-                print(f"  - {m}")
-            print("denominator #2 dir violations (F=0 dirs compiled):")
-            for v in dir_violations:
-                print(f"  - {v}")
-            print("denominator #2 coverage missing (F=1 dirs absent):")
-            for m in dir_coverage_missing:
-                print(f"  - {m}")
-            with open(os.path.join(out_dir, "unmatched.txt"), "w") as fh:
-                fh.write(f"mode={mode} spec={spec_opts or '(none)'}\n"
-                         f"features={features or '(none)'}\n")
-                fh.write("compatible targets:\n")
-                for t in compatible:
-                    fh.write(f"  {t}\n")
-                fh.write("incompatible targets (excluded from coverage):\n")
-                for t, c in unmatched:
-                    fh.write(f"  {t}: {c}\n")
-                fh.write("rule-1 gap warnings (F=1 features with no unit "
-                         "source):\n")
-                for m in missing:
-                    fh.write(f"  {m}\n")
-                fh.write("denominator #2 dir violations (F=0 dirs compiled):\n")
-                for v in dir_violations:
-                    fh.write(f"  {v}\n")
-                fh.write("denominator #2 coverage missing (F=1 dirs absent):\n")
-                for m in dir_coverage_missing:
-                    fh.write(f"  {m}\n")
-
-            # collect only the compatible targets' build dirs
-            for target in compatible:
-                target_dir = os.path.join(unit_dir, target)
-                if os.path.isdir(target_dir):
-                    all_build_dirs.append(target_dir)
+        if entry["selection"] is not None:
+            build_and_run_unit(entry["unit_dir"], entry["selection"])
+            # collect from the selected suites' build dirs (a suite is the
+            # unit ctest and the collector work on)
+            all_build_dirs.extend(
+                entry["selection"].build_dirs(entry["unit_dir"]))
 
     collect(all_build_dirs, out_dir)
 
@@ -494,18 +536,19 @@ def main():
     )
     parser.add_argument(
         "--feature", action="append", default=[],
-        help="Feature set F of the current report, as cmake switches; "
-             "repeatable.  E.g. --feature \"-DWAMR_BUILD_GC=1\".  Listed "
-             "features are 1, every other known feature is 0, cmake's implied "
-             "features are added, and the mode features follow --mode.  "
-             "Default (not given): no feature constraint -- only the mode "
-             "features are fixed and each unit suite keeps the values its own "
-             "CMakeLists declares.  F selects the report's unit targets; it is "
-             "not injected into the build.",
+        help="Feature set F of the current report, as compile macros; "
+             "repeatable.  E.g. --feature \"-DWASM_ENABLE_GC=1\".  F is a "
+             "complete configuration declaration: the listed macros are 1 and "
+             "every other macro is 0, so a unit target belongs to the report "
+             "only when the macros it enables are exactly these.  Default (not "
+             "given): no constraint -- every unit target belongs to the "
+             "report, each suite keeping the values its own CMakeLists "
+             "declares.  F selects the report's unit targets; it is not "
+             "injected into the build.",
     )
     parser.add_argument("--unit", action="store_true",
-                        help="Run the unit tests and merge their coverage "
-                             "(compatible targets only).")
+                        help="Configure, build and run the unit tests whose "
+                             "targets match F, and merge their coverage.")
     parser.add_argument("--full-test", action="store_true",
                         help="With --unit, build every unit suite including "
                              "the llm-enhanced-test submodule suites "
@@ -553,8 +596,8 @@ def main():
         spec = args.spec[i] if i < n_specs else ""
         features = args.feature[i] if i < n_features else ""
         try:
-            expand_features(features, mode)
-        except (ValueError, KeyError) as exc:
+            parse_feature_flags(features)
+        except ValueError as exc:
             parser.error(f"report '{report}': {exc}")
         reports.append({
             "name": report,

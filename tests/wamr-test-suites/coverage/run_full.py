@@ -10,9 +10,11 @@ Drives run_coverage.py once per report object and merges all of them:
   * `spec-<variant>` - classic-interp plus one test_wamr.sh switch (-G GC,
     -e exception handling, -N extended const expression, -W memory64,
     -E multi-memory, -p threads); the `default` variant adds no switch.
-  * `unit-<mode>`    - `<mode>` with no feature constraint (every suite keeps
-    the values its own CMakeLists declares) and FULL_TEST=ON, i.e. all unit
-    suites including the llm-enhanced-test submodule ones.
+  * `unit-<mode>`    - `<mode>` with no feature constraint (so every unit
+    target of the build belongs to the report and each suite keeps the values
+    its own CMakeLists declares) and, by default, FULL_TEST=ON, i.e. all unit
+    suites including the llm-enhanced-test submodule ones.  Pass
+    --no-full-test to leave FULL_TEST off and run the tests/unit suites only.
 
 Each report is written to <out>/<name>_<fingerprint>/; the union of all of
 them is written to <out>/_merged/.  (The spec reports keep a copy of each
@@ -21,6 +23,7 @@ able to see the spec data of every variant.)
 
 Usage (from anywhere in the repository):
   python3 tests/wamr-test-suites/coverage/run_full.py [--out DIR] [--llvm-dir DIR]
+                                                      [--no-full-test]
 """
 
 import argparse
@@ -61,11 +64,18 @@ def main():
                         help="LLVM cmake config dir passed on to "
                              "run_coverage.py; leave empty to use its default "
                              "(the bundled LLVM build).")
+    parser.add_argument("--no-full-test", dest="full_test",
+                        action="store_false", default=True,
+                        help="Do not pass --full-test to the unit reports: "
+                             "build the tests/unit suites only, without the "
+                             "llm-enhanced-test submodule ones (FULL_TEST=OFF).")
     args = parser.parse_args()
 
     common = ["--out", args.out]
     if args.llvm_dir:
         common += ["--llvm-dir", args.llvm_dir]
+
+    unit_flags = ["--unit"] + (["--full-test"] if args.full_test else [])
 
     reports = []
     for variant, spec_opts in SPEC_VARIANTS:
@@ -76,8 +86,8 @@ def main():
     for mode in UNIT_MODES:
         report = f"unit-{mode}"
         reports.append(report)
-        run_coverage(["--report", report, "--mode", mode,
-                      "--unit", "--full-test"] + common)
+        run_coverage(["--report", report, "--mode", mode] + unit_flags
+                     + common)
 
     merge = []
     for report in reports:
