@@ -1,0 +1,30 @@
+name: probe check run
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        required: true
+      check_name:
+        required: true
+        default: "ubuntu CI"
+      conclusion:
+        required: true
+        default: "failure"
+permissions:
+  checks: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: write a check run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST "repos/${{ github.repository }}/check-runs" \
+            -f name="${{ inputs.check_name }}" \
+            -f head_sha="${{ inputs.sha }}" \
+            -f status=completed \
+            -f conclusion="${{ inputs.conclusion }}" \
+            -f output[title]="probe ${{ inputs.conclusion }}" \
+            -f output[summary]="probe check run for semantics experiment" \
+            --jq '"created id=\(.id) app=\(.app.slug) concl=\(.conclusion)"'
