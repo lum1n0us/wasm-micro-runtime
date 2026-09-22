@@ -7576,3 +7576,4 @@ wasm_interp_call_wasm(WASMModuleInstance *module_inst, WASMExecEnv *exec_env,
         FREE_FRAME(exec_env, frame);
     }
 }
+/* gate test PR-D 2026-09-22T04:31:51Z */
