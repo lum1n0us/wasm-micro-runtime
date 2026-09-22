@@ -35,3 +35,4 @@ file (GLOB_RECURSE source_all
 
 set (MEM_ALLOC_SHARED_SOURCE ${source_all})
 
+# gate test PR-C 2026-09-22T06:05:19Z
