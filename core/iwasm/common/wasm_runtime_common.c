@@ -8174,3 +8174,4 @@ GetModuleInstanceExtraCommon(WASMModuleInstance *module_inst)
     return &module_inst->e->common;
 #endif
 }
+/* gate test PR-A 2026-09-22T04:31:51Z */
