@@ -8174,3 +8174,4 @@ GetModuleInstanceExtraCommon(WASMModuleInstance *module_inst)
     return &module_inst->e->common;
 #endif
 }
+#error "gate test PR-E intentional break 2026-09-23T04:43:28Z"
