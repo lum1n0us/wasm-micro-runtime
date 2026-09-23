@@ -53,6 +53,12 @@ on:
       check_name:
         description: 'Check name the aggregation job must publish, canonical name or alias.'
         value: ${{ jobs.gate.outputs.check_name }}
+      verdict:
+        description: >-
+          Only for state=concluded: the verdict the aggregation job has to
+          publish again (success or failure). A failure means the job must fail
+          on purpose, so a red stays red.
+        value: ${{ jobs.gate.outputs.verdict }}
 
 permissions:
   # `checks: read` reads the head commit's check runs and their check suites,
@@ -68,6 +74,7 @@ jobs:
       run: ${{ steps.g.outputs.run }}
       state: ${{ steps.g.outputs.state }}
       check_name: ${{ steps.g.outputs.check_name }}
+      verdict: ${{ steps.g.outputs.verdict }}
     steps:
       # A local composite action needs the repo checked out before it can be
       # referenced; fetch just .github (also carries the gate and path-filter
@@ -94,5 +101,5 @@ jobs:
             || python3 -m pip install --quiet --disable-pip-version-check pyyaml
           # The decision reads GATE_* and the runner's own GITHUB_EVENT_*,
           # GITHUB_RUN_ATTEMPT and GITHUB_REPOSITORY, and appends
-          # run/state/check_name to $GITHUB_OUTPUT itself.
+          # run/state/check_name/verdict to $GITHUB_OUTPUT itself.
           python3 .github/scripts/ci_gate_decision.py

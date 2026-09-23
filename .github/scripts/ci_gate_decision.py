@@ -29,12 +29,18 @@ from typing import Callable
 # or whatever a killed run left behind - is not a verdict.
 VALID_CONCLUSIONS = ("success", "failure")
 
-# Only a run that really executed CI, and a path-filter skip, may publish the
-# canonical check name. Every other state publishes an alias, so a gate that
-# decided not to run can never overwrite the verdict that stands on the
-# required check.
-CANONICAL_STATES = ("run", "skipped")
-ALIAS_SUFFIX = {"push": "on push", "awaiting": "awaiting approval", "concluded": "approved"}
+# States that may publish the canonical check name:
+#   - `run` and `skipped` really produced (or explicitly did not need) a
+#     verdict, so the aggregation job's own conclusion is the verdict;
+#   - `concluded` replays the verdict that still stands on this head commit.
+#     It has to publish the canonical name too: GitHub reads a required check
+#     from the *latest run of the workflow that reports it*, so a newer run
+#     that only wrote an alias would hide the standing verdict and leave the
+#     required check at "Expected" - see `_standing_verdict`.
+# Every other state publishes an alias, so a gate that decided not to run (or
+# was interrupted) can never satisfy the required check by accident.
+CANONICAL_STATES = ("run", "skipped", "concluded")
+ALIAS_SUFFIX = {"push": "on push", "awaiting": "awaiting approval"}
 
 # Used when the ruleset cannot be read; these mirror ruleset 2034258.
 DEFAULT_REQUIRED_APPROVALS = 1
@@ -55,14 +61,20 @@ class Decision:
     state: str
     check_name: str
     message: str
+    # Only set for state="concluded": the verdict the aggregation job has to
+    # publish. A "failure" means the job must fail on purpose, so the red stays
+    # red instead of being replaced by the job's own (skipped, hence green)
+    # result.
+    verdict: str = ""
 
 
 def check_name_for(state, canonical):
     """The check name the aggregation job must publish.
 
-    `run` and `skipped` write the canonical name; `push`, `awaiting` and
-    `concluded` write an alias. An unknown state falls back to an alias too, so
-    adding a state later can never overwrite the required name by accident.
+    `run`, `skipped` and `concluded` write the canonical name; `push`,
+    `awaiting` and every unknown state write an alias. An unknown state falls
+    back to an alias too, so adding a state later can never satisfy the
+    required check by accident.
 
     An empty `canonical` gives an empty name in every state: it means the
     caller has no aggregation job and therefore publishes no check at all
@@ -222,8 +234,8 @@ class Gate:
             self.warn(f"the gate could not decide ({type(err).__name__}: {err}); running CI")
             return self._decision(True, "run", "running CI because the gate could not decide")
 
-    def _decision(self, run, state, message) -> Decision:
-        return Decision(run, state, check_name_for(state, self.check_name), message)
+    def _decision(self, run, state, message, verdict="") -> Decision:
+        return Decision(run, state, check_name_for(state, self.check_name), message, verdict)
 
     def _decide_for_pull_request(self, event_name, event) -> Decision:
         pull = event.get("pull_request") or {}
@@ -251,8 +263,17 @@ class Gate:
         # allow it.
         verdict = self._standing_verdict(number, head_sha) if self.check_name else None
         if verdict:
+            # The canonical name has to be published again, not aliased away.
+            # GitHub reads a required check from the latest run of the workflow
+            # that reports it, so a newer run that only wrote an alias leaves
+            # the required check at "Expected" and blocks the merge even though
+            # the verdict is still there (#33 in the fork). A red is replayed by
+            # failing the aggregation job, a green by letting it pass.
             return self._decision(
-                False, "concluded", f"{head_sha} already has a verdict ({verdict}); keeping it"
+                False,
+                "concluded",
+                f"{head_sha} already has a verdict ({verdict}); publishing it again",
+                verdict=verdict,
             )
         return self._decision(True, "run", f"running CI for approved relevant PR SHA {head_sha}")
 
@@ -360,7 +381,13 @@ class Gate:
         return max(stamps) > completed_at
 
     def _standing_verdict(self, number, head_sha):
-        """Question 3: the conclusion that still stands on this head commit."""
+        """Question 3: the conclusion that still stands on this head commit.
+
+        The verdict found here is not just a reason to skip CI: the caller
+        publishes it again on the canonical check name, because GitHub reads a
+        required check from the latest run of the workflow that reports it. The
+        older record alone would not keep the required check satisfied.
+        """
         if self.run_attempt > 1:
             # `gh run rerun` bumps run_attempt (a single-job re-run does too,
             # but then this job does not run again): an explicit re-run wants a
@@ -410,14 +437,16 @@ Input: the workflow event JSON at --event-path, the caller's --check-name and
 --paths, and read-only GitHub API answers about the PR. Every option defaults
 to the environment variable shown with it, so `gate.yml` passes none of them.
 
-Output: `run=true|false`, `state=` and `check_name=` appended to $GITHUB_OUTPUT
-(and echoed on stdout), plus one `::notice::` explaining the decision and a
-`::warning::` per degraded read. Always exits 0 - a gate that cannot decide
-answers `run=true` instead of failing.
+Output: `run=true|false`, `state=`, `check_name=` and `verdict=` appended to
+$GITHUB_OUTPUT (and echoed on stdout), plus one `::notice::` explaining the
+decision and a `::warning::` per degraded read. Always exits 0 - a gate that
+cannot decide answers `run=true` instead of failing.
 
 Caller contract: run from the repository root with .github checked out (this
 script imports pr_touches_paths, which needs pyyaml), gate every expensive job
-on `run`, and name the aggregation job after `check_name`.
+on `run`, name the aggregation job after `check_name`, and make that job fail
+when `state=concluded` and `verdict=failure`. A caller without an aggregation
+job passes no `--check-name` and ignores both outputs.
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -443,7 +472,7 @@ on `run`, and name the aggregation job after `check_name`.
         help="GITHUB_TOKEN; needs checks:read and pull-requests:read",
     )
     parser.add_argument("--output", default=os.environ.get("GITHUB_OUTPUT", ""),
-                        help="GITHUB_OUTPUT; the file the three outputs are appended to")
+                        help="GITHUB_OUTPUT; the file the outputs are appended to")
     args = parser.parse_args(argv)
 
     with open(args.event_path) as handle:
@@ -460,6 +489,7 @@ on `run`, and name the aggregation job after `check_name`.
         f"run={'true' if decision.run else 'false'}",
         f"state={decision.state}",
         f"check_name={decision.check_name}",
+        f"verdict={decision.verdict}",
     ]
     if args.output:
         with open(args.output, "a") as handle:

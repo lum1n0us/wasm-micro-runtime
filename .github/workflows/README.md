@@ -12,7 +12,7 @@ This document specifies the GitHub Actions workflow triggers, approval gates, an
 | **Status Check Enforcement** | Requires canonical status checks to pass before merging. Current mandatory gates: `ubuntu CI` and `coding guidelines`. |
 | **Merge Queue**              | **Disabled** (standard PR merge flow).                                                                                 |
 
-> ℹ️ **Note on Check Evaluation:** GitHub evaluates required checks by their **exact check-run name**. Only two gate outcomes may publish a pipeline's canonical name - a run that really executed CI, and a path-filter skip. Every other outcome publishes an alias (`... awaiting approval`, `... approved`, `... interrupted`), so a gate that decided not to run can never overwrite the verdict that stands on the required name. The aggregation job always runs and takes its name from the gate's `check_name` output, falling back to `... interrupted` when the gate job itself was cancelled.
+> ℹ️ **Note on Check Evaluation:** GitHub evaluates required checks by their **exact check-run name**, and it reads that name from the **newest run of the workflow that reports it** - once a newer run of the same workflow exists, the older record no longer keeps the required check satisfied. Three gate outcomes therefore publish the pipeline's canonical name: a run that really executed CI, a path-filter skip, and a standing verdict that is published again (`success` as it is, `failure` by failing the aggregation job on purpose). Every other outcome publishes an alias (`... awaiting approval`, `... interrupted`), so a gate that decided not to run - or was cancelled - can never satisfy the required check by accident. The aggregation job always runs and takes its name from the gate's `check_name` output, falling back to `... interrupted` when the gate job itself was cancelled.
 
 ### ⚙️ CI Approval & Execution Logic
 
@@ -31,7 +31,7 @@ The decision is stateless - it reads the current approval state and the check ru
 | **Approval without relevant changes**              | Path filtering skips the jobs.                                              | canonical `ubuntu CI` (`success`)                             |
 | **Push / rebase / "Update branch"** (`synchronize`) | Runs for the new head commit while the approval survived. A push that changes the code is dismissed by GitHub, so it waits for a fresh approval instead. | canonical when it runs, otherwise `ubuntu CI awaiting approval` |
 | **Non-approval review / unapproved sync**          | No expensive compute triggered.                                             | alias `ubuntu CI awaiting approval` (`success`)               |
-| **Same head commit already has a verdict**         | Bypasses redundant CI execution; the standing verdict stays.                | alias `ubuntu CI approved` (`success`)                        |
+| **Same head commit already has a verdict**         | Bypasses redundant CI execution, and **publishes that verdict again** - an older record on its own is no longer read. | canonical `ubuntu CI` (the standing `success`, or `failure` replayed) |
 | **Interrupted** (the gate job was cancelled)       | No new record on the canonical name; the next event re-runs the pipeline.   | alias `ubuntu CI interrupted` (`success`)                     |
 
 #### What Counts as a Verdict
@@ -41,6 +41,8 @@ The decision is stateless - it reads the current approval state and the check ru
 | `success` (including a path-filter skip) and `failure` on the head commit. | `cancelled`; the `failure` a killed run left behind, detected through its check suite; a verdict published before an approval was dismissed; a verdict an explicit re-run was asked to redo (`run_attempt > 1`). |
 
 That last row is what makes an explicit re-run the manual fallback below.
+
+Reusing a verdict means **writing it again, not writing an alias**: GitHub has to see the name in the newest run of that workflow. A gate that only published `ubuntu CI approved` left the required check at *Expected - waiting for status to be reported* even though a green `ubuntu CI` record was still on the commit (fork PR #33, 2026-09-22). A replayed `failure` is published the same way it was earned - the aggregation job fails on purpose - so a red can never be turned green by the reuse path.
 
 #### Manual Fallbacks
 

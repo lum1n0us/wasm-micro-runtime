@@ -205,6 +205,14 @@ jobs:
     needs: [gate, smoke_test]
     runs-on: ubuntu-22.04
     steps:
+      # state=concluded republishes the verdict that still stands on this head
+      # commit. A green is published by the steps below; a red has to be
+      # published the same way it was earned - by failing.
+      - name: Replay the standing verdict
+        if: ${{ needs.gate.outputs.state == 'concluded' && needs.gate.outputs.verdict == 'failure' }}
+        run: |
+          echo "::error title=zephyr CI::replaying the failure that still stands on this head commit"
+          exit 1
       - name: Report which dependency failed
         env:
           NEEDS: ${{ toJSON(needs) }}

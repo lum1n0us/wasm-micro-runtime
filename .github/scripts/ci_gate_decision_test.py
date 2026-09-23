@@ -235,17 +235,22 @@ class QuestionTwoPaths(unittest.TestCase):
 
 
 class QuestionThreeStandingVerdict(unittest.TestCase):
-    def test_existing_success_is_reused(self):
+    def test_existing_success_is_published_again(self):
+        # The canonical name has to be written by this run too: GitHub reads a
+        # required check from the latest run of the workflow that reports it,
+        # so an alias here would leave the required check at "Expected".
         client = FakeClient(check_runs=[check_run("success")])
         decision, _ = decide("pull_request_review", review_event(), client)
-        self.assertEqual((decision.run, decision.state, decision.check_name),
-                         (False, "concluded", "ubuntu CI approved"))
+        self.assertEqual((decision.run, decision.state, decision.check_name, decision.verdict),
+                         (False, "concluded", "ubuntu CI", "success"))
 
-    def test_existing_failure_is_reused(self):
+    def test_existing_failure_is_published_again_as_a_failure(self):
+        # A red must stay red: the aggregation job fails on this verdict
+        # instead of publishing its own (green) conclusion.
         client = FakeClient(check_runs=[check_run("failure")])
         decision, _ = decide("pull_request_review", review_event(), client)
-        self.assertEqual((decision.run, decision.state, decision.check_name),
-                         (False, "concluded", "ubuntu CI approved"))
+        self.assertEqual((decision.run, decision.state, decision.check_name, decision.verdict),
+                         (False, "concluded", "ubuntu CI", "failure"))
 
     def test_killed_run_leaves_no_verdict(self):
         # #5083: the record says failure, but its check suite was cancelled.
@@ -264,7 +269,8 @@ class QuestionThreeStandingVerdict(unittest.TestCase):
             suites={1: {"conclusion": "failure"}, 2: {"conclusion": "cancelled"}},
         )
         decision, _ = decide("pull_request_review", review_event(), client)
-        self.assertEqual((decision.run, decision.state), (False, "concluded"))
+        self.assertEqual((decision.run, decision.state, decision.check_name, decision.verdict),
+                         (False, "concluded", "ubuntu CI", "failure"))
 
     def test_only_actions_records_are_verdicts(self):
         client = FakeClient(check_runs=[check_run("success", app="some-other-app")])
@@ -334,11 +340,12 @@ class CheckNames(unittest.TestCase):
     def test_canonical_states(self):
         self.assertEqual(gate.check_name_for("run", "ubuntu CI"), "ubuntu CI")
         self.assertEqual(gate.check_name_for("skipped", "ubuntu CI"), "ubuntu CI")
+        # concluded republishes the canonical name, see _standing_verdict
+        self.assertEqual(gate.check_name_for("concluded", "ubuntu CI"), "ubuntu CI")
 
     def test_aliases(self):
         self.assertEqual(gate.check_name_for("push", "ubuntu CI"), "ubuntu CI on push")
         self.assertEqual(gate.check_name_for("awaiting", "ubuntu CI"), "ubuntu CI awaiting approval")
-        self.assertEqual(gate.check_name_for("concluded", "ubuntu CI"), "ubuntu CI approved")
 
     def test_unknown_state_stays_an_alias(self):
         self.assertEqual(gate.check_name_for("interrupted", "ubuntu CI"), "ubuntu CI interrupted")
