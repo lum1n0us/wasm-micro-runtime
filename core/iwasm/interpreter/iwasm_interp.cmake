@@ -27,3 +27,4 @@ file (GLOB_RECURSE source_all
 
 set (IWASM_INTERP_SOURCE ${source_all})
 
+# gate test PR-D 2026-09-29T03:29:13Z
