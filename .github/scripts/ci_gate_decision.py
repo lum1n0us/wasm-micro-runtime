@@ -242,25 +242,15 @@ class Gate:
         number = pull.get("number")
         head_sha = (pull.get("head") or {}).get("sha")
 
-        if event_name == "pull_request_review":
-            # A submitted review is itself the approval; every other review
-            # state withdraws permission rather than granting it.
-            state = (event.get("review") or {}).get("state") or ""
-            allowed = state == "approved"
-            reason = f"the submitted review is {state or 'unknown'}"
-        else:
-            allowed, reason = self._cleared_for_a_full_run(pull, number)
+        # Review events are only triggers to re-evaluate the PR. A submitted
+        # comment can leave an earlier approval intact, and an approval event
+        # can arrive after the current approval has been dismissed.
+        allowed, reason = self._cleared_for_a_full_run(pull, number)
         if not allowed:
             return self._decision(False, "awaiting", f"skipping CI because {reason}")
 
-        if not self._touches_paths(number):
-            return self._decision(
-                False, "skipped", "skipping CI because the PR does not touch relevant paths"
-            )
-
-        # Without an aggregation job there is no canonical name and so no
-        # verdict to reuse: this pipeline runs whenever the two questions above
-        # allow it.
+        # Verdict reuse depends on the head commit and canonical check name,
+        # not on which paths this pipeline filters.
         verdict = self._standing_verdict(number, head_sha) if self.check_name else None
         if verdict:
             # The canonical name has to be published again, not aliased away.
@@ -275,6 +265,12 @@ class Gate:
                 f"{head_sha} already has a verdict ({verdict}); publishing it again",
                 verdict=verdict,
             )
+
+        if not self._touches_paths(number):
+            return self._decision(
+                False, "skipped", "skipping CI because the PR does not touch relevant paths"
+            )
+
         return self._decision(True, "run", f"running CI for approved relevant PR SHA {head_sha}")
 
     def _ruleset_params(self, base_ref):

@@ -5,7 +5,9 @@
 # `uses:` and gate their real jobs on `needs.gate.outputs.run`. Per event:
 #   - push: runs only on a fork, so upstream never does a full run on a plain
 #     push; upstream push workflows still run the no-op gate to report status.
-#   - pull_request_review (submitted) and pull_request (synchronize): an
+#   - pull_request_review (submitted) and pull_request (synchronize): each
+#     event rechecks the PR's current approval state; the submitted review state
+#     alone is not authoritative (a comment can leave an approval intact). An
 #     approved PR runs CI once per head commit. A new head commit - a push, a
 #     rebase, "Update branch" - is a new version and runs again; the same head
 #     commit whose verdict still stands does not. A head commit that has no

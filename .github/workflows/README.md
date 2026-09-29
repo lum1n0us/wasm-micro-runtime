@@ -19,8 +19,8 @@ This document specifies the GitHub Actions workflow triggers, approval gates, an
 Real upstream CI execution is strictly **approval-gated** to optimize runner resources and enhance security. The gate answers three questions per event, in this order:
 
 1. **Is this PR cleared for a full run?** The PR must be approved for the head commit.
-2. **Does the change touch this pipeline's paths?** If not, the pipeline just passes.
-3. **Does this head commit already have a verdict that still stands?** If it does, the pipeline does not run again.
+2. **Does this head commit already have a verdict that still stands?** If it does, the pipeline republishes it without checking paths or rerunning CI.
+3. **Does the change touch this pipeline's paths?** If not, the pipeline just passes.
 
 The decision is stateless - it reads the current approval state and the check runs published on this head commit, never what happened earlier. That is what lets any later event heal a pipeline whose run was interrupted. The decision itself lives in [`.github/scripts/ci_gate_decision.py`](../scripts/ci_gate_decision.py); `gate.yml` only wires the event and the caller's inputs into it.
 
@@ -30,7 +30,7 @@ The decision is stateless - it reads the current approval state and the check ru
 | **Approval on an unapproved PR** (relevant paths)  | Runs the pipeline for the head commit.                                      | canonical `ubuntu CI` (`success` / `failure`)                 |
 | **Approval without relevant changes**              | Path filtering skips the jobs.                                              | canonical `ubuntu CI` (`success`)                             |
 | **Push / rebase / "Update branch"** (`synchronize`) | Runs for the new head commit while the approval survived. A push that changes the code is dismissed by GitHub, so it waits for a fresh approval instead. | canonical when it runs, otherwise `ubuntu CI awaiting approval` |
-| **Non-approval review / unapproved sync**          | No expensive compute triggered.                                             | alias `ubuntu CI awaiting approval` (`success`)               |
+| **Review event / unapproved sync**                 | Rechecks current approval state, not the submitted review's state. If not approved, no expensive compute is triggered; if approved, the standing verdict is reused or CI runs. | awaiting alias when unapproved; canonical when approved |
 | **Same head commit already has a verdict**         | Bypasses redundant CI execution, and **publishes that verdict again** - an older record on its own is no longer read. | canonical `ubuntu CI` (the standing `success`, or `failure` replayed) |
 | **Interrupted** (the gate job was cancelled)       | No new record on the canonical name; the next event re-runs the pipeline.   | alias `ubuntu CI interrupted` (`success`)                     |
 

@@ -61,7 +61,7 @@ class FakeClient:
     """
 
     def __init__(self, reviews=(), timeline=(), files=("core/iwasm/x.c",), rules=(),
-                 review_decision=None, opinions=(), check_runs=(), suites=None, failing=(),
+                 review_decision="APPROVED", opinions=(), check_runs=(), suites=None, failing=(),
                  broken=()):
         self.answers = {
             "reviews": list(reviews),
@@ -155,8 +155,16 @@ class PushEvents(unittest.TestCase):
 
 
 class QuestionOneFullRun(unittest.TestCase):
-    def test_review_that_is_not_an_approval_waits(self):
-        decision, _ = decide("pull_request_review", review_event("commented"), FakeClient())
+    def test_review_comment_waits_when_current_state_is_not_approved(self):
+        client = FakeClient(review_decision="CHANGES_REQUESTED")
+        decision, _ = decide("pull_request_review", review_event("commented"), client)
+        self.assertEqual((decision.run, decision.state, decision.check_name),
+                         (False, "awaiting", "ubuntu CI awaiting approval"))
+        self.assertIn("approval_state", client.calls)
+
+    def test_approval_event_waits_when_current_state_is_not_approved(self):
+        client = FakeClient(review_decision="CHANGES_REQUESTED")
+        decision, _ = decide("pull_request_review", review_event("approved"), client)
         self.assertEqual((decision.run, decision.state, decision.check_name),
                          (False, "awaiting", "ubuntu CI awaiting approval"))
 
@@ -220,7 +228,8 @@ class QuestionTwoPaths(unittest.TestCase):
         decision, _ = decide("pull_request_review", review_event(), client)
         self.assertEqual((decision.run, decision.state, decision.check_name),
                          (False, "skipped", "ubuntu CI"))
-        self.assertNotIn("check_runs", client.calls)
+        self.assertIn("check_runs", client.calls)
+        self.assertNotIn("check_suite", client.calls)
 
     def test_relevant_path_runs(self):
         client = FakeClient(files=("core/iwasm/x.c",))
@@ -235,6 +244,19 @@ class QuestionTwoPaths(unittest.TestCase):
 
 
 class QuestionThreeStandingVerdict(unittest.TestCase):
+    def test_existing_verdict_is_reused_before_path_filtering(self):
+        client = FakeClient(files=("docs/readme.md",), check_runs=[check_run("success")])
+        decision, _ = decide("pull_request_review", review_event(), client)
+        self.assertEqual((decision.run, decision.state, decision.check_name, decision.verdict),
+                         (False, "concluded", "ubuntu CI", "success"))
+        self.assertNotIn("changed_files", client.calls)
+
+    def test_review_comment_replays_verdict_while_current_state_is_approved(self):
+        client = FakeClient(check_runs=[check_run("success")])
+        decision, _ = decide("pull_request_review", review_event("commented"), client)
+        self.assertEqual((decision.run, decision.state, decision.check_name, decision.verdict),
+                         (False, "concluded", "ubuntu CI", "success"))
+
     def test_existing_success_is_published_again(self):
         # The canonical name has to be written by this run too: GitHub reads a
         # required check from the latest run of the workflow that reports it,
