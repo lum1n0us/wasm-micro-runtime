@@ -5,6 +5,7 @@
 #
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import shlex
@@ -24,8 +25,10 @@ CLANG_TIDY_DIFF_CANDIDATES = [
 ]
 
 # The flag vectors of samples/minimum/CMakePresets.json that between them put
-# every feature macro in both states.  all-off is not optional: it is the only
-# one that compiles the #else branches.
+# every feature macro in both states.  Every one of them is required: the
+# vectors only cover the macros together, so a preset that does not configure
+# leaves a whole configuration unchecked.  all-off is not optional -- it is the
+# only one that compiles the #else branches.
 PRESETS = [
     "all-off",
     "all-on-classic-interp",
@@ -34,6 +37,79 @@ PRESETS = [
     "all-on-fast-jit",
     "all-on-llvm-jit",
 ]
+
+# Where all-on-llvm-jit finds LLVM.  Empty means "let llvm_env.cmake look", which
+# finds the WAMR-bundled build under core/deps/llvm; CI sets it to the llvm-dev
+# package it installs, so the job does not need to build LLVM for a check that
+# only configures.
+LLVM_DIR = os.environ.get("WAMR_LLVM_DIR", "")
+
+# Sources the presets do not configure, so a change in one of them cannot be
+# scanned.  Each line is a reason: a platform the presets do not build, a
+# component they deliberately leave out, a test program with its own build, a
+# vendored copy, third-party code.  A change under one of them is reported and
+# the run continues; a change anywhere else under CRITICAL_PREFIXES has to be in
+# at least one compile DB.
+NOT_IN_PRESETS = (
+    "core/deps/",                       # third-party
+    "core/iwasm/aot/debug/",            # WAMR_BUILD_DEBUG_AOT
+    "core/iwasm/compilation/debug/",    # WAMR_BUILD_DEBUG_AOT
+    # One relocation file per target, and the presets build x86_64.
+    "core/iwasm/aot/arch/aot_reloc_aarch64.c",
+    "core/iwasm/aot/arch/aot_reloc_arc.c",
+    "core/iwasm/aot/arch/aot_reloc_arm.c",
+    "core/iwasm/aot/arch/aot_reloc_dummy.c",
+    "core/iwasm/aot/arch/aot_reloc_mips.c",
+    "core/iwasm/aot/arch/aot_reloc_riscv.c",
+    "core/iwasm/aot/arch/aot_reloc_thumb.c",
+    "core/iwasm/aot/arch/aot_reloc_x86_32.c",
+    "core/iwasm/aot/arch/aot_reloc_xtensa.c",
+    # invokeNative: one implementation per target, and this is the fallback for
+    # the targets that have no assembly entry.
+    "core/iwasm/common/arch/invokeNative_general.c",
+    # WAMR_BUILD_MINI_LOADER takes features away rather than adding them, so the
+    # presets leave it out.
+    "core/iwasm/interpreter/wasm_mini_loader.c",
+    "core/iwasm/libraries/debug-engine/",   # WAMR_BUILD_DEBUG_INTERP
+    "core/iwasm/libraries/lib-rats/",       # WAMR_BUILD_LIB_RATS
+    "core/iwasm/libraries/lib-socket/",     # standalone: no build entry includes it
+    "core/iwasm/libraries/lib-wasi-threads/stress-test/",   # own build.sh
+    "core/iwasm/libraries/lib-wasi-threads/test/",          # own build.sh
+    "core/iwasm/libraries/lib-wasi-threads/unit-test/",     # own build.sh
+    "core/iwasm/libraries/libc-emcc/",      # WAMR_BUILD_LIBC_EMCC
+    "core/iwasm/libraries/libc-uvwasi/",    # deliberately out of the all-on presets
+    # Vendored uvwasi sources; library source list uses the headers only.
+    "core/iwasm/libraries/libc-wasi/sandboxed-system-primitives/",
+    "core/iwasm/libraries/wasi-nn/",        # deliberately out of samples/minimum all-on
+    "core/shared/coap/",                    # no build entry includes it
+    # One directory per platform, and the presets build one of them.
+    "core/shared/platform/alios/",
+    "core/shared/platform/android/",
+    "core/shared/platform/common/freertos/",
+    "core/shared/platform/common/math/",
+    "core/shared/platform/common/memory/",
+    "core/shared/platform/cosmopolitan/",
+    "core/shared/platform/darwin/",
+    "core/shared/platform/ego/",
+    "core/shared/platform/esp-idf/",
+    "core/shared/platform/freebsd/",
+    "core/shared/platform/include/",
+    "core/shared/platform/linux-sgx/",
+    "core/shared/platform/nuttx/",
+    "core/shared/platform/riot/",
+    "core/shared/platform/rt-thread/",
+    "core/shared/platform/vxworks/",
+    "core/shared/platform/windows/",
+    "core/shared/platform/zephyr/",
+    # TODO: generic code that the product entry points compile.  Adding
+    # UNCOMMON_SHARED_SOURCE to the sample's vmlib would cover it instead.
+    "core/shared/utils/uncommon/",
+)
+
+# Where an unchecked source is a coverage regression rather than a gap the
+# presets are known not to cover.  Everything the presets are supposed to build
+# lives under core/.
+CRITICAL_PREFIXES = ("core/",)
 
 # The three outcomes are distinct in the log and in the exit code, because a
 # check that ran nothing must not look like one that ran and found nothing.
@@ -135,52 +211,78 @@ def preset_build_dir(root: Path, preset: str) -> Path:
     return root.joinpath("build", preset)
 
 
-def generate_preset_compile_commands(root: Path, preset: str) -> bool:
+def generate_preset_compile_commands(root: Path, preset: str) -> str:
     """Configure one samples/minimum preset into <repo>/build/<preset>.  No
     build step: the compile DB is a product of configure alone.  -B overrides
     the preset's binaryDir, which keeps this out of the directory a developer
-    configured for themselves under samples/minimum/build/."""
+    configured for themselves under samples/minimum/build/.
+
+    Returns '' on success, otherwise why the preset could not be configured."""
     if not find_command(["cmake"]):
-        return False
+        return "cmake not found"
+
+    command = [
+        "cmake",
+        "--preset",
+        preset,
+        "-B",
+        str(preset_build_dir(root, preset)),
+        f"-DCMAKE_TOOLCHAIN_FILE={clang_toolchain(root)}",
+    ]
+    if LLVM_DIR:
+        command.append("-DWAMR_BUILD_WITH_CUSTOM_LLVM=1")
+        command.append(f"-DLLVM_DIR={LLVM_DIR}")
 
     result = subprocess.run(
-        [
-            "cmake",
-            "--preset",
-            preset,
-            "-B",
-            str(preset_build_dir(root, preset)),
-            f"-DCMAKE_TOOLCHAIN_FILE={clang_toolchain(root)}",
-        ],
+        command,
         cwd=root.joinpath("samples", "minimum"),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         universal_newlines=True,
     )
     if result.returncode != 0:
-        print(f"--- clang-tidy: preset {preset} failed to configure, skipping it")
-        return False
+        return f"preset {preset} failed to configure"
 
-    return True
+    return ""
 
 
-def resolve_build_dirs(root: Path) -> list:
+def resolve_build_dirs(root: Path) -> tuple:
     """The (preset, build directory) pairs to scan with, in report order.
 
     Every preset is re-configured on every run.  A compile DB left over from
     an earlier commit describes the source files and feature flags of that
     commit, and a change to either is exactly the kind of thing this check is
-    supposed to notice."""
+    supposed to notice.
+
+    Every preset is required, so a preset that does not configure is reported
+    as a failure: the flag vectors only cover the feature macros together, and a
+    missing preset means a whole configuration went unchecked.  CI provides what
+    the presets need (LLVM for all-on-llvm-jit, see LLVM_DIR); on a developer's
+    machine missing tooling is skipped the way a missing clang-tidy is, see
+    unavailable().
+
+    Returns (build_dirs, failure_reason); failure_reason is '' on success."""
     build_dirs = []
     for preset in PRESETS:
-        if not generate_preset_compile_commands(root, preset):
-            continue
+        reason = generate_preset_compile_commands(root, preset)
+        if reason:
+            return [], reason
 
         build_dir = preset_build_dir(root, preset)
         if build_dir.joinpath("compile_commands.json").is_file():
             build_dirs.append((preset, build_dir))
 
-    return build_dirs
+    return build_dirs, ""
+
+
+def is_critical(source: str) -> bool:
+    """Is this source one the presets are supposed to build?
+
+    Yes means a compile DB that does not contain it is a coverage regression
+    rather than a configuration the presets are known to leave out."""
+    return source.startswith(CRITICAL_PREFIXES) and not source.startswith(
+        NOT_IN_PRESETS
+    )
 
 
 def normalize_compile_db_file(root: Path, entry: dict) -> Path:
@@ -306,6 +408,12 @@ def report_coverage(coverage: dict, changed_lines: dict, in_no_db: set) -> None:
         total = len(changed_lines[source])
         note = " -- in no compile DB at all" if source in in_no_db else ""
         print(f"      {source} ({total} changed line(s)){note}")
+        if source in in_no_db:
+            # Not checked, and not a regression either (the presets are known
+            # not to build it), but it has to be visible in the pull request
+            # instead of only in the log.  GitHub reads the annotation, the
+            # pre-commit hook shows it as plain text.
+            print(f"::warning file={source}::no preset compiles this source")
         for name, hit in coverage[source]:
             verdict = f"{len(hit)}/{total}" if hit else "not compiled"
             print(f"        {name:<24} {verdict}")
@@ -396,7 +504,9 @@ def process_changes(root: Path, commits: str) -> int:
     if not sources:
         return skip("no C/C++ source files changed")
 
-    build_dirs = resolve_build_dirs(root)
+    build_dirs, reason = resolve_build_dirs(root)
+    if reason:
+        return unavailable(reason, commits)
     if not build_dirs:
         return unavailable("no preset produced a compile DB", commits)
 
@@ -417,6 +527,7 @@ def process_changes(root: Path, commits: str) -> int:
     changed_lines = {}
     coverage = {}
     in_no_db = set()
+    uncovered_critical = []
     for source in sources:
         path = root.joinpath(source).resolve()
         lines = get_changed_lines(get_diff(root, commits, [source]))
@@ -425,9 +536,13 @@ def process_changes(root: Path, commits: str) -> int:
 
         changed_lines[source] = lines
         if not any(path in db for _, _, db in compile_dbs):
-            # A different remedy from "the branch is off": this one needs
-            # another platform, another target or an optional component.
-            in_no_db.add(source)
+            # Known not to be covered, or a coverage regression?  The first is
+            # reported, the second fails the check: a source the presets are
+            # supposed to build has to be in at least one of their DBs.
+            if is_critical(source):
+                uncovered_critical.append(source)
+            else:
+                in_no_db.add(source)
 
         coverage[source] = []
         for name, _, db in compile_dbs:
@@ -443,6 +558,15 @@ def process_changes(root: Path, commits: str) -> int:
         return skip("no changed lines in the C/C++ sources")
 
     report_coverage(coverage, changed_lines, in_no_db)
+
+    if uncovered_critical:
+        print(
+            "--- clang-tidy: no preset compiles these sources, so none of their "
+            "lines were checked:"
+        )
+        for source in sorted(uncovered_critical):
+            print(f"      {source}")
+        return EXIT_FAILURE
 
     scan = {}
     for source, results in coverage.items():
@@ -483,12 +607,15 @@ def main() -> int:
         "that compiles them",
         epilog="""exit codes:
   0  scanned, clang-tidy reported nothing
-  1  clang-tidy reported something, or the check could not be trusted to run
-     (with --commits, missing tooling and an unusable compile DB land here:
-     in CI a green check that ran nothing is worse than a red one)
-  2  skipped -- nothing was scanned. No C/C++ source changed, or no preset
-     compiles the changed lines, or, with --staged, the tooling is missing.
-     The log says which; treat it as neither pass nor fail.
+  1  clang-tidy reported something, or the check could not be trusted to run:
+     with --commits, a preset that does not configure, missing tooling, an
+     unusable compile DB, or a changed source under core/ that no preset
+     compiles all land here.  In CI a green check that ran nothing is worse
+     than a red one.
+  2  skipped -- nothing was scanned. No C/C++ source changed, or every changed
+     line belongs to a configuration the presets are known not to build, or,
+     with --staged, the tooling is missing.  The log says which; treat it as
+     neither pass nor fail.
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

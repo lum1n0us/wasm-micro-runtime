@@ -165,19 +165,24 @@ jobs:
           ref: ${{ env.PR_REF }}
           fetch-depth: 0
 
-      - name: install clang-21 and clang-tidy-21
+      - name: install clang-21, clang-tidy-21 and the LLVM the JIT preset needs
         run: |
           # Same LLVM 21 as clang-format above, and for the same reason: the
           # check has to give every contributor the same answer. clang itself
           # is needed as well as clang-tidy -- the compile databases are
           # configured with it, see build-scripts/clang_toolchain.cmake.
+          #
+          # llvm-18-dev is what all-on-llvm-jit finds LLVM in (18 is the version
+          # pinned in core/deps/llvm): every preset is required, so this job
+          # cannot let that one be skipped. The check only configures, so the
+          # development package is enough -- no LLVM build is needed here.
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
             | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc >/dev/null
           . /etc/os-release
           echo "deb http://apt.llvm.org/${VERSION_CODENAME}/ llvm-toolchain-${VERSION_CODENAME}-21 main" \
             | sudo tee /etc/apt/sources.list.d/llvm.list >/dev/null
           sudo apt-get update -qq
-          sudo apt-get install -y -qq clang-21 clang-tidy-21
+          sudo apt-get install -y -qq clang-21 clang-tidy-21 llvm-18-dev libzstd-dev zlib1g-dev
           sudo ln -sf /usr/bin/clang-21 /usr/bin/clang
           sudo ln -sf /usr/bin/clang++-21 /usr/bin/clang++
           clang-tidy-21 --version
@@ -185,9 +190,11 @@ jobs:
       - name: Run clang-tidy on the changed lines
         # The check configures every samples/minimum preset so it can say which
         # feature flag vectors actually compile each changed line, and scans
-        # with the ones that do. all-on-llvm-jit needs an LLVM install and is
-        # reported as skipped here; it adds no feature coverage the other
-        # presets do not already have.
+        # with the ones that do.  Every preset is required: the vectors only
+        # cover the feature macros together, so a preset that cannot configure
+        # fails the check instead of quietly dropping its configuration.
+        env:
+          WAMR_LLVM_DIR: /usr/lib/llvm-18/lib/cmake/llvm
         run: |
           set +e
           /usr/bin/env python3 ./ci/clang_tidy_diff_check.py \
