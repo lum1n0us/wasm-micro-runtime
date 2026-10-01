@@ -185,6 +185,8 @@ The defaults below are guaranteed by [build-scripts](../build-scripts) itself (`
 
 > [!NOTE]
 > Feature flags without defaults inside `build-scripts` — for example `WAMR_BUILD_INTERP`, `WAMR_BUILD_AOT`, `WAMR_BUILD_LIBC_BUILTIN`, `WAMR_BUILD_LIBC_WASI`, `WAMR_BUILD_SIMD`, `WAMR_BUILD_REF_TYPES` (usually on), and `WAMR_BUILD_JIT`, `WAMR_BUILD_FAST_JIT`, `WAMR_BUILD_MULTI_MODULE` and friends (usually off) — get their defaults from the top-level build entry, such as the repository root [CMakeLists.txt](../CMakeLists.txt) or the `product-mini` platform files. `runtime_lib.cmake` only forces some of them when the engine options require it: LLVM JIT forces AOT on, LLVM JIT/fast JIT force the classic interpreter on (`WAMR_BUILD_INTERP=1`, `WAMR_BUILD_FAST_INTERP=0`), and GC forces reference types on. Inside `build-scripts` itself, `WAMR_BUILD_GC`, `WAMR_BUILD_MEMORY64`, `WAMR_BUILD_MULTI_MEMORY`, `WAMR_BUILD_SHARED_MEMORY`, `WAMR_BUILD_FAST_INTERP`, `WAMR_BUILD_TAIL_CALL`, `WAMR_BUILD_EXCE_HANDLING`, `WAMR_BUILD_EXTENDED_CONST_EXPR`, and `WAMR_BUILD_LIME1` default to off. Individual `product-mini` platforms may still override any of the defaults above.
+>
+> A version preset does not track what an entry point ships: it turns off the switches its feature set excludes and prints a warning naming what it overrode and whether that value came from `-D`/a preset or from an entry point's own default; see [Wasm specification version preset](#wasm-specification-version-preset). Fix such an override in the entry point that ships the default, not in `build-scripts`.
 
 ### **Configure platform and architecture**
 
@@ -608,14 +610,14 @@ The SIMDe library is pulled in automatically when both `WAMR_BUILD_SIMD` and `WA
 
 ### **quick AOT/JTI entries**
 
-- **WAMR_BUILD_QUICK_AOT_ENTRY**=1/0: register quick call entries to speed up AOT/JIT function calls. Derived from the running mode: on when AOT or LLVM JIT is enabled, off otherwise. Setting it explicitly overrides the derived value.
+- **WAMR_BUILD_QUICK_AOT_ENTRY**=1/0: register quick call entries to speed up AOT/JIT function calls. Derived from the running mode: on when AOT or LLVM JIT is enabled, off otherwise. Setting it explicitly overrides the derived value. Non-CMake builds say it in their own build files, next to their AOT sources: `product-mini/platforms/alios-things/aos.mk`, the `CONFIG_INTERPRETERS_WAMR_AOT_QUICK_ENTRY` option of `product-mini/platforms/nuttx/wamr.mk`, and `build-scripts/SConscript_config` (rt-thread).
 
 > [!NOTE]
 > See [Refine callings to AOT/JIT functions from host native](./perf_tune.md#83-refine-callings-to-aotjit-functions-from-host-native).
 
 ### **AOT intrinsics**
 
-- **WAMR_BUILD_AOT_INTRINSICS**=1/0: turn on AOT intrinsic functions. Derived from the running mode: on when AOT is enabled, off otherwise. Setting it explicitly overrides the derived value. AOT code can call these when wamrc uses `--disable-llvm-intrinsics` or `--enable-builtin-intrinsics=<intr1,intr2,...>`.
+- **WAMR_BUILD_AOT_INTRINSICS**=1/0: turn on AOT intrinsic functions. Derived from the running mode: on when AOT is enabled, off otherwise. Setting it explicitly overrides the derived value. AOT code can call these when wamrc uses `--disable-llvm-intrinsics` or `--enable-builtin-intrinsics=<intr1,intr2,...>`. Non-CMake builds say it in their own build files, next to their AOT sources: `product-mini/platforms/alios-things/aos.mk`, the `CONFIG_INTERPRETERS_WAMR_AOT` block of `product-mini/platforms/nuttx/wamr.mk`, and `build-scripts/SConscript_config` (rt-thread).
 
 > [!NOTE]
 > See [Tuning the XIP intrinsic functions](./xip.md#tuning-the-xip-intrinsic-functions).
@@ -648,6 +650,8 @@ The SIMDe library is pulled in automatically when both `WAMR_BUILD_SIMD` and `WA
 > [!NOTE]
 > Enabling LIME1 automatically turns on `bulk-memory-opt`, `call-indirect-overlong`, and `extended constant expressions`. See [Lime1](https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1).
 >
+> Lime1 is a complete profile, so it also turns **off** `WAMR_BUILD_BULK_MEMORY`, `WAMR_BUILD_REF_TYPES` and `WAMR_BUILD_SIMD`, warning whenever that overrides a value that was set. The older `-DWAMR_BUILD_LIME1=1 -DWAMR_BUILD_BULK_MEMORY=0 -DWAMR_BUILD_REF_TYPES=0 -DWAMR_BUILD_SIMD=0` form keeps working; its three `=0` are redundant now and do not warn.
+>
 > `WAMR_BUILD_LIME1` and the [Wasm specification version presets](#wasm-specification-version-preset) are mutually exclusive: they describe two different feature sets, so setting `WAMR_BUILD_LIME1` together with any `WAMR_BUILD_WASM_SPEC<N>` fails the configure step.
 
 ### **Wasm specification version preset**
@@ -658,14 +662,22 @@ The SIMDe library is pulled in automatically when both `WAMR_BUILD_SIMD` and `WA
 
 The three switches turn one Wasm specification version into a single option.
 
-A preset states which proposals a version requires, and relies on the defaults for the rest: every feature except bulk memory is off unless asked for, so a version is described by the handful of switches it turns on.
+A preset states which proposals a version requires and which ones it excludes. It owns the switches it turns on, and it turns off the excluded ones ahead of the compatibility defaults, so a version is a version no matter what the build entry point ships by default (see [features enabled by default](#features-enabled-by-default-platform-independent)).
 
-| | turns on | note |
+| | effect | note |
 | --- | --- | --- |
-| **WAMR_BUILD_WASM_SPEC1** | nothing; turns `WAMR_BUILD_BULK_MEMORY` **off** | every Wasm 1.0 proposal is always on in WAMR and has no switch. Bulk memory is post-1.0 but [defaults to on](#features-enabled-by-default-platform-independent), so the preset turns it back off |
+| **WAMR_BUILD_WASM_SPEC1** | turns `WAMR_BUILD_BULK_MEMORY`, `WAMR_BUILD_REF_TYPES` and `WAMR_BUILD_SIMD` **off** | a Wasm 1.0 runtime has no post-1.0 proposal. Every Wasm 1.0 proposal is always on in WAMR and has no switch; bulk memory defaults to on inside `build-scripts` and reference types and SIMD default to on in the build entry points, so all three are turned back off |
 | **WAMR_BUILD_WASM_SPEC2** | `WAMR_BUILD_BULK_MEMORY`, `WAMR_BUILD_REF_TYPES`, `WAMR_BUILD_SIMD` | the only configurable Wasm 2.0 proposals; Multi-value, Non-trapping float-to-int Conversions and Sign-extension Operators are always on |
 
-A preset is a baseline, not a cage: a feature asked for on top of it is kept, so `-DWAMR_BUILD_WASM_SPEC2=1 -DWAMR_BUILD_TAIL_CALL=1` builds Wasm 2.0 plus tail call. Drop the preset if you want to be sure nothing else is on, or check the "About Wasm Proposals" status that `config_common.cmake` prints.
+A preset describes a complete feature set, so it has two directions:
+
+- a feature the preset does not exclude, asked for on top of it, is kept:
+  `-DWAMR_BUILD_WASM_SPEC2=1 -DWAMR_BUILD_TAIL_CALL=1` builds Wasm 2.0 plus tail call;
+- a feature the preset excludes is turned off even when the caller turned it on, and configure prints
+  a warning saying whether that value came from `-D`/a CMake preset or from an entry point's own
+  default. Wasm 1.0 and Lime1 exclude bulk memory, reference types and SIMD.
+
+Drop the preset if you want to be sure nothing else is on, or check the "About Wasm Proposals" status that `config_common.cmake` prints.
 
 `WAMR_BUILD_WASM_SPEC2` does not imply `WAMR_BUILD_WASM_SPEC1`, and setting both fails the configure step: each one is a complete feature set rather than a layer on top of the other.
 
@@ -837,16 +849,16 @@ For Valgrind, start with these and add more as needed:
   #...
 ```
 
-To enable the minimal Lime1 feature set, turn off features that are on by default, such as bulk memory, reference types, and SIMD (LIME1 itself turns on bulk-memory-opt, call-indirect-overlong, and extended constant expressions):
+To build the minimal Lime1 feature set, just ask for it: LIME1 turns on `bulk-memory-opt`, `call-indirect-overlong` and extended constant expressions, and turns off bulk memory, reference types and SIMD. Naming the three `=0` explicitly is still accepted and does not warn:
 
 ```Bash
-cmake .. -DWAMR_BUILD_LIME1=1 -DWAMR_BUILD_BULK_MEMORY=0 -DWAMR_BUILD_REF_TYPES=0 -DWAMR_BUILD_SIMD=0
+cmake .. -DWAMR_BUILD_LIME1=1
 ```
 
-To build for a whole Wasm specification version, use the preset switches:
+To build for a whole Wasm specification version, use the preset switches. A preset turns the excluded switches off ahead of the compatibility defaults, so the command below is a Wasm 1.0 build whatever the entry point ships by default; when the entry point enables an excluded feature itself, configure prints a warning naming it. The zero-warning reference is `samples/minimum --preset wasm-spec-1.0`.
 
 ```Bash
-# Wasm 1.0 (an empty preset: every Wasm 1.0 proposal is always on)
+# Wasm 1.0
 cmake .. -DWAMR_BUILD_WASM_SPEC1=1
 
 # Wasm 2.0 (the interpreter mode must be a mode that supports SIMD)

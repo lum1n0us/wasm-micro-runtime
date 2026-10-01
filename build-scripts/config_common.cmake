@@ -98,26 +98,56 @@ endif ()
 ########################################
 # Wasm specification version presets
 #
-# A preset says which proposals a Wasm version requires, and nothing else: every
-# other feature already defaults to 0, so a version is described by the handful
-# of switches it turns on.  Bulk memory is the one exception -- it defaults to 1
-# for compatibility (see the "Default values" block below) -- so Wasm 1.0 has to
-# turn it back off.
+# A preset says which proposals a Wasm version requires, and describes a
+# complete feature set: the proposals it does not include are turned off here,
+# and the caller is told whenever that overrides something.
 #
-# Listing what a version excludes was tried and dropped: it made every new
-# feature something to remember to add to the list, and forgetting would have
-# broken the preset silently.  Relying on the defaults costs nothing and cannot
-# be forgotten, and samples/minimum's all-off preset asserts that the defaults
-# really are off.
+# This file owns the defaults it declares itself.  Bulk memory and shrunk
+# memory ship on for compatibility (see the "Default values" block below), so a
+# version that excludes bulk memory clears it.  The defaults an entry point
+# declares for itself are not visible here and are not encoded here -- reference
+# types and SIMD, for example, are on by default in the top-level
+# CMakeLists.txt and in the product-mini platforms, and a preset does not learn
+# what each entry point ships.  If an entry point enables something a preset
+# excludes, the preset still wins and says so (see wamr_preset_exclude below),
+# and the entry point is where that gets fixed.
 #
 # This block runs before the "Default values" section so that its set() calls
 # win over the if (NOT DEFINED ...) defaults, and before the derived switches
 # (WAMR_BUILD_BULK_MEMORY_OPT, WAMR_BUILD_CALL_INDIRECT_OVERLONG) so that those
-# follow from what a preset leaves here.
+# follow from what a preset leaves here.  The exclusion helper has to stay ahead
+# of the defaults for the same reason: afterwards the compatibility defaults of
+# this file are indistinguishable from a value the caller set.
 #
-# A feature the caller asks for on top of a preset is kept: the preset is the
-# baseline, not a cage.
+# A feature the caller asks for on top of a preset -- one the preset does not
+# exclude -- is kept: the preset is the baseline, not a cage.
 ########################################
+
+# Turn off a feature a version preset does not include.  <feature> is the full
+# variable name, for example WAMR_BUILD_SIMD.
+#
+# This is more than a set() for two reasons.  The feature may still be on
+# because an entry point carries its own default, and the value may have been
+# asked for explicitly.  Both are reported, with their origin, so a request
+# that is being dropped never looks like a request that was honored.
+#
+# It assigns in both cases, also when the variable is still undefined: the
+# compatibility default further down would otherwise turn bulk memory back on.
+macro (wamr_preset_exclude preset feature)
+  if (DEFINED ${feature} AND ${feature} EQUAL 1)
+    if (DEFINED CACHE{${feature}})
+      set (_wamr_asked "was asked for with -D or by a CMake preset")
+    else ()
+      set (_wamr_asked "is on through an entry point's own default")
+    endif ()
+    message (WARNING
+      "${preset} does not include ${feature}, but it ${_wamr_asked}; turning "
+      "it off.  Drop the preset and enable the switches you need, or use a "
+      "newer version preset, if this build really needs ${feature}.")
+  endif ()
+  set (${feature} 0)
+  unset (_wamr_asked)
+endmacro ()
 
 if (NOT DEFINED WAMR_BUILD_WASM_SPEC1)
   set (WAMR_BUILD_WASM_SPEC1 0)
@@ -143,6 +173,17 @@ if (WAMR_BUILD_LIME1 EQUAL 1
     "WAMR_BUILD_LIME1 and the WAMR_BUILD_WASM_SPEC* presets are mutually "
     "exclusive: each one describes its own feature set. Set "
     "WAMR_BUILD_LIME1=1 or one WAMR_BUILD_WASM_SPEC<N>=1, not both.")
+endif ()
+
+# Lime1 is a profile of its own rather than Wasm 1.0 plus bulk memory, so the
+# features outside it are cleared the same way the version presets clear theirs.
+# It runs here, ahead of the "Default values" section, for the same reason they
+# do: only a value somebody set is reported, not a compatibility default of
+# this file.
+if (WAMR_BUILD_LIME1 EQUAL 1)
+  wamr_preset_exclude (WAMR_BUILD_LIME1 WAMR_BUILD_BULK_MEMORY)
+  wamr_preset_exclude (WAMR_BUILD_LIME1 WAMR_BUILD_REF_TYPES)
+  wamr_preset_exclude (WAMR_BUILD_LIME1 WAMR_BUILD_SIMD)
 endif ()
 
 if (WAMR_BUILD_WASM_SPEC1 EQUAL 1 AND WAMR_BUILD_WASM_SPEC2 EQUAL 1)
@@ -188,9 +229,12 @@ if (WAMR_BUILD_WASM_SPEC2 EQUAL 1)
   #TODO: SPEC2 should use SPEC1 as a base and enable additional features
 elseif (WAMR_BUILD_WASM_SPEC1 EQUAL 1)
   message ("     Wasm 1.0 preset enabled via WAMR_BUILD_WASM_SPEC1")
-  # Every Wasm 1.0 proposal is always on in WAMR, so there is nothing to turn
-  # on; bulk memory is post-1.0 and defaults to 1, so it is turned off here.
-  set (WAMR_BUILD_BULK_MEMORY 0)
+  # A Wasm 1.0 runtime has no post-1.0 proposal.  Of the ones WAMR can switch,
+  # bulk memory is on by default in this file and reference types and SIMD are
+  # on by default in the entry points, so all three are cleared here.
+  wamr_preset_exclude (WAMR_BUILD_WASM_SPEC1 WAMR_BUILD_BULK_MEMORY)
+  wamr_preset_exclude (WAMR_BUILD_WASM_SPEC1 WAMR_BUILD_REF_TYPES)
+  wamr_preset_exclude (WAMR_BUILD_WASM_SPEC1 WAMR_BUILD_SIMD)
 endif ()
 
 # Lazy JIT is an implementation detail of the JIT running modes rather than a
@@ -330,6 +374,10 @@ endif ()
 # explicitly.  That failure only shows up at run time as "unsupported opcode",
 # so it is not worth the churn -- ask for the minimal runtime with the all-off
 # preset in samples/minimum/CMakePresets.json instead.
+#
+# A version preset may clear BULK_MEMORY again (Wasm 1.0 and Lime1 do, see the
+# preset section above); nothing clears SHRUNK_MEMORY, because it is a
+# WAMR-private optimisation rather than part of any Wasm version.
 ########################################
 #TODO: BULK_MEMORY should be off by default. But it is kept on for now to
 # maintain compatibility with existing embedders.
@@ -421,6 +469,8 @@ if (NOT DEFINED WAMR_BUILD_FUZZ_TEST)
 endif ()
 
 if (WAMR_BUILD_LIME1 EQUAL 1)
+  # The three switches Lime1 turns on.  What it turns off happens in the preset
+  # section above, ahead of the compatibility defaults.
   set (WAMR_BUILD_BULK_MEMORY_OPT 1)
   set (WAMR_BUILD_CALL_INDIRECT_OVERLONG 1)
   set (WAMR_BUILD_EXTENDED_CONST_EXPR 1)
