@@ -154,6 +154,8 @@ jobs:
           /usr/bin/env python3 ./ci/coding_guidelines_check.py --commits "$base..HEAD"
 
   clang_tidy:
+    # Advisory.  The job runs and reports its findings as this check and as
+    # annotations, and `required` below does not depend on it.
     name: clang-tidy
     needs: changes
     if: ${{ !cancelled() && needs.changes.result == 'success' }}
@@ -249,6 +251,10 @@ jobs:
 
   # Single stable check for branch protection. Configure this job, rather than
   # individual lint jobs, as the required status check in the repository ruleset.
+  #
+  # clang_tidy is deliberately not one of the dependencies: it runs and reports
+  # its findings as its own check with its own annotations, but its verdict is
+  # advice to the author, not a merge gate.
   required:
     name: >-
       ${{ needs.gate.outputs.state == 'push' && 'coding guidelines on push'
@@ -259,7 +265,7 @@ jobs:
     # fail or are skipped, so GitHub evaluates the dynamic check name and the
     # script below can decide whether the workflow should pass.
     if: always()
-    needs: [gate, changes, compliance_job, clang_tidy, actionlint, hadolint]
+    needs: [gate, changes, compliance_job, actionlint, hadolint]
     runs-on: ubuntu-24.04
     steps:
       - name: Report which dependency failed
