@@ -195,18 +195,43 @@ jobs:
         # with the ones that do.  Every preset is required: the vectors only
         # cover the feature macros together, so a preset that cannot configure
         # fails the check instead of quietly dropping its configuration.
+        #
+        # The verdict and the tail of the run go to the step summary, so the
+        # result of this advisory check is readable without opening the log;
+        # the whole output stays in the log below.
         env:
           WAMR_LLVM_DIR: /usr/lib/llvm-18/lib/cmake/llvm
         run: |
           set +e
           /usr/bin/env python3 ./ci/clang_tidy_diff_check.py \
-            --commits "${{ needs.changes.outputs.base }}..HEAD"
-          status=$?
+            --commits "${{ needs.changes.outputs.base }}..HEAD" 2>&1 \
+            | tee clang-tidy.log
+          status=${PIPESTATUS[0]}
+
           # 0 scanned and clean, 1 something to fix, 2 scanned nothing. The
           # check prints which lines no preset compiles, so a 2 is a report,
           # not a pass to be quietly swallowed.
+          case $status in
+            0) verdict="clean, every changed line was scanned" ;;
+            1) verdict="findings to look at, or the check could not be trusted to run" ;;
+            2) verdict="nothing was scanned" ;;
+            *) verdict="did not run to completion" ;;
+          esac
+
+          {
+            echo "### clang-tidy: exit $status -- $verdict"
+            echo
+            echo "<details><summary>tail of the run</summary>"
+            echo
+            echo '```'
+            tail -n 200 clang-tidy.log
+            echo '```'
+            echo
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::notice title=clang-tidy::exit $status -- $verdict"
           if [ $status -eq 2 ]; then
-            echo "::notice title=clang-tidy::nothing to scan, see the log"
             exit 0
           fi
           exit $status
