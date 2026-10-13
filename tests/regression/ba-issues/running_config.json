@@ -1916,6 +1916,90 @@
                 "stdout content": "0x2a:i32",
                 "description": "no heap buffer overflow from return_call when callee has a larger const pool than caller"
             }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980006
+            ],
+            "compile_options": {
+                "compiler": "wamrc",
+                "only compile": false,
+                "in file": "*.wasm",
+                "out file": "out.aot",
+                "options": "",
+                "expected return": {
+                    "ret code": 0,
+                    "stdout content": "Compile success",
+                    "description": "expected compile successfully"
+                }
+            },
+            "runtime": "iwasm-memory64-aot",
+            "file": "out.aot",
+            "mode": "aot",
+            "options": "-f _start",
+            "argument": "",
+            "expected return": {
+                "ret code": 1,
+                "stdout content": "Exception: out of bounds memory access",
+                "description": "memory64 constant-fold load must trap when value + offset wraps uint64"
+            }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980007
+            ],
+            "compile_options": {
+                "compiler": "wamrc",
+                "only compile": false,
+                "in file": "*.wasm",
+                "out file": "out.aot",
+                "options": "",
+                "expected return": {
+                    "ret code": 0,
+                    "stdout content": "Compile success",
+                    "description": "expected compile successfully"
+                }
+            },
+            "runtime": "iwasm-memory64-aot",
+            "file": "out.aot",
+            "mode": "aot",
+            "options": "-f _start",
+            "argument": "",
+            "expected return": {
+                "ret code": 1,
+                "stdout content": "Exception: out of bounds memory access",
+                "description": "memory64 constant-fold memory.copy must trap when src + len wraps uint64"
+            }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980008
+            ],
+            "compile_options": {
+                "compiler": "wamrc",
+                "only compile": false,
+                "in file": "*.wasm",
+                "out file": "out.aot",
+                "options": "",
+                "expected return": {
+                    "ret code": 0,
+                    "stdout content": "Compile success",
+                    "description": "expected compile successfully"
+                }
+            },
+            "runtime": "iwasm-memory64-aot",
+            "file": "out.aot",
+            "mode": "aot",
+            "options": "-f _start",
+            "argument": "",
+            "expected return": {
+                "ret code": 1,
+                "stdout content": "Exception: out of bounds memory access",
+                "description": "memory64 dynamic memory.copy must trap when src + len wraps uint64"
+            }
         }
     ]
 }
