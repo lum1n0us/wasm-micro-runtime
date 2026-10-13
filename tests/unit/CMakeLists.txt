@@ -144,6 +144,12 @@ else()
   message(STATUS "FULL_TEST=OFF: exclude llm-enhanced-test")
 endif()
 
+if(WAMR_BUILD_TARGET STREQUAL "X86_32" OR
+   WAMR_BUILD_TARGET STREQUAL "X86_64" OR
+   WAMR_BUILD_TARGET STREQUAL "AARCH64")
+  add_subdirectory (linear-memory)
+endif ()
+
 if(WAMR_BUILD_TARGET STREQUAL "X86_64" OR
    WAMR_BUILD_TARGET STREQUAL "AARCH64")
   add_subdirectory(aot-stack-frame)
