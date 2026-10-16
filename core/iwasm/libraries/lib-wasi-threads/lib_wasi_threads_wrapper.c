@@ -46,6 +46,23 @@ deallocate_thread_id(int32 thread_id)
     os_mutex_unlock(&thread_id_lock);
 }
 
+static bool
+check_thread_start_func_type(wasm_function_inst_t start_func,
+                             wasm_module_inst_t module_inst)
+{
+    wasm_valkind_t param_types[2];
+
+    /* thread_start() passes a 2-cell argv on the host stack, and the results
+       of the callee are written back into it, so any other signature overflows
+       that buffer */
+    if (wasm_func_get_param_count(start_func, module_inst) != 2
+        || wasm_func_get_result_count(start_func, module_inst) != 0)
+        return false;
+
+    wasm_func_get_param_types(start_func, module_inst, param_types);
+    return param_types[0] == WASM_I32 && param_types[1] == WASM_I32;
+}
+
 static void *
 thread_start(void *arg)
 {
@@ -57,6 +74,8 @@ thread_start(void *arg)
     argv[0] = thread_arg->thread_id;
     argv[1] = thread_arg->arg;
 
+    // TODO: pass the output capacity to wasm_runtime_call_wasm() so results
+    // cannot overflow argv even if the signature check is bypassed
     if (!wasm_runtime_call_wasm(exec_env, thread_arg->start_func, 2, argv)) {
         /* Exception has already been spread during throwing */
     }
@@ -104,6 +123,13 @@ thread_spawn_wrapper(wasm_exec_env_t exec_env, uint32 start_arg)
         wasm_runtime_lookup_function(new_module_inst, THREAD_START_FUNCTION);
     if (!start_func) {
         LOG_ERROR("Failed to find thread start function %s",
+                  THREAD_START_FUNCTION);
+        goto thread_preparation_fail;
+    }
+
+    if (!check_thread_start_func_type(start_func, new_module_inst)) {
+        LOG_ERROR("Thread start function %s must be (param i32 i32) with no "
+                  "results",
                   THREAD_START_FUNCTION);
         goto thread_preparation_fail;
     }

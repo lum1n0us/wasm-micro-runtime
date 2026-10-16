@@ -512,6 +512,8 @@ pthread_start_routine(void *arg)
     wasm_exec_env_set_thread_info(exec_env);
     argv[0] = routine_args->arg;
 
+    // TODO: audit this fixed-size argv callback: the routine's result count is
+    // taken from the guest and not checked against argv
     if (!wasm_runtime_call_indirect(exec_env, routine_args->elem_index, 1,
                                     argv)) {
         /* Exception has already been spread during throwing */
