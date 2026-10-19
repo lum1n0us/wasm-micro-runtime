@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Skip forks: they cannot publish results or upload to code-scanning.
-    if: github.event.repository.fork == false
+    # if: github.event.repository.fork == false
     permissions:
       # Needed to upload the results to code-scanning dashboard.
       security-events: write
