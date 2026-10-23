@@ -817,6 +817,12 @@ WASMFuncType *
 wasm_runtime_get_function_type(const WASMFunctionInstanceCommon *function,
                                uint32 module_type);
 
+/* Internal API: function instance of table 0 element elem_index, or NULL if
+   the index is out of range or the element is null */
+WASMFunctionInstanceCommon *
+wasm_runtime_get_table_func_inst(WASMModuleInstanceCommon *const module_inst,
+                                 uint32 elem_index);
+
 /* See wasm_export.h for description */
 WASM_RUNTIME_API_EXTERN uint32
 wasm_func_get_param_count(WASMFunctionInstanceCommon *const func_inst,

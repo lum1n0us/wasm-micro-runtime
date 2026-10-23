@@ -1936,105 +1936,17 @@
         {
             "deprecated": false,
             "ids": [
-                980010
+                980015
             ],
-            "runtime": "iwasm-wasi-threads-fast-aot",
-            "file": "thread_start_result_i32x3.wasm",
-            "mode": "fast-interp",
-            "options": "",
-            "argument": "",
-            "expected return": {
-                "ret code": 0,
-                "stdout content": "Thread start function wasi_thread_start must be (param i32 i32) with no results",
-                "description": "wasi_thread_start with three i32 results is rejected at spawn, no host stack buffer overflow"
-            }
-        },
-        {
-            "deprecated": false,
-            "ids": [
-                980011
-            ],
-            "compile_options": {
-                "compiler": "wamrc",
-                "only compile": false,
-                "in file": "*.wasm",
-                "out file": "out.aot",
-                "options": "--enable-multi-thread",
-                "expected return": {
-                    "ret code": 0,
-                    "stdout content": "Compile success",
-                    "description": "expected compile successfully"
-                }
-            },
-            "runtime": "iwasm-wasi-threads-fast-aot",
-            "file": "out.aot",
-            "mode": "aot",
-            "options": "",
-            "argument": "",
-            "expected return": {
-                "ret code": 0,
-                "stdout content": "Thread start function wasi_thread_start must be (param i32 i32) with no results",
-                "description": "AOT: wasi_thread_start with a single i32 result is rejected at spawn"
-            }
-        },
-        {
-            "deprecated": false,
-            "ids": [
-                980012
-            ],
-            "runtime": "iwasm-wasi-threads-fast-aot",
-            "file": "thread_start_param_i64x2_result_i64x6.wasm",
-            "mode": "fast-interp",
-            "options": "",
-            "argument": "",
-            "expected return": {
-                "ret code": 0,
-                "stdout content": "Thread start function wasi_thread_start must be (param i32 i32) with no results",
-                "description": "wasi_thread_start with i64 parameters and six i64 results is rejected at spawn"
-            }
-        },
-        {
-            "deprecated": false,
-            "ids": [
-                980013
-            ],
-            "runtime": "iwasm-wasi-threads-classic-asan",
-            "file": "thread_start_param_i32x3.wasm",
+            "runtime": "iwasm-pthread-classic-asan",
+            "file": "pthread_routine_multi_result.wasm",
             "mode": "classic-interp",
-            "options": "",
+            "options": "-f _start",
             "argument": "",
             "expected return": {
                 "ret code": 0,
-                "stdout content": "Thread start function wasi_thread_start must be (param i32 i32) with no results",
-                "description": "wasi_thread_start with three i32 parameters is rejected at spawn"
-            }
-        },
-        {
-            "deprecated": false,
-            "ids": [
-                980014
-            ],
-            "compile_options": {
-                "compiler": "wamrc",
-                "only compile": false,
-                "in file": "*.wasm",
-                "out file": "out.aot",
-                "options": "--enable-multi-thread",
-                "expected return": {
-                    "ret code": 0,
-                    "stdout content": "Compile success",
-                    "description": "expected compile successfully"
-                }
-            },
-            "runtime": "iwasm-wasi-threads-fast-aot",
-            "file": "out.aot",
-            "mode": "aot",
-            "options": "",
-            "argument": "",
-            "expected return": {
-                "ret code": 0,
-                "stdout content": "",
-                "description": "AOT control: signature-correct (param i32 i32) wasi_thread_start spawns successfully"
+                "stdout content": "Thread routine (table index 0) must be (param i32) (result i32)",
+                "description": "pthread routine with three i32 results is rejected at pthread_create, no host stack buffer overflow"
             }
         }
     ]

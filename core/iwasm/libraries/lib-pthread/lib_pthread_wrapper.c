@@ -485,6 +485,23 @@ allocate_handle()
     return id;
 }
 
+static bool
+check_routine_func_type(wasm_function_inst_t routine_func,
+                        wasm_module_inst_t module_inst)
+{
+    wasm_valkind_t param_types[1], result_types[1];
+
+    /* pthread_start_routine() passes a 1-cell argv and reads the result
+       back from argv[0], so the signature must be (param i32) (result i32) */
+    if (wasm_func_get_param_count(routine_func, module_inst) != 1
+        || wasm_func_get_result_count(routine_func, module_inst) != 1)
+        return false;
+
+    wasm_func_get_param_types(routine_func, module_inst, param_types);
+    wasm_func_get_result_types(routine_func, module_inst, result_types);
+    return param_types[0] == WASM_I32 && result_types[0] == WASM_I32;
+}
+
 static void *
 pthread_start_routine(void *arg)
 {
@@ -512,8 +529,8 @@ pthread_start_routine(void *arg)
     wasm_exec_env_set_thread_info(exec_env);
     argv[0] = routine_args->arg;
 
-    // TODO: audit this fixed-size argv callback: the routine's result count is
-    // taken from the guest and not checked against argv
+    /* The routine signature is checked in pthread_create_wrapper(), so one
+       cell of argv is enough for its parameter and its result */
     if (!wasm_runtime_call_indirect(exec_env, routine_args->elem_index, 1,
                                     argv)) {
         /* Exception has already been spread during throwing */
@@ -558,6 +575,7 @@ pthread_create_wrapper(wasm_exec_env_t exec_env,
     wasm_module_inst_t new_module_inst = NULL;
     ThreadInfoNode *info_node = NULL;
     ThreadRoutineArgs *routine_args = NULL;
+    wasm_function_inst_t routine_func;
     uint32 thread_handle;
     uint32 stack_size = 8192;
     uint32 aux_stack_size;
@@ -594,6 +612,16 @@ pthread_create_wrapper(wasm_exec_env_t exec_env,
 
     if (!(wasm_cluster_dup_c_api_imports(new_module_inst, module_inst)))
         goto fail;
+
+    routine_func =
+        wasm_runtime_get_table_func_inst(new_module_inst, elem_index);
+    if (!routine_func
+        || !check_routine_func_type(routine_func, new_module_inst)) {
+        LOG_ERROR("Thread routine (table index %u) must be (param i32) (result "
+                  "i32)",
+                  elem_index);
+        goto fail;
+    }
 
     if (!(info_node = wasm_runtime_malloc(sizeof(ThreadInfoNode))))
         goto fail;
