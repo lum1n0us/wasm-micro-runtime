@@ -1932,6 +1932,22 @@
                 "stdout content": "0x1:i32",
                 "description": "heap-buffer-overflow in fast interp loader when const table overflow check fires prematurely due to duplicate accumulation"
             }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980009
+            ],
+            "runtime": "iwasm-default-extended-const-expr",
+            "file": "extended_const_expr_null_deref.wasm",
+            "mode": "classic-interp",
+            "options": "",
+            "argument": "",
+            "expected return": {
+                "ret code": 255,
+                "stdout content": "WASM module load failed: illegal opcode or constant expression required or type mismatch",
+                "description": "load_init_expr fail path must not dereference the NULL expr of a leaf const left on the stack"
+            }
         }
     ]
 }
