@@ -1932,6 +1932,22 @@
                 "stdout content": "0x1:i32",
                 "description": "heap-buffer-overflow in fast interp loader when const table overflow check fires prematurely due to duplicate accumulation"
             }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980015
+            ],
+            "runtime": "iwasm-default-wasi-disabled",
+            "file": "module_malloc_oob_offset.wasm",
+            "mode": "classic-interp",
+            "options": "--heap-size=0 -f to_test",
+            "argument": "",
+            "expected return": {
+                "ret code": 1,
+                "stdout content": "Exception: allocate memory failed",
+                "description": "offset returned by the module's exported malloc is range checked before the runtime writes to it"
+            }
         }
     ]
 }
