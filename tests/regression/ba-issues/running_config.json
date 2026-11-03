@@ -1916,6 +1916,22 @@
                 "stdout content": "0x2a:i32",
                 "description": "no heap buffer overflow from return_call when callee has a larger const pool than caller"
             }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980017
+            ],
+            "runtime": "iwasm-default",
+            "file": "fd_readdir_device.wasm",
+            "mode": "classic-interp",
+            "options": "--dir=/dev -f _start",
+            "argument": "",
+            "expected return": {
+                "ret code": 0,
+                "stdout content": "",
+                "description": "fd_readdir on a character device returns ENOTDIR instead of using the directory stream"
+            }
         }
     ]
 }
