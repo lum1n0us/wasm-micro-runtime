@@ -1932,6 +1932,22 @@
                 "stdout content": "0x1:i32",
                 "description": "heap-buffer-overflow in fast interp loader when const table overflow check fires prematurely due to duplicate accumulation"
             }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980012
+            ],
+            "runtime": "iwasm-default",
+            "file": "fd_readdir_device.wasm",
+            "mode": "classic-interp",
+            "options": "--dir=/dev -f _start",
+            "argument": "",
+            "expected return": {
+                "ret code": 0,
+                "stdout content": "",
+                "description": "fd_readdir on a character device returns ENOTDIR instead of using the directory stream"
+            }
         }
     ]
 }
