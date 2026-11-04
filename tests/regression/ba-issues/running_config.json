@@ -1916,6 +1916,70 @@
                 "stdout content": "0x2a:i32",
                 "description": "no heap buffer overflow from return_call when callee has a larger const pool than caller"
             }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980009
+            ],
+            "runtime": "iwasm-default-wasi-disabled",
+            "file": "libc_builtin_strtol_endptr_oob.wasm",
+            "mode": "fast-interp",
+            "options": "-f to_test",
+            "argument": "",
+            "expected return": {
+                "ret code": 0,
+                "stdout content": "0x0:i32",
+                "description": "strtol/strtoul write only the 4-byte guest slot; guest offset 0 is NULL"
+            }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980009
+            ],
+            "runtime": "iwasm-default-wasi-disabled",
+            "file": "libc_builtin_strtol_endptr_oob.wasm",
+            "mode": "fast-interp",
+            "options": "-f to_test_oob",
+            "argument": "",
+            "expected return": {
+                "ret code": 1,
+                "stdout content": "Exception: out of bounds memory access",
+                "description": "endptr with 3 bytes left in memory is rejected by validate_native_addr"
+            }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980009
+            ],
+            "runtime": "iwasm-default-wasi-disabled",
+            "file": "libc_builtin_strtol_endptr_oob.wasm",
+            "mode": "classic-interp",
+            "options": "-f to_test",
+            "argument": "",
+            "expected return": {
+                "ret code": 0,
+                "stdout content": "0x0:i32",
+                "description": "strtol/strtoul write only the 4-byte guest slot; guest offset 0 is NULL"
+            }
+        },
+        {
+            "deprecated": false,
+            "ids": [
+                980009
+            ],
+            "runtime": "iwasm-default-wasi-disabled",
+            "file": "libc_builtin_strtol_endptr_oob.wasm",
+            "mode": "classic-interp",
+            "options": "-f to_test_oob",
+            "argument": "",
+            "expected return": {
+                "ret code": 1,
+                "stdout content": "Exception: out of bounds memory access",
+                "description": "endptr with 3 bytes left in memory is rejected by validate_native_addr"
+            }
         }
     ]
 }
