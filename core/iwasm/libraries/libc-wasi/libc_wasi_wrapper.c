@@ -1231,12 +1231,16 @@ wasi_sock_addr_resolve(wasm_exec_env_t exec_env, const char *host,
     wasi_ctx_t wasi_ctx = get_wasi_ctx(module_inst);
     struct fd_table *curfds = NULL;
     char **ns_lookup_list = NULL;
+    __wasi_addr_info_hints_t hints_copy;
 
     if (!wasi_ctx)
         return __WASI_EACCES;
 
     if (!validate_native_addr(hints, sizeof(*hints)))
         return __WASI_EINVAL;
+
+    /* Copy the hints once, the guest may change them at any time. */
+    hints_copy = *hints;
 
     uint64_t addr_info_byte_size = sizeof(*addr_info) * addr_info_size;
     if (addr_info_byte_size / addr_info_size != sizeof(*addr_info))
@@ -1252,8 +1256,8 @@ wasi_sock_addr_resolve(wasm_exec_env_t exec_env, const char *host,
     ns_lookup_list = wasi_ctx_get_ns_lookup_list(wasi_ctx);
 
     return wasi_ssp_sock_addr_resolve(exec_env, curfds, ns_lookup_list, host,
-                                      service, hints, addr_info, addr_info_size,
-                                      max_info_size);
+                                      service, &hints_copy, addr_info,
+                                      addr_info_size, max_info_size);
 }
 
 static wasi_errno_t
@@ -1263,6 +1267,7 @@ wasi_sock_bind(wasm_exec_env_t exec_env, wasi_fd_t fd, wasi_addr_t *addr)
     wasi_ctx_t wasi_ctx = get_wasi_ctx(module_inst);
     struct fd_table *curfds = NULL;
     struct addr_pool *addr_pool = NULL;
+    __wasi_addr_t addr_copy;
 
     if (!wasi_ctx)
         return __WASI_EACCES;
@@ -1270,10 +1275,13 @@ wasi_sock_bind(wasm_exec_env_t exec_env, wasi_fd_t fd, wasi_addr_t *addr)
     if (!validate_native_addr(addr, sizeof(*addr)))
         return __WASI_EINVAL;
 
+    /* Copy the address once, the guest may change it at any time. */
+    addr_copy = *addr;
+
     curfds = wasi_ctx_get_curfds(wasi_ctx);
     addr_pool = wasi_ctx_get_addr_pool(wasi_ctx);
 
-    return wasi_ssp_sock_bind(exec_env, curfds, addr_pool, fd, addr);
+    return wasi_ssp_sock_bind(exec_env, curfds, addr_pool, fd, &addr_copy);
 }
 
 static wasi_errno_t
@@ -1292,6 +1300,7 @@ wasi_sock_connect(wasm_exec_env_t exec_env, wasi_fd_t fd, wasi_addr_t *addr)
     wasi_ctx_t wasi_ctx = get_wasi_ctx(module_inst);
     struct fd_table *curfds = NULL;
     struct addr_pool *addr_pool = NULL;
+    __wasi_addr_t addr_copy;
 
     if (!wasi_ctx)
         return __WASI_EACCES;
@@ -1299,10 +1308,13 @@ wasi_sock_connect(wasm_exec_env_t exec_env, wasi_fd_t fd, wasi_addr_t *addr)
     if (!validate_native_addr(addr, sizeof(*addr)))
         return __WASI_EINVAL;
 
+    /* Copy the address once, the guest may change it at any time. */
+    addr_copy = *addr;
+
     curfds = wasi_ctx_get_curfds(wasi_ctx);
     addr_pool = wasi_ctx_get_addr_pool(wasi_ctx);
 
-    return wasi_ssp_sock_connect(exec_env, curfds, addr_pool, fd, addr);
+    return wasi_ssp_sock_connect(exec_env, curfds, addr_pool, fd, &addr_copy);
 }
 
 static wasi_errno_t
@@ -1935,6 +1947,7 @@ wasi_sock_set_ip_add_membership(wasm_exec_env_t exec_env, wasi_fd_t fd,
     wasm_module_inst_t module_inst = get_module_inst(exec_env);
     wasi_ctx_t wasi_ctx = get_wasi_ctx(module_inst);
     struct fd_table *curfds = NULL;
+    __wasi_addr_ip_t multiaddr_copy;
 
     if (!wasi_ctx)
         return __WASI_EACCES;
@@ -1942,10 +1955,13 @@ wasi_sock_set_ip_add_membership(wasm_exec_env_t exec_env, wasi_fd_t fd,
     if (!validate_native_addr(imr_multiaddr, (uint64)sizeof(__wasi_addr_ip_t)))
         return __WASI_EINVAL;
 
+    /* Copy the address once, the guest may change it at any time. */
+    multiaddr_copy = *imr_multiaddr;
+
     curfds = wasi_ctx_get_curfds(wasi_ctx);
 
     return wasmtime_ssp_sock_set_ip_add_membership(
-        exec_env, curfds, fd, imr_multiaddr, imr_interface);
+        exec_env, curfds, fd, &multiaddr_copy, imr_interface);
 }
 
 static wasi_errno_t
@@ -1956,6 +1972,7 @@ wasi_sock_set_ip_drop_membership(wasm_exec_env_t exec_env, wasi_fd_t fd,
     wasm_module_inst_t module_inst = get_module_inst(exec_env);
     wasi_ctx_t wasi_ctx = get_wasi_ctx(module_inst);
     struct fd_table *curfds = NULL;
+    __wasi_addr_ip_t multiaddr_copy;
 
     if (!wasi_ctx)
         return __WASI_EACCES;
@@ -1963,10 +1980,13 @@ wasi_sock_set_ip_drop_membership(wasm_exec_env_t exec_env, wasi_fd_t fd,
     if (!validate_native_addr(imr_multiaddr, (uint64)sizeof(__wasi_addr_ip_t)))
         return __WASI_EINVAL;
 
+    /* Copy the address once, the guest may change it at any time. */
+    multiaddr_copy = *imr_multiaddr;
+
     curfds = wasi_ctx_get_curfds(wasi_ctx);
 
     return wasmtime_ssp_sock_set_ip_drop_membership(
-        exec_env, curfds, fd, imr_multiaddr, imr_interface);
+        exec_env, curfds, fd, &multiaddr_copy, imr_interface);
 }
 
 static wasi_errno_t
@@ -2303,6 +2323,7 @@ wasi_sock_send_to(wasm_exec_env_t exec_env, wasi_fd_t sock,
     wasi_errno_t err;
     size_t send_bytes = 0;
     struct addr_pool *addr_pool = wasi_ctx_get_addr_pool(wasi_ctx);
+    __wasi_addr_t dest_copy;
 
     if (!wasi_ctx) {
         return __WASI_EINVAL;
@@ -2314,14 +2335,21 @@ wasi_sock_send_to(wasm_exec_env_t exec_env, wasi_fd_t sock,
     if (!validate_native_addr(so_data_len, (uint64)sizeof(uint32)))
         return __WASI_EINVAL;
 
+    /*
+     * Copy the destination once. The pool check and the send must use the
+     * same address, the guest may change it at any time.
+     */
+    dest_copy = *dest_addr;
+
     err = convert_iovec_app_to_buffer(module_inst, si_data, si_data_len, &buf,
                                       &buf_size);
     if (err != __WASI_ESUCCESS)
         return err;
 
     *so_data_len = 0;
-    err = wasmtime_ssp_sock_send_to(exec_env, curfds, addr_pool, sock, buf,
-                                    buf_size, si_flags, dest_addr, &send_bytes);
+    err =
+        wasmtime_ssp_sock_send_to(exec_env, curfds, addr_pool, sock, buf,
+                                  buf_size, si_flags, &dest_copy, &send_bytes);
     *so_data_len = (uint32)send_bytes;
 
     wasm_runtime_free(buf);
