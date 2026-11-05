@@ -39,4 +39,16 @@ wamr_unit_test_compile_wat_to_wasm(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/iovec_threads.wasm
 )
 
+wamr_unit_test_compile_wat_to_wasm(
+  TARGET libc_wasi_iovec_test
+  SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/wasm-apps/addr_ops.wat
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/addr_ops.wasm
+)
+
+wamr_unit_test_compile_wat_to_wasm(
+  TARGET libc_wasi_iovec_test
+  SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/wasm-apps/addr_threads.wat
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/addr_threads.wasm
+)
+
 gtest_discover_tests(libc_wasi_iovec_test PROPERTIES TIMEOUT 120)
