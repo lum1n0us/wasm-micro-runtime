@@ -385,13 +385,16 @@ wasi_fd_pread(wasm_exec_env_t exec_env, wasi_fd_t fd, iovec_app_t *iovec_app,
     iovec = iovec_begin;
 
     for (i = 0; i < iovs_len; i++, iovec_app++, iovec++) {
-        if (!validate_app_addr((uint64)iovec_app->buf_offset,
-                               (uint64)iovec_app->buf_len)) {
+        /* read each field once, the guest may modify it at any time */
+        uint32 buf_offset = iovec_app->buf_offset;
+        uint32 buf_len = iovec_app->buf_len;
+
+        if (!validate_app_addr((uint64)buf_offset, (uint64)buf_len)) {
             err = (wasi_errno_t)-1;
             goto fail;
         }
-        iovec->buf = (void *)addr_app_to_native((uint64)iovec_app->buf_offset);
-        iovec->buf_len = iovec_app->buf_len;
+        iovec->buf = (void *)addr_app_to_native((uint64)buf_offset);
+        iovec->buf_len = buf_len;
     }
 
     err = wasmtime_ssp_fd_pread(exec_env, curfds, fd, iovec_begin, iovs_len,
@@ -443,13 +446,16 @@ wasi_fd_pwrite(wasm_exec_env_t exec_env, wasi_fd_t fd,
     ciovec = ciovec_begin;
 
     for (i = 0; i < iovs_len; i++, iovec_app++, ciovec++) {
-        if (!validate_app_addr((uint64)iovec_app->buf_offset,
-                               (uint64)iovec_app->buf_len)) {
+        /* read each field once, the guest may modify it at any time */
+        uint32 buf_offset = iovec_app->buf_offset;
+        uint32 buf_len = iovec_app->buf_len;
+
+        if (!validate_app_addr((uint64)buf_offset, (uint64)buf_len)) {
             err = (wasi_errno_t)-1;
             goto fail;
         }
-        ciovec->buf = (char *)addr_app_to_native((uint64)iovec_app->buf_offset);
-        ciovec->buf_len = iovec_app->buf_len;
+        ciovec->buf = (char *)addr_app_to_native((uint64)buf_offset);
+        ciovec->buf_len = buf_len;
     }
 
     err = wasmtime_ssp_fd_pwrite(exec_env, curfds, fd, ciovec_begin, iovs_len,
@@ -500,13 +506,16 @@ wasi_fd_read(wasm_exec_env_t exec_env, wasi_fd_t fd,
     iovec = iovec_begin;
 
     for (i = 0; i < iovs_len; i++, iovec_app++, iovec++) {
-        if (!validate_app_addr((uint64)iovec_app->buf_offset,
-                               (uint64)iovec_app->buf_len)) {
+        /* read each field once, the guest may modify it at any time */
+        uint32 buf_offset = iovec_app->buf_offset;
+        uint32 buf_len = iovec_app->buf_len;
+
+        if (!validate_app_addr((uint64)buf_offset, (uint64)buf_len)) {
             err = (wasi_errno_t)-1;
             goto fail;
         }
-        iovec->buf = (void *)addr_app_to_native((uint64)iovec_app->buf_offset);
-        iovec->buf_len = iovec_app->buf_len;
+        iovec->buf = (void *)addr_app_to_native((uint64)buf_offset);
+        iovec->buf_len = buf_len;
     }
 
     err = wasmtime_ssp_fd_read(exec_env, curfds, fd, iovec_begin, iovs_len,
@@ -673,13 +682,16 @@ wasi_fd_write(wasm_exec_env_t exec_env, wasi_fd_t fd,
     ciovec = ciovec_begin;
 
     for (i = 0; i < iovs_len; i++, iovec_app++, ciovec++) {
-        if (!validate_app_addr((uint64)iovec_app->buf_offset,
-                               (uint64)iovec_app->buf_len)) {
+        /* read each field once, the guest may modify it at any time */
+        uint32 buf_offset = iovec_app->buf_offset;
+        uint32 buf_len = iovec_app->buf_len;
+
+        if (!validate_app_addr((uint64)buf_offset, (uint64)buf_len)) {
             err = (wasi_errno_t)-1;
             goto fail;
         }
-        ciovec->buf = (char *)addr_app_to_native((uint64)iovec_app->buf_offset);
-        ciovec->buf_len = iovec_app->buf_len;
+        ciovec->buf = (char *)addr_app_to_native((uint64)buf_offset);
+        ciovec->buf_len = buf_len;
     }
 
     err = wasmtime_ssp_fd_write(exec_env, curfds, fd, ciovec_begin, iovs_len,
@@ -2003,6 +2015,32 @@ wasi_sock_set_ipv6_only(wasm_exec_env_t exec_env, wasi_fd_t fd, bool is_enabled)
     return wasmtime_ssp_sock_set_ipv6_only(exec_env, curfds, fd, is_enabled);
 }
 
+/**
+ * Copy the guest iovec array into host memory in one pass. The guest may
+ * modify the array at any time through another wasm thread, so all checks and
+ * copies must use this snapshot instead of reading the guest array again.
+ */
+static wasi_errno_t
+snapshot_iovec_app(wasm_module_inst_t module_inst, const iovec_app_t *data,
+                   uint32 data_len, iovec_app_t **snapshot_ptr)
+{
+    uint64 total_size = sizeof(iovec_app_t) * (uint64)data_len;
+    iovec_app_t *snapshot;
+
+    if (total_size >= UINT32_MAX
+        || !validate_native_addr((void *)data, total_size))
+        return __WASI_EINVAL;
+
+    if (!(snapshot = wasm_runtime_malloc(total_size ? (uint32)total_size : 1)))
+        return __WASI_ENOMEM;
+
+    bh_memcpy_s(snapshot, (uint32)total_size, data, (uint32)total_size);
+
+    *snapshot_ptr = snapshot;
+    return __WASI_ESUCCESS;
+}
+
+/* data is a host snapshot made by snapshot_iovec_app() */
 static wasi_errno_t
 allocate_iovec_app_buffer(wasm_module_inst_t module_inst,
                           const iovec_app_t *data, uint32 data_len,
@@ -2012,12 +2050,9 @@ allocate_iovec_app_buffer(wasm_module_inst_t module_inst,
     uint32 i;
     uint8 *buf_begin = NULL;
 
-    total_size = sizeof(iovec_app_t) * (uint64)data_len;
-    if (total_size >= UINT32_MAX
-        || !validate_native_addr((void *)data, total_size))
-        return __WASI_EINVAL;
-
     for (total_size = 0, i = 0; i < data_len; i++, data++) {
+        if (!validate_app_addr((uint64)data->buf_offset, (uint64)data->buf_len))
+            return __WASI_EINVAL;
         total_size += data->buf_len;
     }
 
@@ -2094,6 +2129,7 @@ wasi_sock_recv_from(wasm_exec_env_t exec_env, wasi_fd_t sock,
     struct fd_table *curfds = wasi_ctx_get_curfds(wasi_ctx);
     uint64 total_size;
     uint8 *buf_begin = NULL;
+    iovec_app_t *iovec_snapshot = NULL;
     wasi_errno_t err;
     size_t recv_bytes = 0;
 
@@ -2108,7 +2144,13 @@ wasi_sock_recv_from(wasm_exec_env_t exec_env, wasi_fd_t sock,
     if (!validate_native_addr(ro_data_len, (uint64)sizeof(uint32)))
         return __WASI_EINVAL;
 
-    err = allocate_iovec_app_buffer(module_inst, ri_data, ri_data_len,
+    err =
+        snapshot_iovec_app(module_inst, ri_data, ri_data_len, &iovec_snapshot);
+    if (err != __WASI_ESUCCESS) {
+        return err;
+    }
+
+    err = allocate_iovec_app_buffer(module_inst, iovec_snapshot, ri_data_len,
                                     &buf_begin, &total_size);
     if (err != __WASI_ESUCCESS) {
         goto fail;
@@ -2126,11 +2168,15 @@ wasi_sock_recv_from(wasm_exec_env_t exec_env, wasi_fd_t sock,
     *ro_data_len = (uint32)recv_bytes;
 
     err = copy_buffer_to_iovec_app(module_inst, buf_begin, (uint32)total_size,
-                                   ri_data, ri_data_len, (uint32)recv_bytes);
+                                   iovec_snapshot, ri_data_len,
+                                   (uint32)recv_bytes);
 
 fail:
     if (buf_begin) {
         wasm_runtime_free(buf_begin);
+    }
+    if (iovec_snapshot) {
+        wasm_runtime_free(iovec_snapshot);
     }
     return err;
 }
@@ -2164,33 +2210,40 @@ convert_iovec_app_to_buffer(wasm_module_inst_t module_inst,
                             uint8 **buf_ptr, uint64 *buf_len)
 {
     uint32 i;
-    const iovec_app_t *si_data_orig = si_data;
+    iovec_app_t *iovec_snapshot = NULL;
     uint8 *buf = NULL;
+    uint32 remaining;
     wasi_errno_t error;
 
-    error = allocate_iovec_app_buffer(module_inst, si_data, si_data_len,
-                                      buf_ptr, buf_len);
+    error =
+        snapshot_iovec_app(module_inst, si_data, si_data_len, &iovec_snapshot);
     if (error != __WASI_ESUCCESS) {
         return error;
     }
 
-    buf = *buf_ptr;
-    si_data = si_data_orig;
-    for (i = 0; i < si_data_len; i++, si_data++) {
-        char *native_addr;
-
-        if (!validate_app_addr((uint64)si_data->buf_offset,
-                               (uint64)si_data->buf_len)) {
-            wasm_runtime_free(*buf_ptr);
-            return __WASI_EINVAL;
-        }
-
-        native_addr = (char *)addr_app_to_native((uint64)si_data->buf_offset);
-        bh_memcpy_s(buf, si_data->buf_len, native_addr, si_data->buf_len);
-        buf += si_data->buf_len;
+    error = allocate_iovec_app_buffer(module_inst, iovec_snapshot, si_data_len,
+                                      buf_ptr, buf_len);
+    if (error != __WASI_ESUCCESS) {
+        goto fail;
     }
 
-    return __WASI_ESUCCESS;
+    buf = *buf_ptr;
+    remaining = (uint32)*buf_len;
+    for (i = 0; i < si_data_len; i++) {
+        const iovec_app_t *item = &iovec_snapshot[i];
+        char *native_addr;
+
+        native_addr = (char *)addr_app_to_native((uint64)item->buf_offset);
+        bh_memcpy_s(buf, remaining, native_addr, item->buf_len);
+        buf += item->buf_len;
+        remaining -= item->buf_len;
+    }
+
+    error = __WASI_ESUCCESS;
+
+fail:
+    wasm_runtime_free(iovec_snapshot);
+    return error;
 }
 
 static wasi_errno_t
