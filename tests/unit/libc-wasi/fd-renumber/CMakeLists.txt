@@ -1,6 +1,12 @@
 # Copyright (C) 2026 Intel Corporation.  All rights reserved.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+# GNU ld / lld (ELF) support -Wl,--wrap; Apple ld does not.
+if(APPLE OR NOT CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+  message(STATUS "libc-wasi/fd-renumber: skipped, linker lacks --wrap")
+  return()
+endif()
+
 wamr_unit_test_suite_run_modes(libc-wasi/fd-renumber MODES classic-interp)
 if(NOT WAMR_UNIT_TEST_SUITE_ENABLED)
   return()
